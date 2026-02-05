@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Quicksand', sans-serif;
-            background-color: #f0f9ff; /* Light Blue Sky */
+            background-color: #f0f9ff;
             touch-action: manipulation;
         }
         .btn-pop {
@@ -20,19 +20,12 @@
         .btn-pop:active {
             transform: scale(0.95);
         }
-        .loading-pulse {
-            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
         .correct-anim {
             animation: successPop 0.5s ease-out;
         }
         @keyframes successPop {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); background-color: #86efac; }
+            50% { transform: scale(1.05); background-color: #86efac; }
             100% { transform: scale(1); }
         }
         .shake-anim {
@@ -71,16 +64,42 @@
     <!-- Main Container -->
     <main class="flex-grow container mx-auto p-4 max-w-xl flex flex-col items-center justify-center relative">
         
-        <!-- Settings Modal (API Key) -->
-        <div id="settings-modal" class="hidden absolute top-0 left-0 w-full h-full bg-white/95 z-50 flex flex-col p-6 rounded-xl shadow-xl">
-            <h2 class="text-2xl font-bold mb-4 text-indigo-900">Instellings ⚙️</h2>
-            <p class="mb-2 text-sm text-gray-600">Voer jou Google Gemini API sleutel in:</p>
-            <input type="password" id="api-key-input" placeholder="Paste API Key here..." class="w-full p-3 border-2 border-indigo-200 rounded-lg mb-4 focus:border-indigo-500 outline-none">
-            <div class="flex gap-2">
-                <button onclick="saveSettings()" class="flex-1 bg-green-500 text-white p-3 rounded-lg font-bold">Stoor</button>
-                <button onclick="toggleSettings()" class="flex-1 bg-gray-300 text-gray-700 p-3 rounded-lg font-bold">Kanselleer</button>
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden absolute top-0 left-0 w-full h-full bg-white/95 z-50 flex flex-col p-6 rounded-xl shadow-xl backdrop-blur-sm overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900 flex items-center gap-2">
+                <i data-lucide="settings" class="h-6 w-6"></i> Instellings
+            </h2>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase">Taal Rigting</label>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="setDirection('AF_TO_EN')" id="btn-dir-af" class="p-3 rounded-lg border-2 text-left font-semibold transition-all hover:bg-indigo-50">
+                        🇿🇦 Afrikaans ➔ 🇬🇧 Engels
+                    </button>
+                    <button onclick="setDirection('EN_TO_AF')" id="btn-dir-en" class="p-3 rounded-lg border-2 text-left font-semibold transition-all hover:bg-indigo-50">
+                        🇬🇧 Engels ➔ 🇿🇦 Afrikaans
+                    </button>
+                    <button onclick="setDirection('MIXED')" id="btn-dir-mix" class="p-3 rounded-lg border-2 text-left font-semibold transition-all hover:bg-indigo-50">
+                        🔀 Meng Alles
+                    </button>
+                </div>
             </div>
-            <p class="mt-4 text-xs text-gray-500">Kry 'n gratis sleutel by <a href="https://aistudio.google.com/" target="_blank" class="underline text-indigo-600">Google AI Studio</a>.</p>
+
+            <div class="mb-8">
+                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase">Begin-vlak</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <!-- Grade buttons 1-12 -->
+                    <script>
+                        for(let i=1; i<=12; i++) {
+                            document.write(`<button onclick="setStartingGrade(${i})" id="btn-grade-${i}" class="grade-selector-btn p-2 border-2 rounded-lg font-bold hover:bg-indigo-50 transition-all text-sm">${i}</button>`);
+                        }
+                    </script>
+                </div>
+            </div>
+
+            <button onclick="toggleSettings()" class="mt-auto bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">
+                Gaan voort
+            </button>
         </div>
 
         <!-- Grade Level Display -->
@@ -89,7 +108,6 @@
                 <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Moeilikheidsgraad</span>
                 <div class="text-2xl font-bold text-indigo-900 flex items-center gap-2">
                     Graad <span id="grade-display">1</span>
-                    <span id="grade-indicator" class="text-lg">👶</span>
                 </div>
             </div>
             <div class="text-right">
@@ -101,19 +119,13 @@
         </div>
 
         <!-- Question Card -->
-        <div id="quiz-card" class="bg-white w-full rounded-3xl shadow-xl border-b-8 border-indigo-100 p-6 text-center relative overflow-hidden min-h-[400px] flex flex-col justify-center">
+        <div id="quiz-card" class="bg-white w-full rounded-3xl shadow-xl border-b-8 border-indigo-100 p-6 text-center relative overflow-hidden min-h-[350px] flex flex-col justify-center">
             
-            <!-- Loading State -->
-            <div id="loading-state" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center z-20">
-                <div class="text-6xl mb-4 animate-bounce">🤖</div>
-                <p class="text-indigo-600 font-bold text-lg loading-pulse">Die robot dink...</p>
-            </div>
-
             <!-- Start State -->
             <div id="start-state" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-10 p-6">
                 <div class="text-6xl mb-6">🎓</div>
                 <h2 class="text-3xl font-bold text-indigo-900 mb-2">Gereed?</h2>
-                <p class="text-gray-600 mb-8">Kom ons kyk hoeveel woorde jy ken!</p>
+                <p class="text-gray-600 mb-8 text-center">Kom ons leer nuwe woorde! Ons begin by Graad <span id="starting-grade-text" class="font-bold text-indigo-600">1</span>.</p>
                 <button onclick="startGame()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-xl shadow-lg btn-pop hover:bg-indigo-700">
                     Begin!
                 </button>
@@ -121,11 +133,12 @@
 
             <!-- Question Content -->
             <div id="question-content" class="flex flex-col h-full hidden">
-                <div class="mb-2 text-indigo-500 font-semibold text-sm uppercase tracking-widest" id="question-type">AFRIKAANS ➔ ENGELS</div>
+                <div class="mb-4 text-indigo-500 font-bold text-sm uppercase tracking-widest bg-indigo-50 inline-block px-3 py-1 rounded-full mx-auto" id="question-type">
+                    AFRIKAANS ➔ ENGELS
+                </div>
                 
-                <div class="flex-grow flex flex-col justify-center items-center py-4">
-                    <span id="emoji-display" class="text-6xl mb-4 block transform transition-transform hover:scale-110 duration-300"></span>
-                    <h2 id="question-word" class="text-4xl font-black text-gray-800 break-words w-full"></h2>
+                <div class="flex-grow flex flex-col justify-center items-center py-6">
+                    <h2 id="question-word" class="text-4xl md:text-5xl font-black text-gray-800 break-words w-full leading-tight"></h2>
                 </div>
 
                 <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
@@ -136,9 +149,9 @@
         </div>
 
         <!-- Feedback Toast -->
-        <div id="feedback-toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 z-50 pointer-events-none">
-            <span id="feedback-icon" class="text-xl"></span>
-            <span id="feedback-text" class="font-bold"></span>
+        <div id="feedback-toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 z-50 pointer-events-none w-11/12 max-w-sm justify-center">
+            <span id="feedback-icon" class="text-2xl"></span>
+            <span id="feedback-text" class="font-bold text-lg text-center"></span>
         </div>
 
     </main>
@@ -150,27 +163,82 @@
             score: 0,
             consecutiveCorrect: 0,
             consecutiveIncorrect: 0,
-            customApiKey: localStorage.getItem('taal_api_key') || "",
-            isProcessing: false,
             currentQuestion: null,
-            muted: false
+            muted: false,
+            preferredDirection: 'MIXED', 
+            db: [],
+            isProcessing: false
         };
 
-        // Initialize Lucide Icons
-        lucide.createIcons();
-
-        // --- Sound Effects System (Web Audio API) ---
-        const AudioSys = {
-            ctx: null,
-            init: function() {
-                if (!this.ctx) {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (this.ctx.state === 'suspended') {
-                    this.ctx.resume();
+        // --- CSV Engine ---
+        const VocabEngine = {
+            async load() {
+                try {
+                    const response = await fetch('vocabulary.csv');
+                    const text = await response.text();
+                    this.parse(text);
+                } catch (e) {
+                    console.error("Failed to fetch vocabulary.csv, using internal fallback for safety.");
+                    const fallbackCsv = "Grade,Afrikaans,English\n1,Kat,Cat\n1,Hond,Dog\n1,Huis,House";
+                    this.parse(fallbackCsv);
                 }
             },
-            playTone: function(freq, type, duration, startTime = 0) {
+
+            parse(text) {
+                const lines = text.trim().split('\n');
+                state.db = lines.slice(1).map(line => {
+                    const parts = line.split(',');
+                    return {
+                        grade: parseInt(parts[0].trim()),
+                        af: parts[1].trim(),
+                        en: parts[2].trim()
+                    };
+                }).filter(item => !isNaN(item.grade));
+                console.log(`Loaded ${state.db.length} words.`);
+            },
+            
+            getQuestion(targetGrade) {
+                let pool = state.db.filter(w => w.grade === targetGrade);
+                
+                // If pool is too small, broaden search to find distractors
+                if (pool.length < 4) {
+                    pool = state.db.filter(w => Math.abs(w.grade - targetGrade) <= 1);
+                }
+                
+                if (pool.length === 0) pool = state.db;
+
+                const correctItem = pool.filter(w => w.grade === targetGrade)[0] || pool[0];
+                const realCorrectItem = pool.filter(w => w.grade === targetGrade).sort(() => 0.5 - Math.random())[0] || correctItem;
+                
+                let direction = state.preferredDirection === 'MIXED' ? 
+                               (Math.random() > 0.5 ? 'AF_TO_EN' : 'EN_TO_AF') : 
+                               state.preferredDirection;
+
+                const questionWord = direction === 'AF_TO_EN' ? realCorrectItem.af : realCorrectItem.en;
+                const correctWord = direction === 'AF_TO_EN' ? realCorrectItem.en : realCorrectItem.af;
+                
+                const isAnswerEnglish = (direction === 'AF_TO_EN');
+                const otherWords = pool.filter(w => w.af !== realCorrectItem.af);
+                const shuffled = otherWords.sort(() => 0.5 - Math.random());
+                const distractors = shuffled.slice(0, 3).map(w => isAnswerEnglish ? w.en : w.af);
+                
+                return {
+                    type: direction,
+                    q: questionWord,
+                    a: correctWord,
+                    options: shuffleArray([correctWord, ...distractors])
+                };
+            }
+        };
+
+        // --- Audio System ---
+        const AudioSys = {
+            ctx: null,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+            playTone(freq, type, duration, startTime = 0) {
                 if (state.muted || !this.ctx) return;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -184,151 +252,52 @@
                 gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
                 osc.stop(now + duration);
             },
-            correct: function() {
-                this.init();
-                // Happy "Ding-Dong"
-                this.playTone(523.25, 'sine', 0.1, 0); // C5
-                this.playTone(1046.50, 'sine', 0.4, 0.1); // C6
-            },
-            incorrect: function() {
-                this.init();
-                // Low "Buzz"
-                this.playTone(150, 'sawtooth', 0.3, 0);
-            },
-            levelUp: function() {
-                this.init();
-                // Major Fanfare
-                this.playTone(523.25, 'triangle', 0.1, 0);   // C
-                this.playTone(659.25, 'triangle', 0.1, 0.1); // E
-                this.playTone(783.99, 'triangle', 0.1, 0.2); // G
-                this.playTone(1046.50, 'triangle', 0.6, 0.3); // High C
-            },
-            levelDown: function() {
-                this.init();
-                if (state.muted || !this.ctx) return;
+            correct() { this.init(); this.playTone(523.25, 'sine', 0.1, 0); this.playTone(1046.50, 'sine', 0.4, 0.1); },
+            incorrect() { this.init(); this.playTone(150, 'sawtooth', 0.4, 0); },
+            levelUp() { this.init(); this.playTone(523.25, 'triangle', 0.1, 0); this.playTone(659.25, 'triangle', 0.1, 0.1); this.playTone(783.99, 'triangle', 0.1, 0.2); this.playTone(1046.50, 'triangle', 0.6, 0.3); },
+            levelDown() { 
+                this.init(); if (state.muted || !this.ctx) return;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.4);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.4);
-                osc.stop(this.ctx.currentTime + 0.4);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.5);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+                osc.stop(this.ctx.currentTime + 0.5);
             }
         };
 
-        // --- API & Logic ---
-        const systemApiKey = "AIzaSyCPoE0I9RTTHskyn11U4b94uUioc6UHXdc"; // Provided by environment runtime if available
+        // --- Logic & UI ---
 
-        function getApiKey() {
-            return state.customApiKey || systemApiKey;
+        async function initApp() {
+            await VocabEngine.load();
+            lucide.createIcons();
+            updateSettingsUI();
+            updateGradeDisplay();
         }
 
-        async function fetchQuestion() {
-            setLoading(true);
-            const apiKey = getApiKey();
-            
-            // If no key, simulate a fallback (or use hardcoded set for demo purposes if needed)
-            // Ideally, we warn the user, but for smoothness let's try to fetch.
-            
-            const direction = Math.random() > 0.5 ? 'AF_TO_EN' : 'EN_TO_AF';
-            
-            const prompt = `
-                Generate a single vocabulary word suitable for a Grade ${state.grade} child (age ${6 + state.grade}) in South Africa.
-                Return a strict JSON object with no markdown formatting.
-                The JSON must have these fields:
-                - "af": The word in Afrikaans.
-                - "en": The word in English.
-                - "emoji": A single relevant emoji (optional, use empty string if abstract).
-                - "distractors_en": Array of 3 English words that are wrong but related (same category).
-                - "distractors_af": Array of 3 Afrikaans words that are wrong but related.
-            `;
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            responseMimeType: "application/json"
-                        }
-                    })
-                });
-
-                if (!response.ok) throw new Error('API Error');
-
-                const data = await response.json();
-                const text = data.candidates[0].content.parts[0].text;
-                const json = JSON.parse(text);
-
-                // Prepare Question Object
-                state.currentQuestion = {
-                    direction: direction,
-                    correctWord: direction === 'AF_TO_EN' ? json.en : json.af,
-                    questionWord: direction === 'AF_TO_EN' ? json.af : json.en,
-                    emoji: json.emoji,
-                    options: shuffleArray([
-                        direction === 'AF_TO_EN' ? json.en : json.af,
-                        ...(direction === 'AF_TO_EN' ? json.distractors_en : json.distractors_af)
-                    ])
-                };
-
-                renderQuestion();
-
-            } catch (error) {
-                console.error(error);
-                // Fallback for demo/error (Simple static fallback to keep app alive)
-                useFallbackQuestion();
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function useFallbackQuestion() {
-            const fallbacks = [
-                {af: "Fiets", en: "Bicycle", emoji: "🚲", d_en: ["Car", "Bus", "Train"], d_af: ["Motor", "Bus", "Trein"]},
-                {af: "Boom", en: "Tree", emoji: "🌳", d_en: ["Flower", "Grass", "Leaf"], d_af: ["Blom", "Gras", "Blaar"]},
-                {af: "Sambreel", en: "Umbrella", emoji: "☂️", d_en: ["Rain", "Coat", "Hat"], d_af: ["Reën", "Jas", "Hoed"]}
-            ];
-            const random = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            const direction = Math.random() > 0.5 ? 'AF_TO_EN' : 'EN_TO_AF';
-
-            state.currentQuestion = {
-                direction: direction,
-                correctWord: direction === 'AF_TO_EN' ? random.en : random.af,
-                questionWord: direction === 'AF_TO_EN' ? random.af : random.en,
-                emoji: random.emoji,
-                options: shuffleArray([
-                    direction === 'AF_TO_EN' ? random.en : random.af,
-                    ...(direction === 'AF_TO_EN' ? random.d_en : random.d_af)
-                ])
-            };
+        function generateQuestion() {
+            state.currentQuestion = VocabEngine.getQuestion(state.grade);
             renderQuestion();
         }
 
-        // --- UI Rendering ---
-
         function renderQuestion() {
             const q = state.currentQuestion;
-            document.getElementById('question-type').textContent = q.direction === 'AF_TO_EN' ? "WAT IS DIE ENGELS VIR:" : "WAT IS DIE AFRIKAANS VIR:";
-            document.getElementById('question-word').textContent = q.questionWord;
-            document.getElementById('emoji-display').textContent = q.emoji || "❓";
+            const label = q.type === 'AF_TO_EN' ? "AFRIKAANS ➔ ENGELS" : "ENGELS ➔ AFRIKAANS";
+            document.getElementById('question-type').textContent = label;
+            document.getElementById('question-word').textContent = q.q;
 
             const grid = document.getElementById('options-grid');
             grid.innerHTML = '';
 
             q.options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = "bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold py-4 px-6 rounded-xl border-2 border-indigo-200 transition-all btn-pop text-lg";
+                btn.className = "bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold py-6 px-4 rounded-xl border-2 border-indigo-200 transition-all btn-pop text-lg md:text-xl break-words leading-tight";
                 btn.textContent = opt;
                 btn.onclick = () => handleAnswer(opt, btn);
                 grid.appendChild(btn);
             });
-            
-            // Update UI indicators
             updateStreakDisplay();
         }
 
@@ -336,74 +305,58 @@
             if (state.isProcessing) return;
             state.isProcessing = true;
 
-            const isCorrect = selected === state.currentQuestion.correctWord;
+            const isCorrect = selected === state.currentQuestion.a;
 
             if (isCorrect) {
-                // Correct Logic
                 AudioSys.correct();
-                btnElement.classList.remove('bg-indigo-50', 'border-indigo-200');
                 btnElement.classList.add('bg-green-500', 'border-green-600', 'text-white', 'correct-anim');
-                showToast(true, "Mooi so!");
-                
+                showToast(true, "Dis reg! Mooi so.");
                 state.score += 10 + (state.grade * 2);
                 state.consecutiveCorrect++;
                 state.consecutiveIncorrect = 0;
 
-                // Level Up Logic (3 in a row)
                 if (state.consecutiveCorrect >= 3) {
-                    // Delay level up slightly so the correct sound finishes
-                    setTimeout(levelUp, 600);
+                    setTimeout(() => levelUp(), 2000);
                 } else {
-                    setTimeout(() => {
-                        fetchQuestion();
-                        state.isProcessing = false;
-                    }, 1000);
+                    setTimeout(() => { generateQuestion(); state.isProcessing = false; }, 2000);
                 }
             } else {
-                // Incorrect Logic
                 AudioSys.incorrect();
                 btnElement.classList.add('bg-red-500', 'border-red-600', 'text-white', 'shake-anim');
-                showToast(false, "Oeps! Probeer weer.");
-
+                const buttons = document.querySelectorAll('#options-grid button');
+                buttons.forEach(b => {
+                    if (b.textContent === state.currentQuestion.a) {
+                        b.classList.add('bg-green-100', 'border-green-400', 'text-green-800');
+                    }
+                });
+                showToast(false, `Die regte woord was: ${state.currentQuestion.a}`);
                 state.consecutiveCorrect = 0;
                 state.consecutiveIncorrect++;
 
-                // Level Down Logic (2 wrong in a row)
                 if (state.consecutiveIncorrect >= 2) {
-                    setTimeout(levelDown, 600);
+                    setTimeout(() => levelDown(), 3500);
+                } else {
+                    setTimeout(() => { generateQuestion(); state.isProcessing = false; }, 3500);
                 }
-
-                setTimeout(() => {
-                    // Reveal correct answer briefly
-                    const buttons = document.querySelectorAll('#options-grid button');
-                    buttons.forEach(b => {
-                        if (b.textContent === state.currentQuestion.correctWord) {
-                            b.classList.add('bg-green-500', 'text-white');
-                        }
-                    });
-                    
-                    setTimeout(() => {
-                        fetchQuestion();
-                        state.isProcessing = false;
-                    }, 1500);
-                }, 500);
             }
-            
             document.getElementById('score').textContent = state.score;
         }
 
-        // --- Difficulty Logic ---
-
         function levelUp() {
-            AudioSys.levelUp();
-            state.grade++;
-            state.consecutiveCorrect = 0; // Reset streak
-            showToast(true, `Graad ${state.grade}! Jy is slim! 🚀`);
-            updateGradeDisplay();
-            setTimeout(() => {
-                fetchQuestion();
+            const nextGrade = state.grade + 1;
+            const hasData = state.db.some(w => w.grade === nextGrade);
+            if (hasData) {
+                AudioSys.levelUp();
+                state.grade++;
+                state.consecutiveCorrect = 0;
+                showToast(true, `Graad ${state.grade}! Jy is slim! 🚀`);
+                updateGradeDisplay();
+                setTimeout(() => { generateQuestion(); state.isProcessing = false; }, 2000);
+            } else {
+                state.consecutiveCorrect = 0;
+                generateQuestion();
                 state.isProcessing = false;
-            }, 1500);
+            }
         }
 
         function levelDown() {
@@ -412,93 +365,79 @@
                 state.grade--;
                 showToast(false, `Terug na Graad ${state.grade}. Ons oefen nog bietjie.`);
             }
-            state.consecutiveIncorrect = 0; // Reset streak
+            state.consecutiveIncorrect = 0;
             updateGradeDisplay();
+            setTimeout(() => { generateQuestion(); state.isProcessing = false; }, 1000);
         }
 
         function updateGradeDisplay() {
             document.getElementById('grade-display').textContent = state.grade;
-            const indicators = ["👶", "👦", "📚", "🧠", "🎓", "🚀", "🪐"];
-            const icon = indicators[Math.min(state.grade - 1, indicators.length - 1)];
-            document.getElementById('grade-indicator').textContent = icon;
+            document.getElementById('starting-grade-text').textContent = state.grade;
+            
+            // Highlight active grade button in settings
+            document.querySelectorAll('.grade-selector-btn').forEach(btn => {
+                const bGrade = parseInt(btn.textContent);
+                if (bGrade === state.grade) {
+                    btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-700');
+                    btn.classList.remove('border-gray-200', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-700');
+                    btn.classList.add('border-gray-200', 'text-gray-600');
+                }
+            });
+        }
+
+        function setStartingGrade(g) {
+            state.grade = g;
+            state.consecutiveCorrect = 0;
+            state.consecutiveIncorrect = 0;
+            updateGradeDisplay();
         }
 
         function updateStreakDisplay() {
             const container = document.getElementById('streak-dots');
             container.innerHTML = '';
-            
-            // Show dots for correct streak (goal is 3)
             for (let i = 0; i < 3; i++) {
                 const dot = document.createElement('div');
                 dot.className = `w-3 h-3 rounded-full ${i < state.consecutiveCorrect ? 'bg-green-500' : 'bg-gray-200'}`;
                 container.appendChild(dot);
             }
-            
             const remaining = 3 - state.consecutiveCorrect;
             document.getElementById('streak-label').textContent = remaining === 0 ? "Vlak op!" : `Nog ${remaining} vir volgende vlak`;
         }
 
+        function setDirection(dir) { state.preferredDirection = dir; updateSettingsUI(); }
 
-        // --- Utilities ---
+        function updateSettingsUI() {
+            const buttons = { 'AF_TO_EN': document.getElementById('btn-dir-af'), 'EN_TO_AF': document.getElementById('btn-dir-en'), 'MIXED': document.getElementById('btn-dir-mix') };
+            Object.values(buttons).forEach(btn => { btn.className = "p-3 rounded-lg border-2 text-left font-semibold transition-all hover:bg-indigo-50 border-gray-200 text-gray-600"; });
+            const active = buttons[state.preferredDirection];
+            active.className = "p-3 rounded-lg border-2 text-left font-semibold transition-all bg-indigo-100 border-indigo-500 text-indigo-900";
+        }
 
-        function startGame() {
-            AudioSys.init(); // Initialize Audio Context on user gesture
-            document.getElementById('start-state').classList.add('hidden');
-            document.getElementById('question-content').classList.remove('hidden');
-            fetchQuestion();
+        function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); }
+
+        function showToast(isSuccess, message) {
+            const toast = document.getElementById('feedback-toast');
+            document.getElementById('feedback-icon').textContent = isSuccess ? "🌟" : "💡";
+            document.getElementById('feedback-text').textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-10'); }, isSuccess ? 2000 : 3500);
         }
 
         function toggleMute() {
             state.muted = !state.muted;
             const icon = document.getElementById('mute-icon');
-            if (state.muted) {
-                icon.setAttribute('data-lucide', 'volume-x');
-                document.getElementById('mute-btn').classList.add('opacity-50');
-            } else {
-                icon.setAttribute('data-lucide', 'volume-2');
-                document.getElementById('mute-btn').classList.remove('opacity-50');
-                AudioSys.init(); // Ensure context is ready if they unmute
-            }
+            if (state.muted) { icon.setAttribute('data-lucide', 'volume-x'); document.getElementById('mute-btn').classList.add('opacity-50'); }
+            else { icon.setAttribute('data-lucide', 'volume-2'); document.getElementById('mute-btn').classList.remove('opacity-50'); AudioSys.init(); }
             lucide.createIcons();
         }
 
-        function setLoading(isLoading) {
-            const el = document.getElementById('loading-state');
-            if (isLoading) el.classList.remove('hidden');
-            else el.classList.add('hidden');
-        }
-
-        function showToast(isSuccess, message) {
-            const toast = document.getElementById('feedback-toast');
-            const icon = document.getElementById('feedback-icon');
-            const text = document.getElementById('feedback-text');
-
-            icon.textContent = isSuccess ? "🌟" : "❌";
-            text.textContent = message;
-            
-            toast.classList.remove('opacity-0', 'translate-y-10');
-            
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-10');
-            }, 2000);
-        }
-
-        function toggleSettings() {
-            const modal = document.getElementById('settings-modal');
-            modal.classList.toggle('hidden');
-            if (!modal.classList.contains('hidden')) {
-                document.getElementById('api-key-input').value = state.customApiKey;
-            }
-        }
-
-        function saveSettings() {
-            const key = document.getElementById('api-key-input').value.trim();
-            if (key) {
-                state.customApiKey = key;
-                localStorage.setItem('taal_api_key', key);
-                toggleSettings();
-                showToast(true, "Sleutel gestoor!");
-            }
+        function startGame() {
+            AudioSys.init();
+            document.getElementById('start-state').classList.add('hidden');
+            document.getElementById('question-content').classList.remove('hidden');
+            generateQuestion();
         }
 
         function shuffleArray(array) {
@@ -509,6 +448,7 @@
             return array;
         }
 
+        initApp();
     </script>
 </body>
 </html>
