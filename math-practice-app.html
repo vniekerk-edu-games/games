@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice Fun! 🎯</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .mode-selection, .settings, .quiz, .results {
+            display: none;
+        }
+
+        .mode-selection.active, .settings.active, .quiz.active, .results.active {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 15px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .setting-group {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            margin-right: 8px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            font-family: inherit;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 15px;
+            height: 30px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .question-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .question-text {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .answers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .answer-btn {
+            padding: 20px;
+            font-size: 1.5em;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .answer-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .answer-btn.correct {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .answer-btn.incorrect {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .answer-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .feedback.correct {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .feedback.incorrect {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 150px;
+            margin: 10px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .level-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .emoji {
+            font-size: 3em;
+            margin: 20px 0;
+        }
+
+        .streak-indicator {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1em;
+            color: #666;
+        }
+
+        .streak-indicator.hot {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .streak-indicator.cold {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Math Practice Fun!</h1>
+
+        <!-- Mode Selection -->
+        <div class="mode-selection active" id="modeSelection">
+            <div class="center">
+                <p style="font-size: 1.2em; margin-bottom: 30px; color: #666;">
+                    Choose how you want to practice:
+                </p>
+                <button class="btn" onclick="startAutoLevel()">🎮 Auto Level Mode</button>
+                <button class="btn btn-secondary" onclick="showSettings()">⚙️ Custom Settings</button>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings" id="settings">
+            <div class="setting-group">
+                <label>Number of values in equation:</label>
+                <select id="numCount">
+                    <option value="2">Two numbers</option>
+                    <option value="3">Three numbers</option>
+                    <option value="4">Four numbers</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Number range:</label>
+                <select id="numRange">
+                    <option value="10">1 to 10</option>
+                    <option value="20">1 to 20</option>
+                    <option value="50">1 to 50</option>
+                    <option value="100">1 to 100</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Operations to include:</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="opAdd" checked> Addition (+)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="opSub"> Subtraction (−)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="opMul"> Multiplication (×)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="opDiv"> Division (÷)
+                    </label>
+                </div>
+            </div>
+
+            <div class="center">
+                <button class="btn btn-success" onclick="startCustomQuiz()">Start Practice! 🚀</button>
+                <button class="btn" onclick="backToMode()">← Back</button>
+            </div>
+        </div>
+
+        <!-- Quiz -->
+        <div class="quiz" id="quiz">
+            <div id="levelDisplay" class="center" style="margin-bottom: 20px;"></div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0/10</div>
+            </div>
+
+            <div class="streak-indicator" id="streakIndicator"></div>
+
+            <div class="question-card">
+                <div class="question-text" id="questionText"></div>
+                <div class="answers" id="answers"></div>
+            </div>
+
+            <div class="feedback" id="feedback" style="display: none;"></div>
+
+            <div class="center" style="margin-top: 20px;">
+                <button class="btn" id="nextBtn" style="display: none;" onclick="nextQuestion()">Next Question →</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results" id="results">
+            <div class="center">
+                <div class="emoji" id="resultEmoji"></div>
+                <h2 id="resultTitle"></h2>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="finalScore"></div>
+                        <div class="stat-label">Correct</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="finalPercentage"></div>
+                        <div class="stat-label">Score</div>
+                    </div>
+                </div>
+                <div id="levelChangeMessage" style="margin: 20px 0; font-size: 1.2em;"></div>
+                <button class="btn btn-success" onclick="restartQuiz()">Practice Again! 🔄</button>
+                <button class="btn" onclick="backToMode()">← Change Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            mode: 'custom', // 'custom' or 'auto'
+            currentLevel: 1,
+            currentQuestion: 0,
+            correctAnswers: 0,
+            consecutiveCorrect: 0,
+            consecutiveWrong: 0,
+            questions: [],
+            settings: {}
+        };
+
+        // CAPS-based level definitions
+        const levelDefinitions = {
+            1: { numCount: 2, numRange: 10, operations: ['add', 'sub'] }, // Grade 1
+            2: { numCount: 2, numRange: 20, operations: ['add', 'sub'] }, // Grade 2
+            3: { numCount: 2, numRange: 50, operations: ['add', 'sub', 'mul'] }, // Grade 3
+            4: { numCount: 3, numRange: 50, operations: ['add', 'sub', 'mul'] }, // Grade 4
+            5: { numCount: 3, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] }, // Grade 5
+            6: { numCount: 3, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] }, // Grade 6
+            7: { numCount: 4, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] }, // Advanced
+        };
+
+        // Load saved level from localStorage
+        function loadSavedLevel() {
+            const saved = localStorage.getItem('mathPracticeLevel');
+            return saved ? parseInt(saved) : 1;
+        }
+
+        // Save level to localStorage
+        function saveLevel(level) {
+            localStorage.setItem('mathPracticeLevel', level);
+        }
+
+        // Show/hide screens
+        function showScreen(screenId) {
+            document.querySelectorAll('.mode-selection, .settings, .quiz, .results').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function backToMode() {
+            showScreen('modeSelection');
+            resetGame();
+        }
+
+        function showSettings() {
+            showScreen('settings');
+        }
+
+        function startAutoLevel() {
+            gameState.mode = 'auto';
+            gameState.currentLevel = loadSavedLevel();
+            const levelSettings = levelDefinitions[gameState.currentLevel];
+            gameState.settings = {
+                numCount: levelSettings.numCount,
+                numRange: levelSettings.numRange,
+                operations: levelSettings.operations
+            };
+            startQuiz();
+        }
+
+        function startCustomQuiz() {
+            const operations = [];
+            if (document.getElementById('opAdd').checked) operations.push('add');
+            if (document.getElementById('opSub').checked) operations.push('sub');
+            if (document.getElementById('opMul').checked) operations.push('mul');
+            if (document.getElementById('opDiv').checked) operations.push('div');
+
+            if (operations.length === 0) {
+                alert('Please select at least one operation!');
+                return;
+            }
+
+            gameState.mode = 'custom';
+            gameState.settings = {
+                numCount: parseInt(document.getElementById('numCount').value),
+                numRange: parseInt(document.getElementById('numRange').value),
+                operations: operations
+            };
+            startQuiz();
+        }
+
+        function startQuiz() {
+            resetGame();
+            generateQuestions();
+            showScreen('quiz');
+            displayQuestion();
+            updateLevelDisplay();
+        }
+
+        function resetGame() {
+            gameState.currentQuestion = 0;
+            gameState.correctAnswers = 0;
+            gameState.consecutiveCorrect = 0;
+            gameState.consecutiveWrong = 0;
+            gameState.questions = [];
+        }
+
+        function updateLevelDisplay() {
+            const levelDisplay = document.getElementById('levelDisplay');
+            if (gameState.mode === 'auto') {
+                levelDisplay.innerHTML = `<div class="level-badge">📚 Level ${gameState.currentLevel}</div>`;
+            } else {
+                levelDisplay.innerHTML = '';
+            }
+        }
+
+        function generateQuestions() {
+            gameState.questions = [];
+            for (let i = 0; i < 10; i++) {
+                gameState.questions.push(generateQuestion());
+            }
+        }
+
+        function generateQuestion() {
+            const { numCount, numRange, operations } = gameState.settings;
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+            
+            let numbers = [];
+            let answer;
+            let questionText;
+
+            if (operation === 'div') {
+                // For division, ensure clean division
+                const divisor = Math.floor(Math.random() * (numRange - 1)) + 2;
+                const quotient = Math.floor(Math.random() * Math.floor(numRange / divisor)) + 1;
+                answer = quotient;
+                numbers = [divisor * quotient, divisor];
+                questionText = `${numbers[0]} ÷ ${numbers[1]}`;
+            } else {
+                // Generate numbers
+                for (let i = 0; i < numCount; i++) {
+                    numbers.push(Math.floor(Math.random() * numRange) + 1);
+                }
+
+                // Calculate answer based on operation
+                switch (operation) {
+                    case 'add':
+                        answer = numbers.reduce((a, b) => a + b, 0);
+                        questionText = numbers.join(' + ');
+                        break;
+                    case 'sub':
+                        // Ensure no negative results for foundation phase
+                        numbers.sort((a, b) => b - a);
+                        answer = numbers[0];
+                        questionText = numbers[0].toString();
+                        for (let i = 1; i < numbers.length; i++) {
+                            answer -= numbers[i];
+                            questionText += ` − ${numbers[i]}`;
+                        }
+                        // If answer is negative, regenerate
+                        if (answer < 0) return generateQuestion();
+                        break;
+                    case 'mul':
+                        answer = numbers.reduce((a, b) => a * b, 1);
+                        questionText = numbers.join(' × ');
+                        break;
+                }
+            }
+
+            // Generate wrong answers
+            const wrongAnswers = generateWrongAnswers(answer, numRange, operation);
+            const allAnswers = [answer, ...wrongAnswers].sort(() => Math.random() - 0.5);
+
+            return {
+                text: questionText,
+                correctAnswer: answer,
+                answers: allAnswers
+            };
+        }
+
+        function generateWrongAnswers(correct, range, operation) {
+            const wrong = new Set();
+            
+            // Determine how far wrong answers should be
+            const isSmallNumber = range <= 20;
+            const isMultiplication = operation === 'mul';
+            
+            while (wrong.size < 3) {
+                let wrongAnswer;
+                
+                if (isSmallNumber) {
+                    // For small numbers, stay close
+                    const offset = Math.floor(Math.random() * 6) - 3; // -3 to +3
+                    wrongAnswer = correct + offset;
+                } else if (isMultiplication) {
+                    // For multiplication, can be more varied
+                    const factor = Math.random() < 0.5 ? 0.5 : 1.5;
+                    wrongAnswer = Math.round(correct * factor);
+                } else {
+                    // For larger numbers, moderate variation
+                    const offset = Math.floor(Math.random() * 20) - 10;
+                    wrongAnswer = correct + offset;
+                }
+                
+                // Ensure wrong answer is positive and different from correct
+                if (wrongAnswer > 0 && wrongAnswer !== correct && !wrong.has(wrongAnswer)) {
+                    wrong.add(wrongAnswer);
+                }
+            }
+            
+            return Array.from(wrong);
+        }
+
+        function displayQuestion() {
+            const question = gameState.questions[gameState.currentQuestion];
+            document.getElementById('questionText').textContent = question.text + ' = ?';
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            
+            question.answers.forEach(answer => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(answer, question.correctAnswer);
+                answersDiv.appendChild(btn);
+            });
+
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            
+            updateProgress();
+            updateStreakIndicator();
+        }
+
+        function updateProgress() {
+            const progress = ((gameState.currentQuestion) / 10) * 100;
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = `${gameState.currentQuestion}/10`;
+        }
+
+        function updateStreakIndicator() {
+            const indicator = document.getElementById('streakIndicator');
+            
+            if (gameState.mode === 'auto') {
+                if (gameState.consecutiveCorrect >= 3) {
+                    indicator.className = 'streak-indicator hot';
+                    indicator.textContent = `🔥 ${gameState.consecutiveCorrect} correct in a row! ${5 - gameState.consecutiveCorrect} more to level up!`;
+                } else if (gameState.consecutiveWrong >= 2) {
+                    indicator.className = 'streak-indicator cold';
+                    indicator.textContent = `⚠️ ${gameState.consecutiveWrong} wrong in a row. 1 more and you'll go down a level.`;
+                } else if (gameState.consecutiveCorrect > 0) {
+                    indicator.className = 'streak-indicator';
+                    indicator.textContent = `✨ ${gameState.consecutiveCorrect} correct in a row!`;
+                } else {
+                    indicator.textContent = '';
+                }
+            } else {
+                if (gameState.consecutiveCorrect >= 3) {
+                    indicator.className = 'streak-indicator hot';
+                    indicator.textContent = `🔥 ${gameState.consecutiveCorrect} correct in a row! You're on fire!`;
+                } else if (gameState.consecutiveCorrect > 0) {
+                    indicator.className = 'streak-indicator';
+                    indicator.textContent = `✨ ${gameState.consecutiveCorrect} correct in a row!`;
+                } else {
+                    indicator.textContent = '';
+                }
+            }
+        }
+
+        function checkAnswer(selected, correct) {
+            const answerBtns = document.querySelectorAll('.answer-btn');
+            answerBtns.forEach(btn => {
+                btn.disabled = true;
+                if (parseInt(btn.textContent) === correct) {
+                    btn.classList.add('correct');
+                }
+                if (parseInt(btn.textContent) === selected && selected !== correct) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            const feedback = document.getElementById('feedback');
+            feedback.style.display = 'block';
+
+            if (selected === correct) {
+                feedback.className = 'feedback correct';
+                feedback.textContent = '🎉 Correct! Well done!';
+                gameState.correctAnswers++;
+                gameState.consecutiveCorrect++;
+                gameState.consecutiveWrong = 0;
+
+                // Check for level up in auto mode
+                if (gameState.mode === 'auto' && gameState.consecutiveCorrect === 5) {
+                    const maxLevel = Object.keys(levelDefinitions).length;
+                    if (gameState.currentLevel < maxLevel) {
+                        gameState.currentLevel++;
+                        saveLevel(gameState.currentLevel);
+                        feedback.textContent = '🎉 Correct! 🎊 LEVEL UP! You\'re now on Level ' + gameState.currentLevel + '!';
+                        gameState.consecutiveCorrect = 0;
+                    }
+                }
+            } else {
+                feedback.className = 'feedback incorrect';
+                feedback.textContent = `❌ Not quite. The correct answer is ${correct}.`;
+                gameState.consecutiveWrong++;
+                gameState.consecutiveCorrect = 0;
+
+                // Check for level down in auto mode
+                if (gameState.mode === 'auto' && gameState.consecutiveWrong === 3) {
+                    if (gameState.currentLevel > 1) {
+                        gameState.currentLevel--;
+                        saveLevel(gameState.currentLevel);
+                        feedback.textContent = `❌ The correct answer is ${correct}. Don't worry! Let's practice at Level ${gameState.currentLevel}.`;
+                        gameState.consecutiveWrong = 0;
+                    }
+                }
+            }
+
+            document.getElementById('nextBtn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            gameState.currentQuestion++;
+            
+            if (gameState.currentQuestion < 10) {
+                // Update settings if level changed
+                if (gameState.mode === 'auto') {
+                    const levelSettings = levelDefinitions[gameState.currentLevel];
+                    gameState.settings = {
+                        numCount: levelSettings.numCount,
+                        numRange: levelSettings.numRange,
+                        operations: levelSettings.operations
+                    };
+                    // Regenerate remaining questions with new level settings
+                    for (let i = gameState.currentQuestion; i < 10; i++) {
+                        gameState.questions[i] = generateQuestion();
+                    }
+                    updateLevelDisplay();
+                }
+                displayQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            const percentage = Math.round((gameState.correctAnswers / 10) * 100);
+            
+            document.getElementById('finalScore').textContent = `${gameState.correctAnswers}/10`;
+            document.getElementById('finalPercentage').textContent = `${percentage}%`;
+
+            let emoji, title;
+            if (percentage === 100) {
+                emoji = '🏆';
+                title = 'Perfect Score! Amazing!';
+            } else if (percentage >= 80) {
+                emoji = '⭐';
+                title = 'Great Job!';
+            } else if (percentage >= 60) {
+                emoji = '👍';
+                title = 'Good Effort!';
+            } else {
+                emoji = '💪';
+                title = 'Keep Practicing!';
+            }
+
+            document.getElementById('resultEmoji').textContent = emoji;
+            document.getElementById('resultTitle').textContent = title;
+
+            const levelChangeMsg = document.getElementById('levelChangeMessage');
+            if (gameState.mode === 'auto') {
+                levelChangeMsg.innerHTML = `<div class="level-badge">Your current level: Level ${gameState.currentLevel}</div>`;
+            } else {
+                levelChangeMsg.textContent = '';
+            }
+
+            showScreen('results');
+        }
+
+        function restartQuiz() {
+            if (gameState.mode === 'auto') {
+                startAutoLevel();
+            } else {
+                startCustomQuiz();
+            }
+        }
+    </script>
+</body>
+</html>
