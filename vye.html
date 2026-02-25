@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vye Avontuur!</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2d7a2f;
+    --light-green: #5ab55c;
+    --fig-purple: #6b3fa0;
+    --fig-light: #c084fc;
+    --warm-yellow: #fbbf24;
+    --warm-orange: #f97316;
+    --bg: #f0fdf4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% 20%, rgba(107,63,160,0.07) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(90,181,92,0.1) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .app { max-width: 760px; margin: 0 auto; padding: 20px; position: relative; z-index: 1; }
+  .header { text-align: center; padding: 20px 0 10px; }
+  .header h1 {
+    font-family: 'Fredoka One', cursive; font-size: 2.8rem;
+    color: var(--fig-purple); text-shadow: 3px 3px 0 rgba(107,63,160,0.15); line-height: 1.1;
+  }
+  .header .emoji-row { font-size: 2rem; margin: 6px 0; animation: bounce 2s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .progress-bar-wrap {
+    background:#e2d8f5; border-radius:20px; height:18px;
+    margin:16px 0; overflow:hidden; border:2px solid var(--fig-purple);
+  }
+  .progress-bar-fill {
+    height:100%; background:linear-gradient(90deg,var(--fig-purple),var(--fig-light));
+    border-radius:20px; transition:width 0.5s ease;
+  }
+  .progress-label { text-align:center; font-size:0.9rem; color:var(--fig-purple); font-weight:700; margin-bottom:12px; }
+  .card {
+    background:white; border-radius:24px; padding:28px;
+    box-shadow:0 8px 30px rgba(107,63,160,0.12),0 2px 8px rgba(0,0,0,0.06);
+    border:3px solid transparent; animation:fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .card.reading { border-color:var(--light-green); background:linear-gradient(135deg,#fff 0%,#f0fff4 100%); }
+  .card.quiz    { border-color:var(--fig-light);   background:linear-gradient(135deg,#fff 0%,#faf5ff 100%); }
+  .card.fact    { border-color:var(--warm-yellow);  background:linear-gradient(135deg,#fff 0%,#fffbeb 100%); }
+  .card.result  { border-color:var(--warm-orange);  background:linear-gradient(135deg,#fff7ed 0%,#fef9f0 100%); text-align:center; }
+  .badge {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:30px;
+    font-size:0.82rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:14px;
+  }
+  .badge.reading { background:var(--light-green); color:white; }
+  .badge.quiz    { background:var(--fig-purple);   color:white; }
+  .badge.fact    { background:var(--warm-yellow);  color:#7c5c00; }
+  .card-title { font-family:'Fredoka One',cursive; font-size:1.5rem; color:var(--green); margin-bottom:14px; line-height:1.2; }
+  .card.quiz .card-title, .card.fact .card-title { color:var(--fig-purple); }
+  .reading-body { font-size:1.05rem; line-height:1.75; color:#374151; }
+  .reading-body strong { color:var(--green); }
+  .reading-body .section-head { font-family:'Fredoka One',cursive; font-size:1.1rem; color:var(--fig-purple); margin:14px 0 4px; display:block; }
+  .quiz-question { font-size:1.15rem; font-weight:700; color:#1f2937; margin-bottom:18px; line-height:1.4; }
+  .options { display:grid; gap:10px; }
+  .option-btn {
+    background:white; border:3px solid #d8b4fe; border-radius:16px; padding:13px 18px;
+    font-family:'Nunito',sans-serif; font-size:1rem; font-weight:700; color:#4b5563;
+    cursor:pointer; text-align:left; transition:all 0.2s; display:flex; align-items:center; gap:10px;
+  }
+  .option-btn:hover:not(:disabled) { background:#f3e8ff; border-color:var(--fig-purple); color:var(--fig-purple); transform:translateX(4px); }
+  .option-btn.correct { background:#dcfce7; border-color:var(--light-green); color:var(--green); }
+  .option-btn.wrong   { background:#fee2e2; border-color:#ef4444; color:#b91c1c; }
+  .option-btn:disabled { cursor:default; }
+  .option-letter {
+    width:30px; height:30px; background:#e9d5ff; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:0.9rem; flex-shrink:0; color:var(--fig-purple);
+  }
+  .option-btn.correct .option-letter { background:#86efac; color:var(--green); }
+  .option-btn.wrong   .option-letter { background:#fca5a5; color:#b91c1c; }
+  .feedback {
+    margin-top:16px; padding:14px 18px; border-radius:14px; font-size:1rem; font-weight:700;
+    display:none; animation:fadeIn 0.3s ease;
+  }
+  .feedback.correct { background:#dcfce7; color:var(--green); border:2px solid #86efac; display:block; }
+  .feedback.wrong   { background:#fee2e2; color:#b91c1c; border:2px solid #fca5a5; display:block; }
+  .fact-statement {
+    font-size:1.1rem; font-weight:700; color:#1f2937; background:#fef3c7; border-radius:14px;
+    padding:14px 18px; margin-bottom:18px; border-left:5px solid var(--warm-yellow); line-height:1.4;
+  }
+  .tf-buttons { display:flex; gap:14px; justify-content:center; }
+  .tf-btn { flex:1; padding:16px 10px; border:3px solid; border-radius:18px; font-family:'Fredoka One',cursive; font-size:1.3rem; cursor:pointer; transition:all 0.2s; }
+  .tf-btn.true-btn  { border-color:var(--light-green); color:var(--green); background:#f0fff4; }
+  .tf-btn.false-btn { border-color:#ef4444; color:#b91c1c; background:#fff5f5; }
+  .tf-btn:hover:not(:disabled) { transform:scale(1.04); }
+  .tf-btn.sel-correct { background:var(--light-green); color:white; border-color:var(--green); }
+  .tf-btn.sel-wrong   { background:#ef4444; color:white; border-color:#b91c1c; }
+  .match-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+  .match-col h4 { font-family:'Fredoka One',cursive; font-size:0.95rem; color:var(--fig-purple); margin-bottom:8px; text-align:center; }
+  .match-item { padding:10px 14px; border-radius:12px; font-size:0.95rem; font-weight:700; text-align:center; cursor:pointer; border:2px solid; transition:all 0.2s; }
+  .match-left  { background:#ede9fe; border-color:#a78bfa; color:var(--fig-purple); }
+  .match-right { background:#f0fff4; border-color:#86efac; color:var(--green); }
+  .match-item.selected    { transform:scale(1.04); box-shadow:0 4px 12px rgba(107,63,160,0.25); }
+  .match-item.matched-ok  { background:#dcfce7; border-color:var(--light-green); color:var(--green); cursor:default; }
+  .match-item.matched-bad { background:#fee2e2; border-color:#ef4444; color:#b91c1c; animation:shake 0.4s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .nav-area { display:flex; justify-content:flex-end; margin-top:24px; gap:12px; }
+  .btn { font-family:'Fredoka One',cursive; font-size:1.1rem; padding:12px 28px; border-radius:50px; border:none; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px; }
+  .btn-next { background:linear-gradient(135deg,var(--fig-purple),var(--fig-light)); color:white; box-shadow:0 4px 14px rgba(107,63,160,0.35); }
+  .btn-next:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(107,63,160,0.4); }
+  .btn-next:disabled { background:#d1d5db; color:#9ca3af; box-shadow:none; cursor:not-allowed; transform:none; }
+  .btn-restart { background:linear-gradient(135deg,var(--warm-orange),var(--warm-yellow)); color:white; box-shadow:0 4px 14px rgba(249,115,22,0.35); }
+  .stars-display { font-size:2.5rem; margin:12px 0; }
+  .score-big { font-family:'Fredoka One',cursive; font-size:4rem; color:var(--fig-purple); line-height:1; }
+  .score-msg { font-size:1.2rem; font-weight:700; color:#374151; margin:10px 0; }
+  .highlight-box { background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:14px; padding:14px 18px; margin:12px 0; border-left:5px solid var(--warm-orange); }
+  .highlight-box p { font-size:1rem; font-weight:700; color:#78350f; line-height:1.5; }
+  .step-dots { display:flex; justify-content:center; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .step-dot { width:12px; height:12px; border-radius:50%; background:#e9d5ff; border:2px solid #d8b4fe; transition:all 0.3s; }
+  .step-dot.done    { background:var(--fig-purple); border-color:var(--fig-purple); transform:scale(1.2); }
+  .step-dot.current { background:var(--warm-yellow); border-color:var(--warm-orange); transform:scale(1.3); box-shadow:0 0 0 3px rgba(251,191,36,0.3); }
+  @media(max-width:500px) { .header h1{font-size:2rem} .card{padding:20px 16px} .match-grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="emoji-row">🌿 🍈 🌿</div>
+    <h1>Vye Avontuur!</h1>
+    <p style="color:#6b7280;font-weight:700;margin-top:6px">Leer alles oor die wonderlike vy! 🎉</p>
+  </div>
+  <div class="step-dots" id="stepDots"></div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">Stap 1 van 10</div>
+  <div id="cardContainer"></div>
+</div>
+
+<script>
+// All Afrikaans text lives only in JS data — never injected into onclick="" attributes.
+// Apostrophes in JS strings are fine inside double-quoted strings or template literals.
+
+var steps = [
+  /* ── Reading 1 ── */
+  {
+    type: "reading",
+    badge: "📖 Leesstuk 1",
+    title: "Die Vy en die Wesp \u2013 Beste Vriende!",
+    html: [
+      "<p>Die storie van die vy is een van die mooiste stories in die natuur.",
+      " Dit gaan oor iets wat ons <strong>simbiose</strong> noem \u2013 dit beteken twee lewende wesens help mekaar om te oorleef!</p>",
+      "<span class='section-head'>🌺 Die Vy is Eintlik \u02BCn Blomtuin!</span>",
+      "<p>\u02BCn Vy is nie regtig \u02BCn vrug nie \u2013 dit is \u02BCn <strong>syconium</strong>.",
+      " Dit is soos \u02BCn bal met honderde klein blommetjies binne-in!",
+      " Maar hierdie blomme is toegesluit, so bye en wind kan nie help nie.",
+      " Dis waar die <strong>vyewesp</strong> inkom.</p>",
+      "<span class='section-head'>🐝 Die Klein Wesp se Groot Werk</span>",
+      "<p>Die vroulike vyewesp is super klein \u2013 sy kruip deur \u02BCn piepklein gaatjie in die onderkant van die vy.",
+      " Binne-in loop sy oor die blomme en bring stuifmeel saam van \u02BCn ander vy.",
+      " Sy le ook haar eiertjies daar.</p>",
+      "<div class='highlight-box'><p>🤔 Wonder jy of jy \u02BCn insek eet? Moenie bekommerd wees nie!",
+      " Die vy maak \u02BCn spesiale \"verteer-vloeistof\" genaamd <strong>ficain</strong> wat die wesp omskep in protei\u00EFene.",
+      " Teen die tyd dat die vy ryp is, is die wesp heeltemal weg \u2013 net soet vrug oorbly! 🍯</p></div>",
+      "<p>Sonder hierdie vriendskap sou daar <strong>geen vye op aarde</strong> gewees het nie! Hoe wonderlik is dit?</p>"
+    ].join("")
+  },
+
+  /* ── Quiz 1 ── */
+  {
+    type: "quiz",
+    badge: "❓ Vinnige Vraag",
+    title: "Kom ons kyk wat jy onthou!",
+    question: "Wat is die naam van die spesiale \"verteer-vloeistof\" wat die vy maak?",
+    options: ["Stuifmeel", "Ficain", "Simbiose", "Syconium"],
+    correct: 1,
+    fc: "🎉 Fantasties! Ficain is reg! Die vy gebruik ficain om die wesp se liggaam te verteer en dit in protei\u00EFene te verander.",
+    fw: "😊 Nie heeltemal reg nie! Die antwoord is Ficain \u2013 \u02BCn spesiale ensiem in die vy wat die wesp se liggaam omskep in protei\u00EFene."
+  },
+
+  /* ── True/False 1 ── */
+  {
+    type: "truefalse",
+    badge: "✅ Waar of Onwaar?",
+    title: "Is dit reg?",
+    statement: "Die vroulike vyewesp kruip deur \u02BCn gaatjie in die BOKant van die vy.",
+    correct: false,
+    fc: "🎉 Reg! Die wesp kruip deur die gaatjie aan die ONDERkant van die vy. Hierdie gaatjie word die ostiole genoem.",
+    fw: "😊 Oeps! Die wesp kruip eintlik deur die gaatjie aan die ONDERkant van die vy \u2013 dit word die ostiole genoem."
+  },
+
+  /* ── Reading 2 ── */
+  {
+    type: "reading",
+    badge: "📖 Leesstuk 2",
+    title: "Die Vy \u2013 Antieke Superheldvrug!",
+    html: [
+      "<p>Vye word die <strong>\"Vrug van die Oudheid\"</strong> genoem omdat hulle een van die eerste plante was wat mense geplant het \u2013 lank voordat selfs brood uitgedink is!</p>",
+      "<span class='section-head'>🏺 Van Egipte tot die Olimpiese Spele</span>",
+      "<p>In Antieke Egipte was vye so spesiaal dat konings daarmee <strong>begrawe</strong> is \u2013 sodat hulle kos sou h\u00EA in die hiernamaals!",
+      " Die Grieke was ook groot vye-aanhangers.",
+      " Die eerste Olimpiese atlete het vye geeet vir energie.",
+      " Vye was soms die prys vir wenners \u2013 meer waardevol as goue medaljes!</p>",
+      "<span class='section-head'>💪 Wat Sit in \u02BCn Vy?</span>",
+      "<p>Vye is boordevol goeie goed vir jou liggaam:</p>",
+      "<div class='highlight-box'><p>",
+      "🦷 <strong>Kalsium</strong> \u2013 Bou sterk bene en tande. Een koppie vye het amper soveel kalsium as \u02BCn glas melk!<br>",
+      "❤️ <strong>Kalium</strong> \u2013 Help jou hart en spiere reg werk.<br>",
+      "🌾 <strong>Vesel</strong> \u2013 Hou jou maag gelukkig en gesond!",
+      "</p></div>",
+      "<span class='section-head'>☀️ Die Kuns van Droging</span>",
+      "<p>Voor yskaste het mense vye in die son gedroog.",
+      " Die water verdamp, maar die suiker en minerale bly \u2013 dit maak gedroogde vye soms <strong>nog soeter</strong> as vars vye, en hulle hou vir maande!</p>"
+    ].join("")
+  },
+
+  /* ── Quiz 2 ── */
+  {
+    type: "quiz",
+    badge: "❓ Vinnige Vraag",
+    title: "Dink goed na!",
+    question: "Watter mineraal in vye help jou bene en tande sterk te bly?",
+    options: ["Kalium", "Kalsium", "Vesel", "Suiker"],
+    correct: 1,
+    fc: "⭐ Briljant! Kalsium is reg! Dit is dieselfde mineraal wat in melk sit \u2013 en vye het baie daarvan!",
+    fw: "😊 Amper! Die antwoord is Kalsium \u2013 dit bou sterk bene en tande, net soos melk!"
+  },
+
+  /* ── Match ── */
+  {
+    type: "match",
+    badge: "🔗 Pas By Mekaar",
+    title: "Koppel die woord aan sy betekenis!",
+    instruction: "Klik \u02BCn woord links, dan klik die regte betekenis regs.",
+    pairs: [
+      { left: "Kalsium", right: "Sterk bene & tande" },
+      { left: "Kalium",  right: "Help jou hart & spiere" },
+      { left: "Vesel",   right: "Hou jou maag gesond" },
+      { left: "Ficain",  right: "Verteer die wesp" }
+    ]
+  },
+
+  /* ── True/False 2 ── */
+  {
+    type: "truefalse",
+    badge: "✅ Waar of Onwaar?",
+    title: "Is dit reg?",
+    statement: "Gedroogde vye proe gewoonlik MINDER soet as vars vye.",
+    correct: false,
+    fc: "🎉 Korrek! Gedroogde vye is eintlik SOETER \u2013 die suiker word gekonsentreer as die water verdamp!",
+    fw: "😊 Nie reg nie! Gedroogde vye is eintlik SOETER as vars vye \u2013 die suiker word meer gekonsentreer!"
+  },
+
+  /* ── Quiz 3 ── */
+  {
+    type: "quiz",
+    badge: "❓ Vinnige Vraag",
+    title: "Geskiedeniskenner!",
+    question: "Waarmee het die Antieke Grieke Olimpiese wenners beloon in plaas van goue medaljes?",
+    options: ["Geld", "Vye", "Druiwe", "Brood"],
+    correct: 1,
+    fc: "🏆 Perfek! Vye was so waardevol dat dit as prys gegee is. Jy sou \u02BCn goeie Olimpiese atleet gewees het!",
+    fw: "😊 Die antwoord is Vye! Hulle was so waardevol in daai tyd dat winnende atlete vye as prys gekry het."
+  },
+
+  /* ── Final Quiz ── */
+  {
+    type: "quiz",
+    badge: "🌟 Groot Finale Vraag!",
+    title: "Die laaste vraag!",
+    question: "Wat beteken die woord \"simbiose\"?",
+    options: [
+      "Wanneer diere veg vir kos",
+      "Twee wesens help mekaar om te oorleef",
+      "Die binnekant van \u02BCn vy",
+      "Wanneer vye gedroog word"
+    ],
+    correct: 1,
+    fc: "🌟 Wonderlik! Simbiose is wanneer twee verskillende wesens mekaar help! Die vy en die wesp is die perfekte voorbeeld!",
+    fw: "😊 Simbiose beteken wanneer twee verskillende lewende wesens mekaar nodig het om te oorleef \u2013 soos die vy en die wesp!"
+  },
+
+  /* ── Result ── */
+  { type: "result" }
+];
+
+/* ── State ── */
+var currentStep = 0;
+var score = 0;
+var answered = false;
+var matchState = null;
+
+var totalQuestions = steps.filter(function(s) {
+  return s.type === "quiz" || s.type === "truefalse" || s.type === "match";
+}).length;
+
+/* ── Helpers ── */
+function setNextEnabled(on) {
+  var btn = document.getElementById("nextBtn");
+  if (btn) btn.disabled = !on;
+}
+
+function showFeedback(text, isCorrect) {
+  var fb = document.getElementById("feedback");
+  if (!fb) return;
+  fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
+  fb.textContent = text;
+}
+
+/* ── Render dispatcher ── */
+function render() {
+  var total = steps.length;
+  document.getElementById("progressFill").style.width =
+    Math.round((currentStep / (total - 1)) * 100) + "%";
+  document.getElementById("progressLabel").textContent =
+    "Stap " + (currentStep + 1) + " van " + total;
+
+  var dotsEl = document.getElementById("stepDots");
+  dotsEl.innerHTML = "";
+  for (var i = 0; i < steps.length; i++) {
+    var d = document.createElement("div");
+    d.className = "step-dot" +
+      (i < currentStep ? " done" : i === currentStep ? " current" : "");
+    dotsEl.appendChild(d);
+  }
+
+  answered = false;
+  matchState = null;
+  var step = steps[currentStep];
+  var container = document.getElementById("cardContainer");
+
+  if      (step.type === "reading")   renderReading(step, container);
+  else if (step.type === "quiz")      renderQuiz(step, container);
+  else if (step.type === "truefalse") renderTrueFalse(step, container);
+  else if (step.type === "match")     renderMatch(step, container);
+  else if (step.type === "result")    renderResult(container);
+}
+
+function makeNextBtn(disabled) {
+  return "<div class=\"nav-area\"><button class=\"btn btn-next\" id=\"nextBtn\"" +
+    (disabled ? " disabled" : "") + ">Volgende ➡️</button></div>";
+}
+
+/* ── Reading ── */
+function renderReading(step, container) {
+  container.innerHTML =
+    "<div class=\"card reading\">" +
+      "<span class=\"badge reading\">" + step.badge + "</span>" +
+      "<h2 class=\"card-title\">" + step.title + "</h2>" +
+      "<div class=\"reading-body\">" + step.html + "</div>" +
+      makeNextBtn(false) +
+    "</div>";
+  document.getElementById("nextBtn").addEventListener("click", goNext);
+}
+
+/* ── Quiz ── */
+function renderQuiz(step, container) {
+  var letters = ["A","B","C","D"];
+  var optHtml = "";
+  for (var i = 0; i < step.options.length; i++) {
+    optHtml +=
+      "<button class=\"option-btn\" data-idx=\"" + i + "\">" +
+        "<span class=\"option-letter\">" + letters[i] + "</span>" +
+        step.options[i] +
+      "</button>";
+  }
+  container.innerHTML =
+    "<div class=\"card quiz\">" +
+      "<span class=\"badge quiz\">" + step.badge + "</span>" +
+      "<h2 class=\"card-title\">" + step.title + "</h2>" +
+      "<p class=\"quiz-question\">" + step.question + "</p>" +
+      "<div class=\"options\" id=\"optionsList\">" + optHtml + "</div>" +
+      "<div class=\"feedback\" id=\"feedback\"></div>" +
+      makeNextBtn(true) +
+    "</div>";
+
+  document.getElementById("nextBtn").addEventListener("click", goNext);
+
+  var currentStepData = step; // capture for closure
+  document.getElementById("optionsList").addEventListener("click", function(e) {
+    var btn = e.target.closest(".option-btn");
+    if (!btn || answered) return;
+    answered = true;
+    var chosen = parseInt(btn.getAttribute("data-idx"), 10);
+    var allBtns = document.querySelectorAll(".option-btn");
+    for (var j = 0; j < allBtns.length; j++) {
+      allBtns[j].disabled = true;
+      if (j === currentStepData.correct) allBtns[j].classList.add("correct");
+      else if (j === chosen)             allBtns[j].classList.add("wrong");
+    }
+    var ok = chosen === currentStepData.correct;
+    if (ok) score++;
+    showFeedback(ok ? currentStepData.fc : currentStepData.fw, ok);
+    setNextEnabled(true);
+  });
+}
+
+/* ── True/False ── */
+function renderTrueFalse(step, container) {
+  container.innerHTML =
+    "<div class=\"card fact\">" +
+      "<span class=\"badge fact\">" + step.badge + "</span>" +
+      "<h2 class=\"card-title\">" + step.title + "</h2>" +
+      "<div class=\"fact-statement\">🤔 " + step.statement + "</div>" +
+      "<div class=\"tf-buttons\">" +
+        "<button class=\"tf-btn true-btn\" id=\"tfTrue\">✅ Waar</button>" +
+        "<button class=\"tf-btn false-btn\" id=\"tfFalse\">❌ Onwaar</button>" +
+      "</div>" +
+      "<div class=\"feedback\" id=\"feedback\"></div>" +
+      makeNextBtn(true) +
+    "</div>";
+
+  document.getElementById("nextBtn").addEventListener("click", goNext);
+
+  var stepData = step;
+  function handleTF(chosen) {
+    if (answered) return;
+    answered = true;
+    var trueBtn  = document.getElementById("tfTrue");
+    var falseBtn = document.getElementById("tfFalse");
+    trueBtn.disabled  = true;
+    falseBtn.disabled = true;
+    var ok = (chosen === stepData.correct);
+    if (ok) score++;
+    var chosenBtn  = chosen           ? trueBtn : falseBtn;
+    var correctBtn = stepData.correct ? trueBtn : falseBtn;
+    chosenBtn.classList.add(ok ? "sel-correct" : "sel-wrong");
+    if (!ok) correctBtn.classList.add("sel-correct");
+    showFeedback(ok ? stepData.fc : stepData.fw, ok);
+    setNextEnabled(true);
+  }
+
+  document.getElementById("tfTrue") .addEventListener("click", function() { handleTF(true);  });
+  document.getElementById("tfFalse").addEventListener("click", function() { handleTF(false); });
+}
+
+/* ── Match ── */
+function renderMatch(step, container) {
+  var rightOrder = [];
+  for (var i = 0; i < step.pairs.length; i++) rightOrder.push(i);
+  rightOrder.sort(function() { return Math.random() - 0.5; });
+
+  var leftHtml = "", rightHtml = "";
+  for (var i = 0; i < step.pairs.length; i++) {
+    leftHtml += "<div class=\"match-item match-left\" data-side=\"left\" data-idx=\"" + i + "\">" +
+      step.pairs[i].left + "</div>";
+  }
+  for (var j = 0; j < rightOrder.length; j++) {
+    var ri = rightOrder[j];
+    rightHtml += "<div class=\"match-item match-right\" data-side=\"right\" data-idx=\"" + ri + "\">" +
+      step.pairs[ri].right + "</div>";
+  }
+
+  container.innerHTML =
+    "<div class=\"card fact\">" +
+      "<span class=\"badge fact\">" + step.badge + "</span>" +
+      "<h2 class=\"card-title\">" + step.title + "</h2>" +
+      "<p style=\"color:#6b7280;font-size:0.95rem;font-weight:700;margin-bottom:16px\">" + step.instruction + "</p>" +
+      "<div class=\"match-grid\">" +
+        "<div class=\"match-col\"><h4>📌 Woord</h4>"    + leftHtml  + "</div>" +
+        "<div class=\"match-col\"><h4>💡 Betekenis</h4>" + rightHtml + "</div>" +
+      "</div>" +
+      "<div class=\"feedback\" id=\"feedback\"></div>" +
+      makeNextBtn(true) +
+    "</div>";
+
+  document.getElementById("nextBtn").addEventListener("click", goNext);
+
+  matchState = { selectedLeft: null, matchedCount: 0, total: step.pairs.length };
+
+  container.addEventListener("click", function(e) {
+    var item = e.target.closest(".match-item");
+    if (!item || item.classList.contains("matched-ok")) return;
+    var side = item.getAttribute("data-side");
+    var idx  = parseInt(item.getAttribute("data-idx"), 10);
+
+    if (side === "left") {
+      container.querySelectorAll(".match-left.selected").forEach(function(el) {
+        el.classList.remove("selected");
+      });
+      matchState.selectedLeft = idx;
+      item.classList.add("selected");
+    } else {
+      if (matchState.selectedLeft === null) return;
+      var leftIdx = matchState.selectedLeft;
+      var leftEl  = container.querySelector("[data-side=\"left\"][data-idx=\"" + leftIdx + "\"]");
+
+      if (leftIdx === idx) {
+        leftEl.classList.remove("selected");
+        leftEl.classList.add("matched-ok");
+        item.classList.add("matched-ok");
+        matchState.selectedLeft = null;
+        matchState.matchedCount++;
+        if (matchState.matchedCount === matchState.total) {
+          score++;
+          var fb = document.getElementById("feedback");
+          fb.className = "feedback correct";
+          fb.textContent = "Wonderlik! Jy het almal reg gepas! Jy is \u02BCn vy-kenner! 🎉";
+          setNextEnabled(true);
+        }
+      } else {
+        leftEl.classList.add("matched-bad");
+        item.classList.add("matched-bad");
+        setTimeout(function() {
+          leftEl.classList.remove("matched-bad", "selected");
+          item.classList.remove("matched-bad");
+          matchState.selectedLeft = null;
+        }, 600);
+      }
+    }
+  });
+}
+
+/* ── Result ── */
+function renderResult(container) {
+  var pct = Math.round((score / totalQuestions) * 100);
+  var stars, msg;
+  if (pct >= 80) {
+    stars = "⭐⭐⭐";
+    msg   = "Jy is \u02BCn WARE vy-kenner! Fantasties gedoen!";
+  } else if (pct >= 50) {
+    stars = "⭐⭐";
+    msg   = "Goeie werk! Jy weet baie oor vye!";
+  } else {
+    stars = "⭐";
+    msg   = "Goed probeer! Lees gerus weer en probeer opnuut!";
+  }
+  container.innerHTML =
+    "<div class=\"card result\">" +
+      "<div style=\"font-size:3rem;margin-bottom:12px\">🍈🎉🍈</div>" +
+      "<h2 class=\"card-title\" style=\"color:var(--fig-purple);font-size:2rem\">Geluk! Jy is Klaar!</h2>" +
+      "<div class=\"stars-display\">" + stars + "</div>" +
+      "<div class=\"score-big\">" + score + "/" + totalQuestions + "</div>" +
+      "<p class=\"score-msg\">" + msg + "</p>" +
+      "<p style=\"color:#6b7280;font-size:0.95rem;font-weight:700;margin:14px 0 20px\">Nou weet jy alles oor vye vir jou mondeling! 🌿</p>" +
+      "<div class=\"nav-area\" style=\"justify-content:center\">" +
+        "<button class=\"btn btn-restart\" id=\"restartBtn\">🔄 Speel Weer!</button>" +
+      "</div>" +
+    "</div>";
+  document.getElementById("restartBtn").addEventListener("click", restart);
+}
+
+/* ── Nav ── */
+function goNext() {
+  if (currentStep < steps.length - 1) {
+    currentStep++;
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function restart() {
+  currentStep = 0;
+  score = 0;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+render();
+</script>
+</body>
+</html>
