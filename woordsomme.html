@@ -12,6 +12,7 @@
             font-family: 'Comic Neue', cursive;
             background-color: #f0f9ff;
             touch-action: manipulation;
+            overflow-x: hidden;
         }
 
         .card {
@@ -19,22 +20,33 @@
             border: 3px solid #0ea5e9;
         }
 
-        .counter {
-            width: 32px;
-            height: 32px;
+        .counter-blue {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            border: 2px solid #1e40af;
+            display: inline-block;
+            margin: 3px;
+        }
+
+        .counter-yellow {
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background-color: #facc15;
-            border: 3px solid #ca8a04;
+            border: 2px solid #ca8a04;
             display: inline-block;
-            margin: 4px;
+            margin: 3px;
         }
 
         .keypad-btn {
             background-color: white;
             border: 2px solid #e2e8f0;
             border-bottom-width: 6px;
-            transition: all 0.1s;
+            transition: all 0.05s;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .keypad-btn:active {
@@ -45,99 +57,134 @@
 
         .btn-primary {
             border-bottom-width: 6px;
+            transition: all 0.05s;
         }
 
         .btn-primary:active {
             border-bottom-width: 2px;
             transform: translateY(4px);
         }
+
+        .modal-enter {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 select-none">
     <div class="max-w-xl mx-auto">
-        <!-- Header -->
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-sky-700 mb-1">Woordsom-Masjien 🍎</h1>
-            <p class="text-sky-600 text-sm">Tik jou antwoord op die nommers!</p>
+        <header class="text-center mb-4 flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100">
+            <h1 class="text-xl font-bold text-sky-700">Wiskunde Oefening 🍎</h1>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl" id="star-count">⭐ 0</span>
+            </div>
         </header>
 
-        <!-- Main App Area -->
-        <main id="app" class="bg-white rounded-3xl p-5 md:p-8 card">
+        <main id="app" class="bg-white rounded-3xl p-5 md:p-8 card relative">
             <div id="question-container">
-                <div class="mb-6 min-h-[120px]">
-                    <span id="question-type" class="inline-block px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold mb-3 uppercase tracking-wider"></span>
-                    <p id="problem-text" class="text-xl md:text-2xl text-gray-800 leading-snug font-bold"></p>
+                <div class="mb-4 min-h-[100px]">
+                    <span id="question-type-tag" class="inline-block px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold mb-2 uppercase"></span>
+                    <p id="problem-text" class="text-lg md:text-xl text-gray-800 leading-snug font-bold"></p>
                 </div>
 
-                <!-- Answer Display Area -->
-                <div class="mb-6 text-center">
-                    <div id="answer-box" class="inline-block min-w-[80px] h-20 text-5xl font-bold text-sky-600 border-b-8 border-sky-200 px-4 flex items-center justify-center">
+                <div class="mb-4 text-center">
+                    <div id="answer-box" class="inline-block min-w-[100px] h-16 text-5xl font-bold text-sky-600 border-b-8 border-sky-200 px-4 flex items-center justify-center bg-sky-50 rounded-t-xl">
                         ?
                     </div>
                 </div>
 
-                <!-- Touch Keypad -->
-                <div class="grid grid-cols-3 gap-3 mb-6">
-                    <button onclick="pressKey(1)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">1</button>
-                    <button onclick="pressKey(2)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">2</button>
-                    <button onclick="pressKey(3)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">3</button>
-                    <button onclick="pressKey(4)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">4</button>
-                    <button onclick="pressKey(5)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">5</button>
-                    <button onclick="pressKey(6)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">6</button>
-                    <button onclick="pressKey(7)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">7</button>
-                    <button onclick="pressKey(8)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">8</button>
-                    <button onclick="pressKey(9)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">9</button>
-                    <button onclick="pressKey('clear')" class="keypad-btn rounded-2xl py-4 text-xl font-bold text-red-500 bg-red-50">CL</button>
-                    <button onclick="pressKey(0)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">0</button>
-                    <button onclick="checkAnswer()" class="keypad-btn rounded-2xl py-4 text-xl font-bold text-green-600 bg-green-50 border-green-200">OK</button>
-                </div>
-
-                <!-- Visual Aids -->
-                <div id="visual-aid" class="p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hidden mb-4">
-                    <p class="text-xs text-gray-400 mb-2 uppercase font-bold">Hulpmiddel:</p>
-                    <div id="counter-display" class="flex flex-wrap justify-center"></div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <button onclick="pressKey(1)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">1</button>
+                    <button onclick="pressKey(2)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">2</button>
+                    <button onclick="pressKey(3)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">3</button>
+                    <button onclick="pressKey(4)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">4</button>
+                    <button onclick="pressKey(5)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">5</button>
+                    <button onclick="pressKey(6)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">6</button>
+                    <button onclick="pressKey(7)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">7</button>
+                    <button onclick="pressKey(8)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">8</button>
+                    <button onclick="pressKey(9)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">9</button>
+                    <button onclick="pressKey('clear')" class="keypad-btn rounded-2xl py-3 text-lg font-bold text-red-500 bg-red-50">SKOON</button>
+                    <button onclick="pressKey(0)" class="keypad-btn rounded-2xl py-3 text-2xl font-bold text-gray-700">0</button>
+                    <button onclick="checkAnswer()" class="keypad-btn rounded-2xl py-3 text-lg font-bold text-green-600 bg-green-50 border-green-200">KLAAR</button>
                 </div>
             </div>
 
-            <!-- Feedback Message -->
-            <div id="feedback" class="mt-2 text-center text-lg font-bold hidden p-3 rounded-2xl"></div>
+            <div id="feedback" class="text-center text-lg font-bold hidden p-3 rounded-2xl mb-4"></div>
 
-            <!-- Bottom Actions -->
-            <div class="mt-6 pt-4 border-t border-gray-100 flex gap-3">
-                <button onclick="generateQuestion()" class="flex-1 btn-primary bg-sky-500 text-white font-bold py-4 px-2 rounded-2xl shadow-lg border-sky-700">
+            <div class="flex gap-3">
+                <button onclick="generateQuestion()" class="flex-1 btn-primary bg-sky-500 text-white font-bold py-4 rounded-2xl shadow-lg border-sky-700">
                     NUWE VRAAG
                 </button>
-                <button onclick="toggleVisualAid()" class="btn-primary bg-amber-400 text-amber-900 font-bold py-4 px-4 rounded-2xl border-amber-600">
+                <button onclick="openHintModal()" class="btn-primary bg-amber-400 text-amber-900 font-bold py-4 px-6 rounded-2xl border-amber-600">
                     💡
                 </button>
             </div>
         </main>
     </div>
 
+    <!-- Hint Modal -->
+    <div id="hint-modal" class="fixed inset-0 bg-black/50 hidden z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 modal-enter border-4 border-amber-400">
+            <h2 class="text-2xl font-bold text-amber-600 mb-4 flex items-center gap-2">Hulpmiddel 💡</h2>
+            <div class="space-y-6">
+                <div>
+                    <p id="hint-val1-label" class="text-sm font-bold text-gray-500 mb-1"></p>
+                    <div id="hint-val1-dots" class="flex flex-wrap"></div>
+                </div>
+                <div class="border-t border-dashed border-gray-300 pt-4">
+                    <p id="hint-val2-label" class="text-sm font-bold text-gray-500 mb-1"></p>
+                    <div id="hint-val2-dots" class="flex flex-wrap"></div>
+                </div>
+                <p id="hint-instruction" class="text-center text-gray-500 italic text-sm"></p>
+            </div>
+            <button onclick="closeModals()" class="w-full mt-6 bg-amber-500 text-white font-bold py-4 rounded-2xl">EK VERSTAAN</button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 modal-enter border-4 border-sky-400 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-sky-600 mb-4 text-center">Kom ons kyk... 🤔</h2>
+            <div class="space-y-4 text-left">
+                <div class="bg-sky-50 p-3 rounded-xl">
+                    <p class="font-bold text-sky-800 text-xs uppercase">1. Getalle in die storie:</p>
+                    <p id="help-step-1" class="text-lg"></p>
+                </div>
+                <div class="bg-sky-50 p-3 rounded-xl">
+                    <p class="font-bold text-sky-800 text-xs uppercase">2. Wiskunde-som:</p>
+                    <p id="help-step-2" class="text-xl font-mono font-bold"></p>
+                </div>
+                <div class="bg-sky-50 p-3 rounded-xl">
+                    <p class="font-bold text-sky-800 text-xs uppercase">3. Teken dit:</p>
+                    <div id="help-step-3" class="flex flex-wrap mt-1"></div>
+                </div>
+                <div class="bg-green-50 p-3 rounded-xl border-2 border-green-200">
+                    <p class="font-bold text-green-800 text-xs uppercase">4. Jou antwoord:</p>
+                    <p id="help-step-4" class="text-2xl font-bold text-green-600"></p>
+                </div>
+            </div>
+            <button onclick="closeModals()" class="w-full mt-6 bg-sky-600 text-white font-bold py-4 rounded-2xl">PROBEER WEER</button>
+        </div>
+    </div>
+
     <script>
         const names = ["Jan", "San", "Jaco", "Jana", "Miko", "Lize", "Kobus", "Zoe"];
         const objects = [
-            { plur: "appels" },
-            { plur: "lekkers" },
-            { plur: "albasters" },
-            { plur: "potlode" },
-            { plur: "katte" },
-            { plur: "pere" },
-            { plur: "boeke" }
+            { plur: "appels" }, { plur: "lekkers" }, { plur: "albasters" },
+            { plur: "potlode" }, { plur: "katte" }, { plur: "pere" }, { plur: "boeke" }
         ];
 
-        let currentAnswer = 0;
-        let visualAidCount = 0;
+        let currentData = {};
         let userInput = "";
+        let stars = 0;
 
         function pressKey(key) {
-            if (key === 'clear') {
-                userInput = "";
-            } else {
-                if (userInput.length < 3) {
-                    userInput += key.toString();
-                }
-            }
+            if (key === 'clear') { userInput = ""; }
+            else { if (userInput.length < 3) userInput += key.toString(); }
             updateDisplay();
         }
 
@@ -146,6 +193,7 @@
         }
 
         function generateQuestion() {
+            closeModals();
             document.getElementById('feedback').classList.add('hidden');
             userInput = "";
             updateDisplay();
@@ -155,83 +203,121 @@
             const item = objects[Math.floor(Math.random() * objects.length)];
             
             let text = "";
-            let val1, val2;
+            let v1, v2, ans;
 
             switch(type) {
-                case 0: // A + B = ?
-                    val1 = Math.floor(Math.random() * 10) + 1;
-                    val2 = Math.floor(Math.random() * 9) + 1;
-                    text = `${person} het ${val1} ${item.plur}. Hy kry nog ${val2} ${item.plur}. Hoeveel het hy altesaam?`;
-                    currentAnswer = val1 + val2;
-                    visualAidCount = currentAnswer;
-                    document.getElementById('question-type').innerText = "Plus (+)";
+                case 0: // A + B = ? (Result Unknown)
+                    v1 = Math.floor(Math.random() * 8) + 2;
+                    v2 = Math.floor(Math.random() * 7) + 2;
+                    ans = v1 + v2;
+                    text = `${person} het ${v1} ${item.plur}. Hy kry nog ${v2} ${item.plur}. Hoeveel het hy altesaam?`;
+                    document.getElementById('question-type-tag').innerText = "Plus (+) Som";
                     break;
-
-                case 1: // A - B = ?
-                    val1 = Math.floor(Math.random() * 10) + 10;
-                    val2 = Math.floor(Math.random() * 9) + 1;
-                    text = `${person} het ${val1} ${item.plur}. Sy eet ${val2} ${item.plur}. Hoeveel ${item.plur} is daar nou oor?`;
-                    currentAnswer = val1 - val2;
-                    visualAidCount = val1;
-                    document.getElementById('question-type').innerText = "Minus (-)";
+                case 1: // A - B = ? (Result Unknown)
+                    v1 = Math.floor(Math.random() * 8) + 12;
+                    v2 = Math.floor(Math.random() * 7) + 2;
+                    ans = v1 - v2;
+                    text = `${person} het ${v1} ${item.plur}. Sy eet/verloor ${v2} ${item.plur}. Hoeveel is daar nou oor?`;
+                    document.getElementById('question-type-tag').innerText = "Minus (-) Som";
                     break;
-
-                case 2: // ? + A = B
-                    val1 = Math.floor(Math.random() * 8) + 2; 
-                    val2 = Math.floor(Math.random() * 9) + 1; 
-                    let total = val1 + val2;
-                    text = `${person} het 'n aantal ${item.plur}. Hy kry nog ${val2}. Nou het hy ${total}. Hoeveel het hy aan die begin gehad?`;
-                    currentAnswer = val1;
-                    visualAidCount = total;
-                    document.getElementById('question-type').innerText = "Vind die begin (+)";
+                case 2: // ? + A = B (Start Unknown Add)
+                    ans = Math.floor(Math.random() * 7) + 2; // Original amount
+                    v2 = Math.floor(Math.random() * 7) + 2; // Added
+                    v1 = ans + v2; // Total shown in story
+                    text = `${person} het 'n aantal ${item.plur}. Hy kry nog ${v2}. Nou het hy ${v1}. Hoeveel het hy aan die begin gehad?`;
+                    document.getElementById('question-type-tag').innerText = "Raai die Begin (+)";
                     break;
-
-                case 3: // ? - A = B
-                    val1 = Math.floor(Math.random() * 10) + 5; 
-                    val2 = Math.floor(Math.random() * 5) + 1; 
-                    let start = val1 + val2;
-                    text = `${person} het 'n aantal ${item.plur}. Sy verloor ${val2}. Nou het sy net ${val1} oor. Hoeveel het sy gehad?`;
-                    currentAnswer = start;
-                    visualAidCount = start;
-                    document.getElementById('question-type').innerText = "Vind die begin (-)";
+                case 3: // ? - A = B (Start Unknown Sub)
+                    ans = Math.floor(Math.random() * 8) + 5; // Original amount
+                    v2 = Math.floor(Math.random() * 7) + 2; // Lost
+                    v1 = ans - v2; // Result shown in story
+                    // Story version: Had X, lost V2, now has V1. What was X?
+                    // Correct Story: Start with ANS, lose V2, results in V1.
+                    text = `${person} het 'n aantal ${item.plur}. Sy verloor ${v2}. Nou het sy net ${v1} oor. Hoeveel het sy gehad?`;
+                    ans = v1 + v2; // We need to solve for the start
+                    document.getElementById('question-type-tag').innerText = "Raai die Begin (-)";
                     break;
             }
 
+            currentData = { v1, v2, type, answer: ans, person, item };
             document.getElementById('problem-text').innerText = text;
-            updateVisualAid();
         }
 
-        function updateVisualAid() {
-            const container = document.getElementById('counter-display');
-            container.innerHTML = '';
-            for(let i=0; i < visualAidCount; i++) {
-                const div = document.createElement('div');
-                div.className = 'counter';
-                container.appendChild(div);
+        function openHintModal() {
+            const d1 = document.getElementById('hint-val1-dots');
+            const d2 = document.getElementById('hint-val2-dots');
+            const inst = document.getElementById('hint-instruction');
+            d1.innerHTML = ''; d2.innerHTML = '';
+            
+            if (currentData.type === 0) {
+                document.getElementById('hint-val1-label').innerText = `Het: ${currentData.v1}`;
+                document.getElementById('hint-val2-label').innerText = `Kry by: ${currentData.v2}`;
+                for(let i=0; i<currentData.v1; i++) d1.innerHTML += '<div class="counter-blue"></div>';
+                for(let i=0; i<currentData.v2; i++) d2.innerHTML += '<div class="counter-yellow"></div>';
+                inst.innerText = "Tel almal saam om die totaal te kry!";
+            } else if (currentData.type === 1) {
+                document.getElementById('hint-val1-label').innerText = `Begin met: ${currentData.v1}`;
+                document.getElementById('hint-val2-label').innerText = `Verloor: ${currentData.v2}`;
+                for(let i=0; i<currentData.v1; i++) d1.innerHTML += '<div class="counter-blue"></div>';
+                for(let i=0; i<currentData.v2; i++) d2.innerHTML += '<div class="counter-yellow"></div>';
+                inst.innerText = "Begin by die blou sirkels en haal die geel sirkels weg.";
+            } else if (currentData.type === 2) {
+                document.getElementById('hint-val1-label').innerText = `Totaal aan die einde: ${currentData.v1}`;
+                document.getElementById('hint-val2-label').innerText = `Die deel wat bygekom het: ${currentData.v2}`;
+                for(let i=0; i<currentData.v1; i++) d1.innerHTML += '<div class="counter-blue"></div>';
+                for(let i=0; i<currentData.v2; i++) d2.innerHTML += '<div class="counter-yellow"></div>';
+                inst.innerText = "Die antwoord is wat oorbly as jy die geel sirkels van die bloues wegvat.";
+            } else {
+                document.getElementById('hint-val1-label').innerText = `Wat sy nou het: ${currentData.v1}`;
+                document.getElementById('hint-val2-label').innerText = `Wat sy verloor het: ${currentData.v2}`;
+                for(let i=0; i<currentData.v1; i++) d1.innerHTML += '<div class="counter-blue"></div>';
+                for(let i=0; i<currentData.v2; i++) d2.innerHTML += '<div class="counter-yellow"></div>';
+                inst.innerText = "Tel die twee groepe saam om te sien waarmee sy begin het!";
             }
-        }
-
-        function toggleVisualAid() {
-            document.getElementById('visual-aid').classList.toggle('hidden');
+            document.getElementById('hint-modal').classList.remove('hidden');
         }
 
         function checkAnswer() {
             if (userInput === "") return;
-            
-            const userVal = parseInt(userInput);
-            const feedback = document.getElementById('feedback');
-            feedback.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-
-            if (userVal === currentAnswer) {
-                feedback.innerText = "Mooi so! Korrek! 🌟";
-                feedback.classList.add('bg-green-100', 'text-green-700');
+            if (parseInt(userInput) === currentData.answer) {
+                stars++;
+                document.getElementById('star-count').innerText = `⭐ ${stars}`;
+                const fb = document.getElementById('feedback');
+                fb.innerText = "Mooi so! 🌟";
+                fb.className = "text-center text-lg font-bold p-3 rounded-2xl mb-4 bg-green-100 text-green-700";
+                fb.classList.remove('hidden');
                 setTimeout(generateQuestion, 1500);
             } else {
-                feedback.innerText = "Probeer weer! 💡";
-                feedback.classList.add('bg-red-100', 'text-red-700');
-                userInput = "";
-                updateDisplay();
+                showHelpModal();
             }
+        }
+
+        function showHelpModal() {
+            document.getElementById('help-step-1').innerText = `${currentData.v1} en ${currentData.v2}`;
+            const step2 = document.getElementById('help-step-2');
+            const dots = document.getElementById('help-step-3');
+            dots.innerHTML = '';
+
+            if (currentData.type === 0) {
+                step2.innerText = `${currentData.v1} + ${currentData.v2} = □`;
+            } else if (currentData.type === 1) {
+                step2.innerText = `${currentData.v1} - ${currentData.v2} = □`;
+            } else if (currentData.type === 2) {
+                step2.innerText = `□ + ${currentData.v2} = ${currentData.v1}`;
+            } else {
+                step2.innerText = `□ - ${currentData.v2} = ${currentData.v1}`;
+            }
+
+            for(let i=0; i<currentData.answer; i++) dots.innerHTML += '<div class="counter-blue"></div>';
+            document.getElementById('help-step-4').innerText = `${currentData.answer} ${currentData.item.plur}`;
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+
+        function closeModals() {
+            document.getElementById('hint-modal').classList.add('hidden');
+            document.getElementById('help-modal').classList.add('hidden');
+            userInput = "";
+            updateDisplay();
         }
 
         window.onload = generateQuestion;
