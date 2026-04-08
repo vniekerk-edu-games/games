@@ -2,7 +2,7 @@
 <html lang="af">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gielie se Woordsom-Masjien</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,6 +11,7 @@
         body {
             font-family: 'Comic Neue', cursive;
             background-color: #f0f9ff;
+            touch-action: manipulation;
         }
 
         .card {
@@ -19,144 +20,180 @@
         }
 
         .counter {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background-color: #facc15;
-            border: 2px solid #ca8a04;
+            border: 3px solid #ca8a04;
             display: inline-block;
-            margin: 2px;
+            margin: 4px;
         }
 
-        .btn-hover:active {
-            transform: translateY(2px);
+        .keypad-btn {
+            background-color: white;
+            border: 2px solid #e2e8f0;
+            border-bottom-width: 6px;
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        .keypad-btn:active {
+            border-bottom-width: 2px;
+            transform: translateY(4px);
+            background-color: #f8fafc;
+        }
+
+        .btn-primary {
+            border-bottom-width: 6px;
+        }
+
+        .btn-primary:active {
+            border-bottom-width: 2px;
+            transform: translateY(4px);
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-2xl mx-auto">
+<body class="p-4 md:p-8 select-none">
+    <div class="max-w-xl mx-auto">
         <!-- Header -->
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-sky-700 mb-2">Graad 2 Woordsomme 🍎</h1>
-            <p class="text-sky-600">Oefen jou wiskunde met nuwe vrae elke keer!</p>
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-sky-700 mb-1">Woordsom-Masjien 🍎</h1>
+            <p class="text-sky-600 text-sm">Tik jou antwoord op die nommers!</p>
         </header>
 
         <!-- Main App Area -->
-        <main id="app" class="bg-white rounded-3xl p-6 md:p-10 card">
+        <main id="app" class="bg-white rounded-3xl p-5 md:p-8 card">
             <div id="question-container">
-                <div class="mb-6">
-                    <span id="question-type" class="inline-block px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-sm font-bold mb-3 uppercase tracking-wider"></span>
-                    <p id="problem-text" class="text-2xl text-gray-800 leading-relaxed font-bold"></p>
+                <div class="mb-6 min-h-[120px]">
+                    <span id="question-type" class="inline-block px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold mb-3 uppercase tracking-wider"></span>
+                    <p id="problem-text" class="text-xl md:text-2xl text-gray-800 leading-snug font-bold"></p>
                 </div>
 
-                <div class="space-y-4 mb-8">
-                    <label class="block text-lg font-bold text-gray-700">Skryf jou antwoord:</label>
-                    <div class="flex gap-4 items-center">
-                        <input type="number" id="user-answer" 
-                            class="w-full text-2xl p-4 border-4 border-sky-200 rounded-2xl focus:border-sky-500 outline-none transition-colors"
-                            placeholder="?">
-                        <button onclick="checkAnswer()" id="submit-btn" 
-                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-2xl text-xl btn-hover shadow-lg transition-all">
-                            Check
-                        </button>
+                <!-- Answer Display Area -->
+                <div class="mb-6 text-center">
+                    <div id="answer-box" class="inline-block min-w-[80px] h-20 text-5xl font-bold text-sky-600 border-b-8 border-sky-200 px-4 flex items-center justify-center">
+                        ?
                     </div>
                 </div>
 
+                <!-- Touch Keypad -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button onclick="pressKey(1)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">1</button>
+                    <button onclick="pressKey(2)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">2</button>
+                    <button onclick="pressKey(3)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">3</button>
+                    <button onclick="pressKey(4)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">4</button>
+                    <button onclick="pressKey(5)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">5</button>
+                    <button onclick="pressKey(6)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">6</button>
+                    <button onclick="pressKey(7)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">7</button>
+                    <button onclick="pressKey(8)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">8</button>
+                    <button onclick="pressKey(9)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">9</button>
+                    <button onclick="pressKey('clear')" class="keypad-btn rounded-2xl py-4 text-xl font-bold text-red-500 bg-red-50">CL</button>
+                    <button onclick="pressKey(0)" class="keypad-btn rounded-2xl py-4 text-3xl font-bold text-gray-700">0</button>
+                    <button onclick="checkAnswer()" class="keypad-btn rounded-2xl py-4 text-xl font-bold text-green-600 bg-green-50 border-green-200">OK</button>
+                </div>
+
                 <!-- Visual Aids -->
-                <div id="visual-aid" class="p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hidden">
-                    <p class="text-sm text-gray-500 mb-2 uppercase font-bold italic">Hulpmiddel (Sirkels):</p>
-                    <div id="counter-display" class="flex flex-wrap"></div>
+                <div id="visual-aid" class="p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hidden mb-4">
+                    <p class="text-xs text-gray-400 mb-2 uppercase font-bold">Hulpmiddel:</p>
+                    <div id="counter-display" class="flex flex-wrap justify-center"></div>
                 </div>
             </div>
 
             <!-- Feedback Message -->
-            <div id="feedback" class="mt-6 text-center text-xl font-bold hidden p-4 rounded-2xl"></div>
+            <div id="feedback" class="mt-2 text-center text-lg font-bold hidden p-3 rounded-2xl"></div>
 
-            <!-- Action Buttons -->
-            <div class="mt-8 pt-6 border-t border-gray-100 flex justify-between gap-4">
-                <button onclick="generateQuestion()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-xl btn-hover transition-all">
-                    Nuwe Som ↻
+            <!-- Bottom Actions -->
+            <div class="mt-6 pt-4 border-t border-gray-100 flex gap-3">
+                <button onclick="generateQuestion()" class="flex-1 btn-primary bg-sky-500 text-white font-bold py-4 px-2 rounded-2xl shadow-lg border-sky-700">
+                    NUWE VRAAG
                 </button>
-                <button onclick="toggleVisualAid()" class="bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold py-3 px-4 rounded-xl transition-all">
-                    Wys Sirkels 🟡
+                <button onclick="toggleVisualAid()" class="btn-primary bg-amber-400 text-amber-900 font-bold py-4 px-4 rounded-2xl border-amber-600">
+                    💡
                 </button>
             </div>
         </main>
-
-        <footer class="text-center mt-8 text-gray-400 text-sm">
-            Geniet die wiskunde! | Graad 2-hulp
-        </footer>
     </div>
 
     <script>
         const names = ["Jan", "San", "Jaco", "Jana", "Miko", "Lize", "Kobus", "Zoe"];
         const objects = [
-            { sing: "appel", plur: "appels", icon: "🍎" },
-            { sing: "lekker", plur: "lekkers", icon: "🍬" },
-            { sing: "albasters", plur: "albasters", icon: "🔮" },
-            { sing: "potlood", plur: "potlode", icon: "✏️" },
-            { sing: "kat", plur: "katte", icon: "🐱" },
-            { sing: "peer", plur: "pere", icon: "🍐" },
-            { sing: "boek", plur: "boeke", icon: "📚" }
+            { plur: "appels" },
+            { plur: "lekkers" },
+            { plur: "albasters" },
+            { plur: "potlode" },
+            { plur: "katte" },
+            { plur: "pere" },
+            { plur: "boeke" }
         ];
 
         let currentAnswer = 0;
         let visualAidCount = 0;
+        let userInput = "";
 
-        function getRandom(arr) {
-            return arr[Math.floor(Math.random() * arr.length)];
+        function pressKey(key) {
+            if (key === 'clear') {
+                userInput = "";
+            } else {
+                if (userInput.length < 3) {
+                    userInput += key.toString();
+                }
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('answer-box').innerText = userInput || "?";
         }
 
         function generateQuestion() {
-            // Reset UI
             document.getElementById('feedback').classList.add('hidden');
-            document.getElementById('user-answer').value = '';
-            document.getElementById('user-answer').focus();
+            userInput = "";
+            updateDisplay();
             
-            const type = Math.floor(Math.random() * 4); // 0-3 based on worksheet patterns
-            const person = getRandom(names);
-            const item = getRandom(objects);
+            const type = Math.floor(Math.random() * 4);
+            const person = names[Math.floor(Math.random() * names.length)];
+            const item = objects[Math.floor(Math.random() * objects.length)];
             
             let text = "";
             let val1, val2;
 
             switch(type) {
-                case 0: // Addition (A + B = ?)
+                case 0: // A + B = ?
                     val1 = Math.floor(Math.random() * 10) + 1;
                     val2 = Math.floor(Math.random() * 9) + 1;
-                    text = `${person} het ${val1} ${item.plur}. Hy/sy kry nog ${val2} ${item.plur}. Hoeveel ${item.plur} het hy/sy altesaam?`;
+                    text = `${person} het ${val1} ${item.plur}. Hy kry nog ${val2} ${item.plur}. Hoeveel het hy altesaam?`;
                     currentAnswer = val1 + val2;
                     visualAidCount = currentAnswer;
                     document.getElementById('question-type').innerText = "Plus (+)";
                     break;
 
-                case 1: // Subtraction (A - B = ?)
-                    val1 = Math.floor(Math.random() * 10) + 10; // 10-20
+                case 1: // A - B = ?
+                    val1 = Math.floor(Math.random() * 10) + 10;
                     val2 = Math.floor(Math.random() * 9) + 1;
-                    text = `${person} het ${val1} ${item.plur}. Hy/sy eet/verloor ${val2} ${item.plur}. Hoeveel ${item.plur} het hy/sy oor?`;
+                    text = `${person} het ${val1} ${item.plur}. Sy eet ${val2} ${item.plur}. Hoeveel ${item.plur} is daar nou oor?`;
                     currentAnswer = val1 - val2;
                     visualAidCount = val1;
                     document.getElementById('question-type').innerText = "Minus (-)";
                     break;
 
-                case 2: // Start Unknown Addition (? + A = B)
-                    val1 = Math.floor(Math.random() * 8) + 2; // the answer
-                    val2 = Math.floor(Math.random() * 9) + 1; // added
+                case 2: // ? + A = B
+                    val1 = Math.floor(Math.random() * 8) + 2; 
+                    val2 = Math.floor(Math.random() * 9) + 1; 
                     let total = val1 + val2;
-                    text = `${person} het 'n aantal ${item.plur}. Hy/sy kry nog ${val2} ${item.plur}. Nou het hy/sy ${total} ${item.plur}. Hoeveel ${item.plur} het ${person} gehad?`;
+                    text = `${person} het 'n aantal ${item.plur}. Hy kry nog ${val2}. Nou het hy ${total}. Hoeveel het hy aan die begin gehad?`;
                     currentAnswer = val1;
                     visualAidCount = total;
-                    document.getElementById('question-type').innerText = "Begin Onbekend (+)";
+                    document.getElementById('question-type').innerText = "Vind die begin (+)";
                     break;
 
-                case 3: // Start Unknown Subtraction (? - A = B)
-                    val1 = Math.floor(Math.random() * 10) + 5; // the answer
-                    val2 = Math.floor(Math.random() * 5) + 1; // subtracted
+                case 3: // ? - A = B
+                    val1 = Math.floor(Math.random() * 10) + 5; 
+                    val2 = Math.floor(Math.random() * 5) + 1; 
                     let start = val1 + val2;
-                    text = `${person} het 'n aantal ${item.plur}. Hy/sy verloor ${val2} ${item.plur}. Nou het hy/sy net ${val1} ${item.plur} oor. Hoeveel ${item.plur} het hy/sy gehad?`;
+                    text = `${person} het 'n aantal ${item.plur}. Sy verloor ${val2}. Nou het sy net ${val1} oor. Hoeveel het sy gehad?`;
                     currentAnswer = start;
                     visualAidCount = start;
-                    document.getElementById('question-type').innerText = "Begin Onbekend (-)";
+                    document.getElementById('question-type').innerText = "Vind die begin (-)";
                     break;
             }
 
@@ -175,35 +212,28 @@
         }
 
         function toggleVisualAid() {
-            const aid = document.getElementById('visual-aid');
-            aid.classList.toggle('hidden');
+            document.getElementById('visual-aid').classList.toggle('hidden');
         }
 
         function checkAnswer() {
-            const userVal = parseInt(document.getElementById('user-answer').value);
-            const feedback = document.getElementById('feedback');
+            if (userInput === "") return;
             
+            const userVal = parseInt(userInput);
+            const feedback = document.getElementById('feedback');
             feedback.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
 
             if (userVal === currentAnswer) {
-                feedback.innerText = "Mooi so! Dit is korrek! 🌟";
+                feedback.innerText = "Mooi so! Korrek! 🌟";
                 feedback.classList.add('bg-green-100', 'text-green-700');
-                // Auto generate new question after a short delay
-                setTimeout(generateQuestion, 2000);
+                setTimeout(generateQuestion, 1500);
             } else {
-                feedback.innerText = "Probeer weer! Jy kan dit doen! 💪";
+                feedback.innerText = "Probeer weer! 💡";
                 feedback.classList.add('bg-red-100', 'text-red-700');
+                userInput = "";
+                updateDisplay();
             }
         }
 
-        // Handle Enter key
-        document.getElementById('user-answer').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                checkAnswer();
-            }
-        });
-
-        // Start first question
         window.onload = generateQuestion;
     </script>
 </body>
