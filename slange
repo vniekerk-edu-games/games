@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Die Swart Mamba Avontuur!</title>
+    <!-- Tailwind CSS vir pragtige, vinnige stilering -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons vir oulike ikone -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        
+        h1, h2, h3, .font-kids {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        /* Pasgemaakte animasies vir kinders se aandag */
+        .bounce-slow {
+            animation: bounce 3s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+
+        /* Versteek scrollbars vir 'n skoner speletjie-gevoel */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- KLANK EFFEKTE GENERATOR (Sonder eksterne oudiodokumente) -->
+    <script>
+        // Web Audio API sintetiseerder vir speletjie-klanke
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+                osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'hiss') {
+                // Slang se blaas/siss-geluid met wit geraas
+                const bufferSize = audioCtx.sampleRate * 0.5;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 4000;
+                
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start();
+            } else if (type === 'win') {
+                // Trumpet fanfare
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.type = 'triangle';
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.12);
+                    g.gain.setValueAtTime(0.1, audioCtx.currentTime + idx * 0.12);
+                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.12 + 0.2);
+                    o.start(audioCtx.currentTime + idx * 0.12);
+                    o.stop(audioCtx.currentTime + idx * 0.12 + 0.25);
+                });
+            }
+        }
+    </script>
+
+    <!-- BO-BALK (HEADER) -->
+    <header class="bg-slate-900 border-b-4 border-emerald-500 p-4 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-500 p-2 rounded-full text-slate-950 flex items-center justify-center pulse-glow">
+                    <!-- SVG Slang Logo -->
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 2c3.5 0 6.5 2.5 6.5 6s-3 6-6.5 6-6.5-2.5-6.5-6 3-6 6.5-6z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14c-4 0-8 3-8 8h16c0-5-4-8-8-8z"></path>
+                        <path d="M11 6h2M12 5v2" stroke-linecap="round"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl text-emerald-400 tracking-wide">Swart Mamba Avontuur!</h1>
+                    <p class="text-xs text-slate-400">Word 'n ware Mamba-Meester!</p>
+                </div>
+            </div>
+            
+            <button onclick="playSound('hiss')" class="bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-xs font-bold py-2 px-3 rounded-full border-2 border-emerald-500 flex items-center gap-1">
+                🔊 Maak Slang Sss-geluid
+            </button>
+        </div>
+    </header>
+
+    <!-- HOOF-INHOUD -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 flex flex-col justify-center">
+        
+        <!-- SPELKEUSE SKERM -->
+        <div id="lobby-screen" class="space-y-6 text-center py-6">
+            <div class="max-w-md mx-auto bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border-4 border-slate-700 shadow-xl bounce-slow">
+                <span class="text-6xl">🐍</span>
+                <h2 class="text-3xl text-emerald-400 mt-4 mb-2">Hallo Cobus!</h2>
+                <p class="text-slate-300 text-sm leading-relaxed mb-4">
+                    Kies 'n oulike speletjie hieronder om alles te leer oor die ongelooflike **Swart Mamba** vir jou skoolpraatjie!
+                </p>
+                <div class="bg-emerald-950/40 text-emerald-300 p-3 rounded-xl border border-emerald-500/30 text-xs text-left">
+                    💡 <strong>Mamma/Pappa Tip:</strong> Speel eers die "Feite-Verkenner" om al die geheime te leer, toets dan jou brein met die "Goue Mamba Vasvra"!
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                <!-- Kaart 1 -->
+                <button onclick="switchScreen('facts-screen'); playSound('click');" class="group bg-slate-800 hover:bg-slate-700/90 active:scale-95 border-4 border-emerald-500/60 hover:border-emerald-400 rounded-2xl p-5 text-left transition-all flex flex-col justify-between h-48 shadow-lg">
+                    <div>
+                        <div class="bg-emerald-500/20 group-hover:bg-emerald-500/30 w-12 h-12 rounded-lg flex items-center justify-center text-3xl mb-3">🔍</div>
+                        <h3 class="text-lg text-emerald-300">1. Feite-Verkenner</h3>
+                        <p class="text-xs text-slate-400 mt-1">Klik op die prente en vind geheime mamba-feite!</p>
+                    </div>
+                    <span class="text-emerald-400 font-bold text-xs flex items-center gap-1 mt-2">Kom ons speel <i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+                </button>
+
+                <!-- Kaart 2 -->
+                <button onclick="switchScreen('quiz-screen'); playSound('click'); startQuiz();" class="group bg-slate-800 hover:bg-slate-700/90 active:scale-95 border-4 border-blue-500/60 hover:border-blue-400 rounded-2xl p-5 text-left transition-all flex flex-col justify-between h-48 shadow-lg">
+                    <div>
+                        <div class="bg-blue-500/20 group-hover:bg-blue-500/30 w-12 h-12 rounded-lg flex items-center justify-center text-3xl mb-3">🏆</div>
+                        <h3 class="text-lg text-blue-300">2. Goue Mamba Vasvra</h3>
+                        <p class="text-xs text-slate-400 mt-1">Beantwoord oulike vrae en wen jou eie mamba-sertifikaat!</p>
+                    </div>
+                    <span class="text-blue-400 font-bold text-xs flex items-center gap-1 mt-2">Kom ons speel <i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SKERM 1: FEITE-VERKENNER -->
+        <div id="facts-screen" class="hidden space-y-4">
+            <button onclick="switchScreen('lobby-screen'); playSound('click');" class="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-bold bg-slate-800 py-2 px-4 rounded-lg w-max mb-2">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Terug na Hoofskerm
+            </button>
+
+            <h2 class="text-2xl text-emerald-400 text-center">Tik op 'n boks om die mamba se geheime te leer!</h2>
+            <p class="text-center text-xs text-slate-400">Sien jy hoe oulik die mamba is? Klik op enige knoppie om sy superkragte te sien.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <!-- Feit 1 -->
+                <div onclick="revealFact(1)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-1">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">👄</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-1">Sy swart mond...</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-1">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-1">
+                        🌟 <strong>Praatjie Tip:</strong> Wys jou maats hoe die slang sy mond oopmaak soos 'n swart boks! Dit is hoekom hy so genoem word!
+                    </div>
+                </div>
+
+                <!-- Feit 2 -->
+                <div onclick="revealFact(2)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-2">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🏃💨</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-2">Sy blitsvinnige spoed...</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-2">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-2">
+                        🌟 <strong>Praatjie Tip:</strong> Sê vir die klas dat hy teen 20 km/h kan seil. Dis so vinnig soos 'n fiets op die pad!
+                    </div>
+                </div>
+
+                <!-- Feit 3 -->
+                <div onclick="revealFact(3)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">📏</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-3">Hoe lank is hy?</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-3">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-3">
+                        🌟 <strong>Praatjie Tip:</strong> Hy kan tot 4 meter lank word! Sê vir jou juffrou dat dit so lank soos 'n motor is!
+                    </div>
+                </div>
+
+                <!-- Feit 4 -->
+                <div onclick="revealFact(4)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🐀</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-4">Sy gunsteling kos...</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-4">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-4">
+                        🌟 <strong>Praatjie Tip:</strong> Hy vang muise en rotte. Dit beteken hy help boere om hulle skure skoon te hou!
+                    </div>
+                </div>
+
+                <!-- Feit 5 -->
+                <div onclick="revealFact(5)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🦎☀️</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-5">Die sonbakker...</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-5">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-5">
+                        🌟 <strong>Praatjie Tip:</strong> Hy is "koudbloedig". Hy gebruik die oggendson om sy batterye te laai voordat hy gaan jag.
+                    </div>
+                </div>
+
+                <!-- Feit 6 -->
+                <div onclick="revealFact(6)" class="cursor-pointer bg-slate-800 p-5 rounded-2xl border-2 border-slate-700 hover:border-emerald-500 transition-all transform hover:-translate-y-1" id="fact-card-6">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🙈</span>
+                        <h3 class="text-lg font-bold text-emerald-300" id="fact-title-6">Is hy regtig so kwaai?</h3>
+                    </div>
+                    <p class="text-sm text-slate-300 mt-2" id="fact-desc-6">Klik om te sien...</p>
+                    <div class="mt-3 text-xs text-emerald-400 font-bold hidden" id="fact-extra-6">
+                        🌟 <strong>Praatjie Tip:</strong> Hy sal eerder wegseil as om te baklei. Hy wil net met rus gelaat word!
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center pt-4">
+                <button onclick="switchScreen('quiz-screen'); playSound('click'); startQuiz();" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 px-6 rounded-full text-md shadow-lg transition-transform hover:scale-105">
+                    Nou is ek gereed vir die Vasvra! 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- SKERM 2: VASVRA -->
+        <div id="quiz-screen" class="hidden max-w-xl mx-auto space-y-4">
+            <button onclick="switchScreen('lobby-screen'); playSound('click');" class="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-bold bg-slate-800 py-2 px-4 rounded-lg w-max mb-2">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Los Vasvra
+            </button>
+
+            <!-- Vraag Houer -->
+            <div class="bg-slate-800 rounded-3xl p-6 border-4 border-slate-700 shadow-2xl relative overflow-hidden">
+                <!-- Vorderingstreeppie -->
+                <div class="w-full bg-slate-700 h-3 rounded-full mb-6">
+                    <div id="quiz-progress" class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 20%"></div>
+                </div>
+
+                <div class="flex justify-between text-xs text-slate-400 mb-2">
+                    <span id="quiz-number-tag" class="font-bold">VRAAG 1 VAN 5</span>
+                    <span id="quiz-score-tag">Skoor: 0</span>
+                </div>
+
+                <!-- Vraag self -->
+                <h3 id="quiz-question" class="text-xl md:text-2xl text-slate-100 mb-6 font-semibold">Die vraag sal hier kom...</h3>
+
+                <!-- Antwoord Knoppies -->
+                <div class="space-y-3" id="quiz-options">
+                    <!-- Knoppies word dinamies deur JS ingesit -->
+                </div>
+
+                <!-- Ekstra verduideliking na antwoord -->
+                <div id="quiz-feedback" class="hidden mt-4 p-4 rounded-xl border text-sm transition-all">
+                    <!-- Feedback teks -->
+                </div>
+
+                <!-- Volgende Knoppie -->
+                <button id="next-quiz-btn" onclick="nextQuestion()" class="hidden w-full mt-4 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold py-3 rounded-xl transition-transform active:scale-95 text-center">
+                    Volgende Vraag 👉
+                </button>
+            </div>
+        </div>
+
+        <!-- SKERM 2.5: SERTIFIKAAT SKERM (RESULTATE) -->
+        <div id="certificate-screen" class="hidden max-w-2xl mx-auto text-center space-y-6">
+            <div class="bg-slate-800/90 border-4 border-amber-400 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                <!-- Sparkle effek -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-300"></div>
+                
+                <span class="text-7xl block mb-4">🏆</span>
+                <h2 class="text-3xl text-amber-400 mb-2">Baie Geluk!</h2>
+                <p class="text-slate-300 text-md">Jy het die Swart Mamba Vasvra voltooi!</p>
+                
+                <!-- Die Sertifikaat Kassie -->
+                <div class="my-6 p-6 border-4 border-dashed border-amber-500/40 bg-slate-900 rounded-2xl text-center">
+                    <p class="text-amber-500 text-xs uppercase tracking-widest font-bold">Amptelike Diploma</p>
+                    <h3 class="text-2xl text-slate-100 my-2 font-kids">SWART MAMBA-MEESTER</h3>
+                    <p class="text-sm text-slate-300 max-w-md mx-auto">
+                        Hierdie diploma word gegee aan 'n baie slim en dapper seun wat nou alles weet oor die vinnigste slang in Afrika!
+                    </p>
+                    <div class="mt-4 text-emerald-400 font-bold text-lg" id="final-score-text">
+                        Jy het 5 uit 5 reg beantwoord!
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onclick="switchScreen('lobby-screen'); playSound('click');" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-all">
+                        Terug na Spyskaart
+                    </button>
+                    <button onclick="switchScreen('quiz-screen'); playSound('click'); startQuiz();" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 rounded-xl transition-all">
+                        Speel Weer 🔁
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ONDER-BALK (FOOTER) -->
+    <footer class="bg-slate-950 p-4 border-t border-slate-800 text-center text-xs text-slate-500">
+        <div class="max-w-4xl mx-auto">
+            <p>Ons leer speel-speel oor die Swart Mamba in Afrikaans. Gemaak vir Graad 2's! 🇿🇦</p>
+        </div>
+    </footer>
+
+    <!-- INTERAKTIEWE LOGIKA (JAVASCRIPT) -->
+    <script>
+        // -------------------------
+        // ALGEMENE SKERMBEHEER
+        // -------------------------
+        function switchScreen(screenId) {
+            // Versteek alle skerms
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('facts-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('certificate-screen').classList.add('hidden');
+
+            // Wys die gekose een
+            document.getElementById(screenId).classList.remove('hidden');
+            
+            // As ons teruggaan na lobby, herlaai lucide icons net vir sekerheid
+            if (screenId === 'lobby-screen') {
+                lucide.createIcons();
+            }
+        }
+
+        // -------------------------
+        // FEITE-VERKENNER LOGIKA
+        // -------------------------
+        const factsData = {
+            1: {
+                title: "Sy swart mond! 👄",
+                desc: "Die mamba is eintlik bruin of grys van buite. Maar sy naam kom van die binnedeel van sy mond wat pikswart is! Hy maak dit oop as hy sê: 'Bly weg!'"
+            },
+            2: {
+                title: "Spoedvrat! 🏃💨",
+                desc: "Hy is een van die vinnigste slange ter wêreld en seil teen 20 kilometer per uur om uit gevaar uit te kom!"
+            },
+            3: {
+                title: "Olifant se lengte! 📏",
+                desc: "Hy is die langste giftige slang in Afrika. Hy kan tot 4 meter lank word! Dis omtrent so lank soos 'n groot trampoline."
+            },
+            4: {
+                title: "Klein ridders! 🐀",
+                desc: "Mambas eet rotte, muise en voëls. Hulle is baie goed om hierdie knaagdiere in die bosveld te beheer sodat daar nie te veel van hulle word nie."
+            },
+            5: {
+                title: "Son-krag! ☀️",
+                desc: "Hy is 'koudbloedig', so hy kan nie sy eie lyf warm hou nie. Hy lê op klippe in die oggend om te bak en krag te kry."
+            },
+            6: {
+                title: "Hy is skaam! 🙈",
+                desc: "Mense dink hy is 'n monster, maar hy is eintlik skugter en bang vir ons! Hy sal vinnig wegkruip as hy jou hoor kom."
+            }
+        };
+
+        function revealFact(id) {
+            playSound('click');
+            const card = document.getElementById(`fact-card-${id}`);
+            const title = document.getElementById(`fact-title-${id}`);
+            const desc = document.getElementById(`fact-desc-${id}`);
+            const extra = document.getElementById(`fact-extra-${id}`);
+
+            // Verander styl om te wys dit is oopgemaak
+            card.classList.remove('bg-slate-800', 'border-slate-700');
+            card.classList.add('bg-emerald-950/50', 'border-emerald-500');
+
+            // Sit amptelike teks in
+            title.innerText = factsData[id].title;
+            desc.innerText = factsData[id].desc;
+            
+            // Wys ekstra praatjie tip
+            extra.classList.remove('hidden');
+        }
+
+        // -------------------------
+        // GOUE MAMBA VASVRA LOGIKA
+        // -------------------------
+        const quizQuestions = [
+            {
+                q: "Waar kom die Swart Mamba se naam vandaan?",
+                options: [
+                    "Sy skille is pikswart",
+                    "Die binnekant van sy mond is pikswart",
+                    "Hy slaap net in die nag"
+                ],
+                correct: 1,
+                info: "Ja! Sy lyf is eintlik bruin of grys, maar sy mond is pikswart!"
+            },
+            {
+                q: "Hoe vinnig kan 'n Swart Mamba seil?",
+                options: [
+                    "5 kilometer per uur",
+                    "20 kilometer per uur",
+                    "100 kilometer per uur"
+                ],
+                correct: 1,
+                info: "Dis reg! 20 km/h is blitsvinnig vir 'n slang!"
+            },
+            {
+                q: "Wat eet die Swart Mamba graag?",
+                options: [
+                    "Gras en blare",
+                    "Klein diertjies soos muise en voëls",
+                    "Groot seekoeie"
+                ],
+                correct: 1,
+                info: "Korrek! Hy is 'n karnivoor en jag klein diere."
+            },
+            {
+                q: "Hoe lank kan 'n Swart Mamba word?",
+                options: [
+                    "Tot 4 meter lank",
+                    "Net so lank soos 'n liniaal (30 cm)",
+                    "10 meter lank"
+                ],
+                correct: 0,
+                info: "4 meter! Dis die langste giftige slang in die hele Afrika!"
+            },
+            {
+                q: "Wat sal die mamba gewoonlik doen as hy 'n mens hoor?",
+                options: [
+                    "Hy sal dadelik aanval",
+                    "Hy sal fluit",
+                    "Hy sal vinnig weghardloop en wegkruip"
+                ],
+                correct: 2,
+                info: "Absoluut! Hy is baie bang vir mense en wil eerder vlug."
+            }
+        ];
+
+        let currentQuestionIdx = 0;
+        let quizScore = 0;
+
+        function startQuiz() {
+            currentQuestionIdx = 0;
+            quizScore = 0;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const currentQ = quizQuestions[currentQuestionIdx];
+            
+            // Stel vordering op
+            const progressPercent = ((currentQuestionIdx + 1) / quizQuestions.length) * 100;
+            document.getElementById('quiz-progress').style.width = `${progressPercent}%`;
+            document.getElementById('quiz-number-tag').innerText = `VRAAG ${currentQuestionIdx + 1} VAN ${quizQuestions.length}`;
+            document.getElementById('quiz-score-tag').innerText = `Skoor: ${quizScore}`;
+
+            // Stel vraag en opsies
+            document.getElementById('quiz-question').innerText = currentQ.q;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            currentQ.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left bg-slate-700/60 hover:bg-slate-700 border-2 border-slate-600 hover:border-blue-400 p-4 rounded-xl text-sm transition-all flex items-center justify-between group";
+                btn.innerHTML = `
+                    <span>${opt}</span>
+                    <span class="w-6 h-6 rounded-full border border-slate-500 group-hover:bg-blue-500/30 flex items-center justify-center text-xs">A${idx+1}</span>
+                `;
+                btn.onclick = () => selectAnswer(idx);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Versteek feedback en volgende knoppie
+            document.getElementById('quiz-feedback').className = "hidden mt-4 p-4 rounded-xl border text-sm transition-all";
+            document.getElementById('next-quiz-btn').classList.add('hidden');
+        }
+
+        function selectAnswer(selectedIdx) {
+            const currentQ = quizQuestions[currentQuestionIdx];
+            const optionsContainer = document.getElementById('quiz-options');
+            const feedbackBox = document.getElementById('quiz-feedback');
+            
+            // Deaktiveer alle knoppies sodat hy nie weer kan klik nie
+            Array.from(optionsContainer.children).forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === currentQ.correct) {
+                    btn.className = "w-full text-left bg-emerald-950/40 border-2 border-emerald-500 p-4 rounded-xl text-sm text-emerald-200 font-bold flex items-center justify-between";
+                } else if (idx === selectedIdx) {
+                    btn.className = "w-full text-left bg-red-950/40 border-2 border-red-500 p-4 rounded-xl text-sm text-red-300 flex items-center justify-between";
+                } else {
+                    btn.className = "w-full text-left bg-slate-800/20 border-2 border-slate-800/40 p-4 rounded-xl text-sm text-slate-500 flex items-center justify-between";
+                }
+            });
+
+            // Gaan na of dit korrek is
+            if (selectedIdx === currentQ.correct) {
+                playSound('correct');
+                quizScore++;
+                feedbackBox.className = "mt-4 p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 text-sm";
+                feedbackBox.innerHTML = `⭐ <strong>Mooi so!</strong> ${currentQ.info}`;
+            } else {
+                playSound('wrong');
+                feedbackBox.className = "mt-4 p-4 rounded-xl border border-red-500/40 bg-red-950/30 text-red-300 text-sm";
+                feedbackBox.innerHTML = `😢 <strong>Oepsie!</strong> Dit was amper. Maar onthou: ${currentQ.info}`;
+            }
+
+            document.getElementById('quiz-score-tag').innerText = `Skoor: ${quizScore}`;
+            feedbackBox.classList.remove('hidden');
+            document.getElementById('next-quiz-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            playSound('click');
+            currentQuestionIdx++;
+            if (currentQuestionIdx < quizQuestions.length) {
+                showQuestion();
+            } else {
+                showCertificate();
+            }
+        }
+
+        function showCertificate() {
+            playSound('win');
+            switchScreen('certificate-screen');
+            document.getElementById('final-score-text').innerText = `Jy het ${quizScore} uit ${quizQuestions.length} korrek!`;
+        }
+
+        // Initialize op start
+        window.onload = function() {
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
