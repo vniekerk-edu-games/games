@@ -1,924 +1,452 @@
-<!DOCTYPE html>
-<html lang="af">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wiskunde Oefening Pret! 🎯</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+  :root{
+    --sky-top:#7EC8E3;
+    --sky-bottom:#EAF6E9;
+    --grass:#6BAA75;
+    --grass-dark:#4E8C58;
+    --card:#FFFDF7;
+    --ink:#2B2118;
+    --ink-soft:#6b5f52;
+    --sun:#FFD166;
+    --coral:#FF6B6B;
+    --success:#06A77D;
+    --success-dark:#04835F;
+    --bug:#E63946;
+    --sky-blue-deep:#3A8FB7;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Nunito',sans-serif;
+    background:linear-gradient(180deg,var(--sky-top) 0%, var(--sky-bottom) 62%);
+    color:var(--ink);
+    min-height:100vh;
+    overflow-x:hidden;
+    user-select:none;
+  }
+  h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
+  button{font-family:inherit; cursor:pointer;}
+  #app{position:relative; min-height:100vh; display:flex; flex-direction:column;}
 
-        body {
-            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+  /* clouds */
+  .cloud{position:absolute; background:#fff; border-radius:50px; opacity:.85; filter:blur(.3px);}
+  .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%;}
+  .cloud1{width:90px;height:34px; top:6%; left:8%;}
+  .cloud1::before{width:50px;height:50px; top:-24px; left:10px;}
+  .cloud1::after{width:38px;height:38px; top:-16px; left:50px;}
+  .cloud2{width:70px;height:26px; top:14%; right:10%;}
+  .cloud2::before{width:38px;height:38px; top:-18px; left:8px;}
+  .cloud2::after{width:28px;height:28px; top:-12px; left:36px;}
 
-        .container {
-            background: white;
-            border-radius: 30px;
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            position: relative;
-        }
+  /* ---------- LEVEL SELECT SCREEN ---------- */
+  #levelScreen{position:relative; z-index:2; flex:1; display:flex; flex-direction:column; align-items:center; padding:28px 20px 40px;}
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:2px;}
+  .brand-sun{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #FFE8A3, var(--sun));box-shadow:0 0 0 6px rgba(255,209,102,.35);}
+  .brand h1{font-size:30px; margin:0; color:var(--ink); letter-spacing:.5px;}
+  .tagline{margin:2px 0 22px; color:var(--ink-soft); font-weight:700; font-size:16px;}
 
-        h1 {
-            color: #667eea;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
+  .stats-strip{display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap; justify-content:center;}
+  .pill{background:rgba(255,255,255,.75); border:2px solid rgba(255,255,255,.9); border-radius:999px; padding:8px 16px; font-weight:800; font-size:14px; display:flex; align-items:center; gap:6px; color:var(--ink);}
 
-        .language-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 25px;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: bold;
-            color: #667eea;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
+  .level-grid{width:100%; max-width:900px; display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px;}
+  .level-card{
+    background:var(--card); border-radius:22px; padding:18px 18px 16px;
+    border:3px solid transparent; text-align:left;
+    box-shadow:0 6px 0 rgba(43,33,24,.12), 0 10px 18px rgba(43,33,24,.08);
+    display:flex; flex-direction:column; gap:8px; min-height:150px;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .level-card:active{transform:translateY(4px); box-shadow:0 2px 0 rgba(43,33,24,.12);}
+  .level-top{display:flex; align-items:center; gap:12px;}
+  .level-badge{
+    width:46px;height:46px;border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:800; color:#fff; flex-shrink:0; font-family:'Baloo 2',sans-serif;
+  }
+  .level-card h3{margin:0; font-size:19px; line-height:1.15;}
+  .level-sub{margin:0; color:var(--ink-soft); font-weight:700; font-size:13.5px;}
+  .level-ops{font-size:13px; font-weight:800; color:var(--ink-soft); background:#F1EEE4; display:inline-block; padding:3px 10px; border-radius:999px; align-self:flex-start;}
+  .stars{display:flex; gap:3px; margin-top:auto;}
+  .star{font-size:16px; opacity:.28;}
+  .star.on{opacity:1;}
 
-        .language-toggle:hover {
-            background: #667eea;
-            color: white;
-        }
+  /* ---------- QUIZ SCREEN ---------- */
+  #quizScreen{position:relative; z-index:2; flex:1; display:none; flex-direction:column; min-height:100vh;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 18px; gap:10px; flex-wrap:wrap;}
+  .topbar-left,.topbar-right{display:flex; align-items:center; gap:10px;}
+  .chip-btn{
+    background:rgba(255,255,255,.8); border:2px solid rgba(255,255,255,.95); border-radius:999px;
+    padding:9px 16px; font-weight:800; font-size:14.5px; color:var(--ink); display:flex; align-items:center; gap:6px;
+  }
+  .chip-btn:active{transform:scale(.96);}
+  .stat-chip{background:rgba(255,255,255,.75); border-radius:999px; padding:8px 14px; font-weight:800; font-size:14px; display:flex; align-items:center; gap:6px;}
 
-        .mode-selection, .settings, .quiz, .results {
-            display: none;
-        }
+  .quiz-main{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 16px 0; position:relative;}
 
-        .mode-selection.active, .settings.active, .quiz.active, .results.active {
-            display: block;
-        }
+  .problem{display:flex; align-items:center; gap:16px; font-size:56px; font-weight:800; font-family:'Baloo 2',sans-serif;}
+  .problem .op{color:var(--sky-blue-deep);}
+  .answer-box{
+    min-width:110px; min-height:74px; background:var(--card); border-radius:18px;
+    border:4px solid #E4DFD1; display:flex; align-items:center; justify-content:center;
+    font-size:40px; font-weight:800; color:var(--ink); padding:0 14px;
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.04);
+  }
+  .answer-box.filled{border-color:var(--sky-blue-deep);}
+  .answer-box .cursor{display:inline-block;width:3px;height:34px;background:#c9c2b2;margin-left:3px;animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
 
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            border-radius: 15px;
-            cursor: pointer;
-            margin: 10px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            font-family: inherit;
-        }
+  .praise{height:30px; margin-top:14px; font-weight:800; font-size:17px; text-align:center;}
 
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
+  .keypad{
+    display:grid; grid-template-columns:repeat(3,84px); gap:12px; margin:22px 0 10px;
+  }
+  .key{
+    height:64px; border-radius:16px; border:none; background:var(--card); font-size:26px; font-weight:800;
+    color:var(--ink); box-shadow:0 4px 0 rgba(43,33,24,.15); display:flex; align-items:center; justify-content:center;
+  }
+  .key:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(43,33,24,.15);}
+  .key.del{background:#F3E7C9; color:#9A6B18; font-size:22px;}
+  .key.go{background:var(--success); color:#fff;}
+  .key.go:disabled{opacity:.45;}
 
-        .btn:active {
-            transform: translateY(-1px);
-        }
+  /* grass + mascot */
+  .grass{position:relative; width:100%; height:78px; background:linear-gradient(180deg,var(--grass) 0%, var(--grass-dark) 100%); margin-top:14px; flex-shrink:0;}
+  .grass::before{content:"";position:absolute; top:-10px; left:0; right:0; height:16px;
+    background:repeating-linear-gradient(90deg, var(--grass) 0 6px, transparent 6px 12px);
+    clip-path:polygon(0 100%,3% 0,6% 100%,9% 0,12% 100%,15% 0,18% 100%,21% 0,24% 100%,27% 0,30% 100%,33% 0,36% 100%,39% 0,42% 100%,45% 0,48% 100%,51% 0,54% 100%,57% 0,60% 100%,63% 0,66% 100%,69% 0,72% 100%,75% 0,78% 100%,81% 0,84% 100%,87% 0,90% 100%,93% 0,96% 100%,99% 0,100% 100%);
+  }
+  .mascot{position:absolute; left:calc(50% - 26px); bottom:118px; width:52px; height:44px; animation:bob 2.6s ease-in-out infinite;}
+  .mascot .body{position:absolute; width:44px; height:34px; left:4px; top:8px; background:radial-gradient(circle at 35% 30%, #ff7b85, var(--bug)); border-radius:50% 50% 46% 46%; box-shadow:inset 0 -6px 8px rgba(0,0,0,.15);}
+  .mascot .midline{position:absolute; left:26px; top:8px; width:3px; height:34px; background:#8f0f18; border-radius:2px;}
+  .mascot .spot{position:absolute; width:8px; height:8px; background:#20090a; border-radius:50%;}
+  .mascot .s1{left:10px; top:14px;} .mascot .s2{left:12px; top:26px;} .mascot .s3{left:32px; top:14px;} .mascot .s4{left:34px; top:26px;}
+  .mascot .head{position:absolute; width:18px; height:16px; left:17px; top:0; background:#20090a; border-radius:50%;}
+  .mascot .eye{position:absolute; width:4px; height:4px; background:#fff; border-radius:50%; top:4px;}
+  .mascot .e1{left:19px;} .mascot .e2{left:29px;}
+  .mascot .antenna{position:absolute; width:2px; height:12px; background:#20090a; top:-10px; border-radius:2px;}
+  .mascot .a1{left:20px; transform:rotate(-18deg);} .mascot .a2{left:32px; transform:rotate(18deg);}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-8px) rotate(-2deg);}}
+  .mascot.happy{animation:happyJump .7s ease;}
+  @keyframes happyJump{0%{transform:translateY(0) rotate(0);}30%{transform:translateY(-26px) rotate(10deg);}55%{transform:translateY(-4px) rotate(-8deg);}75%{transform:translateY(-14px) rotate(6deg);}100%{transform:translateY(0) rotate(0);}}
+  .mascot.oops{animation:oopsShake .6s ease;}
+  @keyframes oopsShake{0%,100%{transform:translateX(0) rotate(0);}20%{transform:translateX(-6px) rotate(-6deg);}40%{transform:translateX(6px) rotate(6deg);}60%{transform:translateX(-4px) rotate(-4deg);}80%{transform:translateX(4px) rotate(4deg);}}
 
-        .btn-secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
+  .confetti{position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden;}
+  .confetti span{position:absolute; top:-10px; width:9px; height:9px; border-radius:2px; animation:fall 1.05s ease-in forwards;}
+  @keyframes fall{to{transform:translateY(340px) rotate(300deg); opacity:0;}}
 
-        .btn-success {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
+  /* overlay */
+  .overlay{position:fixed; inset:0; background:rgba(30,25,20,.42); display:none; align-items:center; justify-content:center; z-index:20; padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--card); border-radius:24px; padding:26px 24px; max-width:420px; width:100%; box-shadow:0 20px 40px rgba(0,0,0,.25);}
+  .modal h2{margin:0 0 6px;}
+  .modal p{color:var(--ink-soft); font-weight:700; margin:0 0 18px; font-size:15px;}
+  .modal-close{width:100%; padding:14px; border:none; border-radius:14px; background:var(--sky-blue-deep); color:#fff; font-weight:800; font-size:16px;}
 
-        .setting-group {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-        }
+  @media (max-width:420px){
+    .problem{font-size:42px; gap:10px;}
+    .answer-box{min-width:86px; min-height:60px; font-size:32px;}
+    .keypad{grid-template-columns:repeat(3,72px);}
+    .key{height:56px; font-size:22px;}
+  }
+</style>
 
-        .setting-group label {
-            display: block;
-            font-size: 1.1em;
-            color: #333;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
+<div id="app">
+  <div class="cloud cloud1"></div>
+  <div class="cloud cloud2"></div>
 
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+  <!-- LEVEL SELECT -->
+  <div id="levelScreen">
+    <div class="brand"><div class="brand-sun"></div><h1>Getalweide</h1></div>
+    <p class="tagline">Kies 'n vlak om te begin speel!</p>
+    <div class="stats-strip">
+      <div class="pill">⭐ <span id="totalCorrectPill">0</span> korrek in totaal</div>
+      <div class="pill">🔥 <span id="bestStreakPill">0</span> beste reeks</div>
+    </div>
+    <div class="level-grid" id="levelGrid"></div>
+  </div>
 
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .checkbox-label input {
-            margin-right: 8px;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px;
-            font-size: 1.1em;
-            border-radius: 10px;
-            border: 2px solid #ddd;
-            font-family: inherit;
-        }
-
-        .progress-bar {
-            background: #e9ecef;
-            border-radius: 15px;
-            height: 30px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-            height: 100%;
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .question-card {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 20px;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .question-text {
-            font-size: 2.5em;
-            color: #333;
-            margin-bottom: 30px;
-            font-weight: bold;
-        }
-
-        .answers {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .answer-btn {
-            padding: 20px;
-            font-size: 1.5em;
-            background: white;
-            border: 3px solid #667eea;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .answer-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .answer-btn.correct {
-            background: #28a745;
-            border-color: #28a745;
-            color: white;
-        }
-
-        .answer-btn.incorrect {
-            background: #dc3545;
-            border-color: #dc3545;
-            color: white;
-        }
-
-        .answer-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .feedback {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.2em;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .feedback.correct {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .feedback.incorrect {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-
-        .stat-box {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            min-width: 150px;
-            margin: 10px;
-        }
-
-        .stat-value {
-            font-size: 2.5em;
-            color: #667eea;
-            font-weight: bold;
-        }
-
-        .stat-label {
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .level-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1.1em;
-            margin: 10px 0;
-        }
-
-        .center {
-            text-align: center;
-        }
-
-        .emoji {
-            font-size: 3em;
-            margin: 20px 0;
-        }
-
-        .streak-indicator {
-            text-align: center;
-            margin: 15px 0;
-            font-size: 1.1em;
-            color: #666;
-        }
-
-        .streak-indicator.hot {
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .streak-indicator.cold {
-            color: #dc3545;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <button class="language-toggle" onclick="toggleLanguage()" id="langToggle">English</button>
-        
-        <h1 id="mainTitle">🎯 Wiskunde Oefening Pret!</h1>
-
-        <!-- Mode Selection -->
-        <div class="mode-selection active" id="modeSelection">
-            <div class="center">
-                <p style="font-size: 1.2em; margin-bottom: 30px; color: #666;" id="modePrompt">
-                    Kies hoe jy wil oefen:
-                </p>
-                <button class="btn" onclick="startAutoLevel()" id="autoLevelBtn">🎮 Outomatiese Vlak Modus</button>
-                <button class="btn btn-secondary" onclick="showSettings()" id="customSettingsBtn">⚙️ Aangepaste Instellings</button>
-            </div>
-        </div>
-
-        <!-- Settings -->
-        <div class="settings" id="settings">
-            <div class="setting-group">
-                <label id="numCountLabel">Aantal getalle in vergelyking:</label>
-                <select id="numCount">
-                    <option value="2" id="twoNumbers">Twee getalle</option>
-                    <option value="3" id="threeNumbers">Drie getalle</option>
-                    <option value="4" id="fourNumbers">Vier getalle</option>
-                </select>
-            </div>
-
-            <div class="setting-group">
-                <label id="numRangeLabel">Getalbereik:</label>
-                <select id="numRange">
-                    <option value="10">1 tot 10</option>
-                    <option value="20">1 tot 20</option>
-                    <option value="50">1 tot 50</option>
-                    <option value="100">1 tot 100</option>
-                </select>
-            </div>
-
-            <div class="setting-group">
-                <label id="operationsLabel">Bewerkings om in te sluit:</label>
-                <div class="checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="opAdd" checked> <span id="addition">Optel (+)</span>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="opSub"> <span id="subtraction">Aftrek (−)</span>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="opMul"> <span id="multiplication">Vermenigvuldiging (×)</span>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="opDiv"> <span id="division">Deling (÷)</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="center">
-                <button class="btn btn-success" onclick="startCustomQuiz()" id="startBtn">Begin Oefen! 🚀</button>
-                <button class="btn" onclick="backToMode()" id="backBtn1">← Terug</button>
-            </div>
-        </div>
-
-        <!-- Quiz -->
-        <div class="quiz" id="quiz">
-            <div id="levelDisplay" class="center" style="margin-bottom: 20px;"></div>
-            
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0/10</div>
-            </div>
-
-            <div class="streak-indicator" id="streakIndicator"></div>
-
-            <div class="question-card">
-                <div class="question-text" id="questionText"></div>
-                <div class="answers" id="answers"></div>
-            </div>
-
-            <div class="feedback" id="feedback" style="display: none;"></div>
-
-            <div class="center" style="margin-top: 20px;">
-                <button class="btn" id="nextBtn" style="display: none;" onclick="nextQuestion()">Volgende Vraag →</button>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div class="results" id="results">
-            <div class="center">
-                <div class="emoji" id="resultEmoji"></div>
-                <h2 id="resultTitle"></h2>
-                <div class="stats">
-                    <div class="stat-box">
-                        <div class="stat-value" id="finalScore"></div>
-                        <div class="stat-label" id="correctLabel">Korrek</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="finalPercentage"></div>
-                        <div class="stat-label" id="scoreLabel">Telling</div>
-                    </div>
-                </div>
-                <div id="levelChangeMessage" style="margin: 20px 0; font-size: 1.2em;"></div>
-                <button class="btn btn-success" onclick="restartQuiz()" id="practiceAgainBtn">Oefen Weer! 🔄</button>
-                <button class="btn" onclick="backToMode()" id="backBtn2">← Terug</button>
-            </div>
-        </div>
+  <!-- QUIZ -->
+  <div id="quizScreen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="chip-btn" id="levelsBtn">🌼 Vlakke</button>
+        <div class="stat-chip" id="currentLevelChip">Vlak 1</div>
+      </div>
+      <div class="topbar-right">
+        <div class="stat-chip">🔥 <span id="streakStat">0</span></div>
+        <div class="stat-chip">⭐ <span id="correctStat">0</span></div>
+      </div>
     </div>
 
-    <script>
-        // Language translations
-        const translations = {
-            af: {
-                mainTitle: '🎯 Wiskunde Oefening Pret!',
-                langToggle: 'English',
-                modePrompt: 'Kies hoe jy wil oefen:',
-                autoLevelBtn: '🎮 Outomatiese Vlak Modus',
-                customSettingsBtn: '⚙️ Aangepaste Instellings',
-                numCountLabel: 'Aantal getalle in vergelyking:',
-                twoNumbers: 'Twee getalle',
-                threeNumbers: 'Drie getalle',
-                fourNumbers: 'Vier getalle',
-                numRangeLabel: 'Getalbereik:',
-                operationsLabel: 'Bewerkings om in te sluit:',
-                addition: 'Optel (+)',
-                subtraction: 'Aftrek (−)',
-                multiplication: 'Vermenigvuldiging (×)',
-                division: 'Deling (÷)',
-                startBtn: 'Begin Oefen! 🚀',
-                backBtn: '← Terug',
-                nextBtn: 'Volgende Vraag →',
-                correctLabel: 'Korrek',
-                scoreLabel: 'Telling',
-                practiceAgainBtn: 'Oefen Weer! 🔄',
-                level: 'Vlak',
-                selectOperation: 'Kies asseblief ten minste een bewerking!',
-                correct: '🎉 Korrek! Goed gedaan!',
-                incorrect: '❌ Nie heeltemal nie. Die korrekte antwoord is',
-                levelUp: '🎉 Korrek! 🎊 VLAK OP! Jy is nou op Vlak',
-                levelDown: '❌ Die korrekte antwoord is',
-                levelDownMsg: 'Moenie worry nie! Kom ons oefen by Vlak',
-                perfectScore: 'Perfekte Telling! Wonderlik!',
-                greatJob: 'Goeie Werk!',
-                goodEffort: 'Goeie Poging!',
-                keepPracticing: 'Hou Aan Oefen!',
-                currentLevel: 'Jou huidige vlak: Vlak',
-                streakHot: 'korrek op \'n ry!',
-                streakMoreToLevel: 'meer om vlak op te gaan!',
-                streakCold: 'verkeerd op \'n ry. 1 meer en jy sal \'n vlak afgaan.',
-                streakCorrect: 'korrek op \'n ry!',
-                onFire: 'Jy is aan die brand!'
-            },
-            en: {
-                mainTitle: '🎯 Math Practice Fun!',
-                langToggle: 'Afrikaans',
-                modePrompt: 'Choose how you want to practice:',
-                autoLevelBtn: '🎮 Auto Level Mode',
-                customSettingsBtn: '⚙️ Custom Settings',
-                numCountLabel: 'Number of values in equation:',
-                twoNumbers: 'Two numbers',
-                threeNumbers: 'Three numbers',
-                fourNumbers: 'Four numbers',
-                numRangeLabel: 'Number range:',
-                operationsLabel: 'Operations to include:',
-                addition: 'Addition (+)',
-                subtraction: 'Subtraction (−)',
-                multiplication: 'Multiplication (×)',
-                division: 'Division (÷)',
-                startBtn: 'Start Practice! 🚀',
-                backBtn: '← Back',
-                nextBtn: 'Next Question →',
-                correctLabel: 'Correct',
-                scoreLabel: 'Score',
-                practiceAgainBtn: 'Practice Again! 🔄',
-                level: 'Level',
-                selectOperation: 'Please select at least one operation!',
-                correct: '🎉 Correct! Well done!',
-                incorrect: '❌ Not quite. The correct answer is',
-                levelUp: '🎉 Correct! 🎊 LEVEL UP! You\'re now on Level',
-                levelDown: '❌ The correct answer is',
-                levelDownMsg: 'Don\'t worry! Let\'s practice at Level',
-                perfectScore: 'Perfect Score! Amazing!',
-                greatJob: 'Great Job!',
-                goodEffort: 'Good Effort!',
-                keepPracticing: 'Keep Practicing!',
-                currentLevel: 'Your current level: Level',
-                streakHot: 'correct in a row!',
-                streakMoreToLevel: 'more to level up!',
-                streakCold: 'wrong in a row. 1 more and you\'ll go down a level.',
-                streakCorrect: 'correct in a row!',
-                onFire: 'You\'re on fire!'
-            }
-        };
+    <div class="quiz-main">
+      <div class="problem" id="problem"></div>
+      <div class="answer-box" id="answerBox"><span class="cursor"></span></div>
+      <div class="praise" id="praise"></div>
+      <div class="keypad" id="keypad">
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key del" data-k="del" aria-label="Vee uit">⌫</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key go" data-k="go" aria-label="Gaan na antwoord" disabled>✓</button>
+      </div>
+      <div class="confetti" id="confetti"></div>
+    </div>
 
-        // Current language (default Afrikaans)
-        let currentLang = 'af';
+    <div class="grass">
+      <div class="mascot" id="mascot">
+        <div class="antenna a1"></div><div class="antenna a2"></div>
+        <div class="body"></div><div class="midline"></div>
+        <div class="spot s1"></div><div class="spot s2"></div><div class="spot s3"></div><div class="spot s4"></div>
+        <div class="head"></div><div class="eye e1"></div><div class="eye e2"></div>
+      </div>
+    </div>
+  </div>
 
-        // Toggle language
-        function toggleLanguage() {
-            currentLang = currentLang === 'af' ? 'en' : 'af';
-            localStorage.setItem('mathPracticeLang', currentLang);
-            updateLanguage();
-        }
+  <div class="overlay" id="welcomeOverlay">
+    <div class="modal">
+      <h2>Welkom by Getalweide! 🌻</h2>
+      <p>Kies 'n vlak hieronder om te begin oefen. Jy kan enige tyd van vlak verander met die "🌼 Vlakke"-knoppie.</p>
+      <button class="modal-close" id="welcomeClose">Kom ons begin!</button>
+    </div>
+  </div>
+</div>
 
-        // Update all text on page
-        function updateLanguage() {
-            const t = translations[currentLang];
-            
-            document.getElementById('mainTitle').textContent = t.mainTitle;
-            document.getElementById('langToggle').textContent = t.langToggle;
-            document.getElementById('modePrompt').textContent = t.modePrompt;
-            document.getElementById('autoLevelBtn').textContent = t.autoLevelBtn;
-            document.getElementById('customSettingsBtn').textContent = t.customSettingsBtn;
-            document.getElementById('numCountLabel').textContent = t.numCountLabel;
-            document.getElementById('twoNumbers').textContent = t.twoNumbers;
-            document.getElementById('threeNumbers').textContent = t.threeNumbers;
-            document.getElementById('fourNumbers').textContent = t.fourNumbers;
-            document.getElementById('numRangeLabel').textContent = t.numRangeLabel;
-            document.getElementById('operationsLabel').textContent = t.operationsLabel;
-            document.getElementById('addition').textContent = t.addition;
-            document.getElementById('subtraction').textContent = t.subtraction;
-            document.getElementById('multiplication').textContent = t.multiplication;
-            document.getElementById('division').textContent = t.division;
-            document.getElementById('startBtn').textContent = t.startBtn;
-            document.getElementById('backBtn1').textContent = t.backBtn;
-            document.getElementById('backBtn2').textContent = t.backBtn;
-            document.getElementById('nextBtn').textContent = t.nextBtn;
-            document.getElementById('correctLabel').textContent = t.correctLabel;
-            document.getElementById('scoreLabel').textContent = t.scoreLabel;
-            document.getElementById('practiceAgainBtn').textContent = t.practiceAgainBtn;
-            
-            document.title = t.mainTitle;
+<script>
+(function(){
+  const LEVELS = [
+    {id:1, title:"Optel tot 10",              sub:"bv. 3 + 6",   ops:"+",   color:"#4CA771"},
+    {id:2, title:"Optel en aftrek tot 10",    sub:"bv. 8 − 3",   ops:"+ −", color:"#3A8FB7"},
+    {id:3, title:"Optel: klein + groot getal",sub:"bv. 6 + 14",  ops:"+",   color:"#E08E45"},
+    {id:4, title:"Optel en aftrek: klein + groot",sub:"bv. 17 − 4", ops:"+ −", color:"#B5638C"},
+    {id:5, title:"Optel: getalle 10 tot 20",  sub:"bv. 13 + 15", ops:"+",   color:"#5B7FDE"},
+    {id:6, title:"Optel en aftrek: 10 tot 20",sub:"bv. 19 − 12", ops:"+ −", color:"#379E8A"},
+    {id:7, title:"Tafels tot 10",             sub:"bv. 4 × 7",   ops:"×",   color:"#C0533E"},
+  ];
 
-            if (gameState.mode === 'auto') {
-                updateLevelDisplay();
-            }
+  let stats = {
+    totalCorrect:0, totalAnswered:0, bestStreak:0,
+    perLevel:{1:{c:0,a:0},2:{c:0,a:0},3:{c:0,a:0},4:{c:0,a:0},5:{c:0,a:0},6:{c:0,a:0},7:{c:0,a:0}}
+  };
+  let currentLevel = null;
+  let currentStreak = 0;
+  let entered = "";
+  let current = null;
+  let locked = false;
 
-            updateStreakIndicator();
-        }
+  const PRAISE = ["Uitstekend! 🎉","Mooi so!","Reg so!","Wonderlik!","Super! ⭐","Briljant!"];
+  const rand = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
 
-        // Load saved language
-        function loadLanguage() {
-            const saved = localStorage.getItem('mathPracticeLang');
-            if (saved) {
-                currentLang = saved;
-            }
-            updateLanguage();
-        }
+  function genProblem(levelId){
+    let a,b,op;
+    switch(levelId){
+      case 1: a=rand(1,10); b=rand(1,10); op="+"; break;
+      case 2: {
+        a=rand(1,10); b=rand(1,10);
+        op = Math.random()<0.5 ? "+" : "-";
+        if(op==="-" && b>a){ [a,b]=[b,a]; }
+        break;
+      }
+      case 3: {
+        a=rand(1,10); b=rand(10,20);
+        op="+";
+        if(Math.random()<0.5){ [a,b]=[b,a]; }
+        break;
+      }
+      case 4: {
+        const small=rand(1,10), big=rand(10,20);
+        op = Math.random()<0.5 ? "+" : "-";
+        if(op==="-"){ a=big; b=small; }
+        else { a=small; b=big; if(Math.random()<0.5){ [a,b]=[b,a]; } }
+        break;
+      }
+      case 5: a=rand(10,20); b=rand(10,20); op="+"; break;
+      case 6: {
+        a=rand(10,20); b=rand(10,20);
+        op = Math.random()<0.5 ? "+" : "-";
+        if(op==="-" && b>a){ [a,b]=[b,a]; }
+        break;
+      }
+      case 7: a=rand(1,10); b=rand(1,10); op="×"; break;
+    }
+    let answer;
+    if(op==="+") answer=a+b;
+    else if(op==="-") answer=a-b;
+    else answer=a*b;
+    return {a,b,op,answer};
+  }
 
-        // Game state
-        let gameState = {
-            mode: 'custom',
-            currentLevel: 1,
-            currentQuestion: 0,
-            correctAnswers: 0,
-            consecutiveCorrect: 0,
-            consecutiveWrong: 0,
-            questions: [],
-            settings: {}
-        };
+  // ---------- localStorage ----------
+  function loadStats(){
+    try{
+      const saved = localStorage.getItem('numberMeadowStats');
+      if(saved){
+        const parsed = JSON.parse(saved);
+        stats = Object.assign(stats, parsed);
+      }
+    }catch(e){ /* localStorage unavailable */ }
+  }
+  function saveStats(){
+    try{
+      localStorage.setItem('numberMeadowStats', JSON.stringify(stats));
+    }catch(e){ /* localStorage unavailable */ }
+  }
 
-        // CAPS-based level definitions
-        const levelDefinitions = {
-            1: { numCount: 2, numRange: 10, operations: ['add', 'sub'] },
-            2: { numCount: 2, numRange: 20, operations: ['add', 'sub'] },
-            3: { numCount: 2, numRange: 50, operations: ['add', 'sub', 'mul'] },
-            4: { numCount: 3, numRange: 50, operations: ['add', 'sub', 'mul'] },
-            5: { numCount: 3, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] },
-            6: { numCount: 3, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] },
-            7: { numCount: 4, numRange: 100, operations: ['add', 'sub', 'mul', 'div'] }
-        };
+  // ---------- level select rendering ----------
+  const levelGrid = document.getElementById('levelGrid');
+  function renderLevelGrid(){
+    levelGrid.innerHTML = "";
+    LEVELS.forEach(lvl=>{
+      const pl = stats.perLevel[lvl.id] || {c:0,a:0};
+      const starsCount = Math.min(5, Math.floor(pl.c/10));
+      const card = document.createElement('button');
+      card.className = "level-card";
+      card.innerHTML = `
+        <div class="level-top">
+          <div class="level-badge" style="background:${lvl.color}">${lvl.id}</div>
+          <div>
+            <h3>${lvl.title}</h3>
+            <p class="level-sub">${lvl.sub}</p>
+          </div>
+        </div>
+        <span class="level-ops">${lvl.ops}</span>
+        <div class="stars">${[1,2,3,4,5].map(i=>`<span class="star ${i<=starsCount?'on':''}">★</span>`).join('')}</div>
+      `;
+      card.addEventListener('click', ()=> startLevel(lvl.id));
+      levelGrid.appendChild(card);
+    });
+    document.getElementById('totalCorrectPill').textContent = stats.totalCorrect;
+    document.getElementById('bestStreakPill').textContent = stats.bestStreak;
+  }
 
-        // Load saved level
-        function loadSavedLevel() {
-            const saved = localStorage.getItem('mathPracticeLevel');
-            return saved ? parseInt(saved) : 1;
-        }
+  // ---------- screens ----------
+  const levelScreen = document.getElementById('levelScreen');
+  const quizScreen = document.getElementById('quizScreen');
+  function showLevelScreen(){
+    renderLevelGrid();
+    levelScreen.style.display = "flex";
+    quizScreen.style.display = "none";
+  }
+  function showQuizScreen(){
+    levelScreen.style.display = "none";
+    quizScreen.style.display = "flex";
+  }
 
-        // Save level
-        function saveLevel(level) {
-            localStorage.setItem('mathPracticeLevel', level);
-        }
+  function startLevel(id){
+    currentLevel = id;
+    const lvl = LEVELS.find(l=>l.id===id);
+    document.getElementById('currentLevelChip').textContent = "Vlak " + id;
+    document.getElementById('currentLevelChip').style.background = lvl.color;
+    document.getElementById('currentLevelChip').style.color = "#fff";
+    document.getElementById('currentLevelChip').style.borderColor = "transparent";
+    updateHeaderStats();
+    showQuizScreen();
+    nextProblem();
+  }
 
-        // Show/hide screens
-        function showScreen(screenId) {
-            document.querySelectorAll('.mode-selection, .settings, .quiz, .results').forEach(el => {
-                el.classList.remove('active');
-            });
-            document.getElementById(screenId).classList.add('active');
-        }
+  function updateHeaderStats(){
+    document.getElementById('streakStat').textContent = currentStreak;
+    document.getElementById('correctStat').textContent = stats.totalCorrect;
+  }
 
-        function backToMode() {
-            showScreen('modeSelection');
-            resetGame();
-        }
+  // ---------- quiz logic ----------
+  const problemEl = document.getElementById('problem');
+  const answerBox = document.getElementById('answerBox');
+  const praiseEl = document.getElementById('praise');
+  const goKey = document.querySelector('.key.go');
+  const mascot = document.getElementById('mascot');
 
-        function showSettings() {
-            showScreen('settings');
-        }
+  function nextProblem(){
+    entered = "";
+    locked = false;
+    current = genProblem(currentLevel);
+    problemEl.innerHTML = `<span>${current.a}</span><span class="op">${current.op}</span><span>${current.b}</span><span class="op">=</span>`;
+    renderAnswerBox();
+    praiseEl.textContent = "";
+  }
 
-        function startAutoLevel() {
-            gameState.mode = 'auto';
-            gameState.currentLevel = loadSavedLevel();
-            const levelSettings = levelDefinitions[gameState.currentLevel];
-            gameState.settings = {
-                numCount: levelSettings.numCount,
-                numRange: levelSettings.numRange,
-                operations: levelSettings.operations
-            };
-            startQuiz();
-        }
+  function renderAnswerBox(){
+    answerBox.classList.toggle('filled', entered.length>0);
+    answerBox.innerHTML = entered.length ? entered + '<span class="cursor"></span>' : '<span class="cursor"></span>';
+    goKey.disabled = entered.length===0;
+  }
 
-        function startCustomQuiz() {
-            const operations = [];
-            if (document.getElementById('opAdd').checked) operations.push('add');
-            if (document.getElementById('opSub').checked) operations.push('sub');
-            if (document.getElementById('opMul').checked) operations.push('mul');
-            if (document.getElementById('opDiv').checked) operations.push('div');
+  function handleKey(k){
+    if(locked) return;
+    if(k==="del"){ entered = entered.slice(0,-1); renderAnswerBox(); return; }
+    if(k==="go"){ submitAnswer(); return; }
+    if(entered.length>=3) return;
+    entered += k;
+    renderAnswerBox();
+  }
 
-            if (operations.length === 0) {
-                alert(translations[currentLang].selectOperation);
-                return;
-            }
+  function submitAnswer(){
+    if(entered.length===0 || locked) return;
+    locked = true;
+    const val = parseInt(entered,10);
+    const correct = val === current.answer;
+    const pl = stats.perLevel[currentLevel];
+    stats.totalAnswered++; pl.a++;
 
-            gameState.mode = 'custom';
-            gameState.settings = {
-                numCount: parseInt(document.getElementById('numCount').value),
-                numRange: parseInt(document.getElementById('numRange').value),
-                operations: operations
-            };
-            startQuiz();
-        }
+    if(correct){
+      stats.totalCorrect++; pl.c++;
+      currentStreak++;
+      if(currentStreak>stats.bestStreak) stats.bestStreak = currentStreak;
+      praiseEl.style.color = "var(--success-dark)";
+      praiseEl.textContent = PRAISE[rand(0,PRAISE.length-1)];
+      mascot.className = "mascot happy";
+      burstConfetti();
+    } else {
+      currentStreak = 0;
+      praiseEl.style.color = "var(--coral)";
+      praiseEl.textContent = "Nie helemaal nie — dit is " + current.answer + ". Probeer weer!";
+      mascot.className = "mascot oops";
+    }
+    updateHeaderStats();
+    saveStats();
 
-        function startQuiz() {
-            resetGame();
-            generateQuestions();
-            showScreen('quiz');
-            displayQuestion();
-            updateLevelDisplay();
-        }
+    setTimeout(()=>{ mascot.className="mascot"; nextProblem(); }, correct ? 1000 : 1500);
+  }
 
-        function resetGame() {
-            gameState.currentQuestion = 0;
-            gameState.correctAnswers = 0;
-            gameState.consecutiveCorrect = 0;
-            gameState.consecutiveWrong = 0;
-            gameState.questions = [];
-        }
+  function burstConfetti(){
+    const holder = document.getElementById('confetti');
+    const colors = ["#FFD166","#06A77D","#FF6B6B","#3A8FB7","#E63946"];
+    for(let i=0;i<18;i++){
+      const s = document.createElement('span');
+      s.style.left = rand(5,95)+"%";
+      s.style.background = colors[rand(0,colors.length-1)];
+      s.style.animationDelay = (Math.random()*0.15)+"s";
+      holder.appendChild(s);
+      setTimeout(()=>s.remove(), 1300);
+    }
+  }
 
-        function updateLevelDisplay() {
-            const t = translations[currentLang];
-            const levelDisplay = document.getElementById('levelDisplay');
-            if (gameState.mode === 'auto') {
-                levelDisplay.innerHTML = `<div class="level-badge">📚 ${t.level} ${gameState.currentLevel}</div>`;
-            } else {
-                levelDisplay.innerHTML = '';
-            }
-        }
+  document.getElementById('keypad').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.key');
+    if(!btn) return;
+    handleKey(btn.dataset.k);
+  });
 
-        function generateQuestions() {
-            gameState.questions = [];
-            for (let i = 0; i < 10; i++) {
-                gameState.questions.push(generateQuestion());
-            }
-        }
+  document.addEventListener('keydown', (e)=>{
+    if(quizScreen.style.display==="none") return;
+    if(e.key>='0' && e.key<='9') handleKey(e.key);
+    else if(e.key==='Backspace') handleKey('del');
+    else if(e.key==='Enter') handleKey('go');
+  });
 
-        function generateQuestion() {
-            const { numCount, numRange, operations } = gameState.settings;
-            const operation = operations[Math.floor(Math.random() * operations.length)];
-            
-            let numbers = [];
-            let answer;
-            let questionText;
+  document.getElementById('levelsBtn').addEventListener('click', showLevelScreen);
+  document.getElementById('welcomeClose').addEventListener('click', ()=>{
+    document.getElementById('welcomeOverlay').classList.remove('show');
+  });
 
-            if (operation === 'div') {
-                const divisor = Math.floor(Math.random() * (numRange - 1)) + 2;
-                const quotient = Math.floor(Math.random() * Math.floor(numRange / divisor)) + 1;
-                answer = quotient;
-                numbers = [divisor * quotient, divisor];
-                questionText = `${numbers[0]} ÷ ${numbers[1]}`;
-            } else {
-                for (let i = 0; i < numCount; i++) {
-                    numbers.push(Math.floor(Math.random() * numRange) + 1);
-                }
-
-                switch (operation) {
-                    case 'add':
-                        answer = numbers.reduce((a, b) => a + b, 0);
-                        questionText = numbers.join(' + ');
-                        break;
-                    case 'sub':
-                        numbers.sort((a, b) => b - a);
-                        answer = numbers[0];
-                        questionText = numbers[0].toString();
-                        for (let i = 1; i < numbers.length; i++) {
-                            answer -= numbers[i];
-                            questionText += ` − ${numbers[i]}`;
-                        }
-                        if (answer < 0) return generateQuestion();
-                        break;
-                    case 'mul':
-                        answer = numbers.reduce((a, b) => a * b, 1);
-                        questionText = numbers.join(' × ');
-                        break;
-                }
-            }
-
-            const wrongAnswers = generateWrongAnswers(answer, numRange, operation);
-            const allAnswers = [answer, ...wrongAnswers].sort(() => Math.random() - 0.5);
-
-            return {
-                text: questionText,
-                correctAnswer: answer,
-                answers: allAnswers
-            };
-        }
-
-        function generateWrongAnswers(correct, range, operation) {
-            const wrong = new Set();
-            const isSmallNumber = range <= 20;
-            const isMultiplication = operation === 'mul';
-            
-            while (wrong.size < 3) {
-                let wrongAnswer;
-                
-                if (isSmallNumber) {
-                    const offset = Math.floor(Math.random() * 6) - 3;
-                    wrongAnswer = correct + offset;
-                } else if (isMultiplication) {
-                    const factor = Math.random() < 0.5 ? 0.5 : 1.5;
-                    wrongAnswer = Math.round(correct * factor);
-                } else {
-                    const offset = Math.floor(Math.random() * 20) - 10;
-                    wrongAnswer = correct + offset;
-                }
-                
-                if (wrongAnswer > 0 && wrongAnswer !== correct && !wrong.has(wrongAnswer)) {
-                    wrong.add(wrongAnswer);
-                }
-            }
-            
-            return Array.from(wrong);
-        }
-
-        function displayQuestion() {
-            const question = gameState.questions[gameState.currentQuestion];
-            document.getElementById('questionText').textContent = question.text + ' = ?';
-            
-            const answersDiv = document.getElementById('answers');
-            answersDiv.innerHTML = '';
-            
-            question.answers.forEach(answer => {
-                const btn = document.createElement('button');
-                btn.className = 'answer-btn';
-                btn.textContent = answer;
-                btn.onclick = () => checkAnswer(answer, question.correctAnswer);
-                answersDiv.appendChild(btn);
-            });
-
-            document.getElementById('feedback').style.display = 'none';
-            document.getElementById('nextBtn').style.display = 'none';
-            
-            updateProgress();
-            updateStreakIndicator();
-        }
-
-        function updateProgress() {
-            const progress = ((gameState.currentQuestion) / 10) * 100;
-            const progressFill = document.getElementById('progressFill');
-            progressFill.style.width = progress + '%';
-            progressFill.textContent = `${gameState.currentQuestion}/10`;
-        }
-
-        function updateStreakIndicator() {
-            const t = translations[currentLang];
-            const indicator = document.getElementById('streakIndicator');
-            
-            if (gameState.mode === 'auto') {
-                if (gameState.consecutiveCorrect >= 3) {
-                    indicator.className = 'streak-indicator hot';
-                    indicator.textContent = `🔥 ${gameState.consecutiveCorrect} ${t.streakHot} ${5 - gameState.consecutiveCorrect} ${t.streakMoreToLevel}`;
-                } else if (gameState.consecutiveWrong >= 2) {
-                    indicator.className = 'streak-indicator cold';
-                    indicator.textContent = `⚠️ ${gameState.consecutiveWrong} ${t.streakCold}`;
-                } else if (gameState.consecutiveCorrect > 0) {
-                    indicator.className = 'streak-indicator';
-                    indicator.textContent = `✨ ${gameState.consecutiveCorrect} ${t.streakCorrect}`;
-                } else {
-                    indicator.textContent = '';
-                }
-            } else {
-                if (gameState.consecutiveCorrect >= 3) {
-                    indicator.className = 'streak-indicator hot';
-                    indicator.textContent = `🔥 ${gameState.consecutiveCorrect} ${t.streakHot} ${t.onFire}`;
-                } else if (gameState.consecutiveCorrect > 0) {
-                    indicator.className = 'streak-indicator';
-                    indicator.textContent = `✨ ${gameState.consecutiveCorrect} ${t.streakCorrect}`;
-                } else {
-                    indicator.textContent = '';
-                }
-            }
-        }
-
-        function checkAnswer(selected, correct) {
-            const t = translations[currentLang];
-            const answerBtns = document.querySelectorAll('.answer-btn');
-            answerBtns.forEach(btn => {
-                btn.disabled = true;
-                if (parseInt(btn.textContent) === correct) {
-                    btn.classList.add('correct');
-                }
-                if (parseInt(btn.textContent) === selected && selected !== correct) {
-                    btn.classList.add('incorrect');
-                }
-            });
-
-            const feedback = document.getElementById('feedback');
-            feedback.style.display = 'block';
-
-            if (selected === correct) {
-                feedback.className = 'feedback correct';
-                feedback.textContent = t.correct;
-                gameState.correctAnswers++;
-                gameState.consecutiveCorrect++;
-                gameState.consecutiveWrong = 0;
-
-                if (gameState.mode === 'auto' && gameState.consecutiveCorrect === 5) {
-                    const maxLevel = Object.keys(levelDefinitions).length;
-                    if (gameState.currentLevel < maxLevel) {
-                        gameState.currentLevel++;
-                        saveLevel(gameState.currentLevel);
-                        feedback.textContent = `${t.levelUp} ${gameState.currentLevel}!`;
-                        gameState.consecutiveCorrect = 0;
-                    }
-                }
-            } else {
-                feedback.className = 'feedback incorrect';
-                feedback.textContent = `${t.incorrect} ${correct}.`;
-                gameState.consecutiveWrong++;
-                gameState.consecutiveCorrect = 0;
-
-                if (gameState.mode === 'auto' && gameState.consecutiveWrong === 3) {
-                    if (gameState.currentLevel > 1) {
-                        gameState.currentLevel--;
-                        saveLevel(gameState.currentLevel);
-                        feedback.textContent = `${t.levelDown} ${correct}. ${t.levelDownMsg} ${gameState.currentLevel}.`;
-                        gameState.consecutiveWrong = 0;
-                    }
-                }
-            }
-
-            document.getElementById('nextBtn').style.display = 'block';
-        }
-
-        function nextQuestion() {
-            gameState.currentQuestion++;
-            
-            if (gameState.currentQuestion < 10) {
-                if (gameState.mode === 'auto') {
-                    const levelSettings = levelDefinitions[gameState.currentLevel];
-                    gameState.settings = {
-                        numCount: levelSettings.numCount,
-                        numRange: levelSettings.numRange,
-                        operations: levelSettings.operations
-                    };
-                    for (let i = gameState.currentQuestion; i < 10; i++) {
-                        gameState.questions[i] = generateQuestion();
-                    }
-                    updateLevelDisplay();
-                }
-                displayQuestion();
-            } else {
-                showResults();
-            }
-        }
-
-        function showResults() {
-            const t = translations[currentLang];
-            const percentage = Math.round((gameState.correctAnswers / 10) * 100);
-            
-            document.getElementById('finalScore').textContent = `${gameState.correctAnswers}/10`;
-            document.getElementById('finalPercentage').textContent = `${percentage}%`;
-
-            let emoji, title;
-            if (percentage === 100) {
-                emoji = '🏆';
-                title = t.perfectScore;
-            } else if (percentage >= 80) {
-                emoji = '⭐';
-                title = t.greatJob;
-            } else if (percentage >= 60) {
-                emoji = '👍';
-                title = t.goodEffort;
-            } else {
-                emoji = '💪';
-                title = t.keepPracticing;
-            }
-
-            document.getElementById('resultEmoji').textContent = emoji;
-            document.getElementById('resultTitle').textContent = title;
-
-            const levelChangeMsg = document.getElementById('levelChangeMessage');
-            if (gameState.mode === 'auto') {
-                levelChangeMsg.innerHTML = `<div class="level-badge">${t.currentLevel} ${gameState.currentLevel}</div>`;
-            } else {
-                levelChangeMsg.textContent = '';
-            }
-
-            showScreen('results');
-        }
-
-        function restartQuiz() {
-            if (gameState.mode === 'auto') {
-                startAutoLevel();
-            } else {
-                startCustomQuiz();
-            }
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            loadLanguage();
-        };
-    </script>
-</body>
-</html>
+  // ---------- init ----------
+  function init(){
+    loadStats();
+    renderLevelGrid();
+    showLevelScreen();
+    document.getElementById('welcomeOverlay').classList.add('show');
+  }
+  init();
+})();
+</script>
