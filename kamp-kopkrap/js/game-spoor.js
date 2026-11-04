@@ -13,12 +13,11 @@
   };
   const CMD = { f: { i: '⬆', n: 'Vorentoe', c: 'c-f' }, l: { i: '↺', n: 'Draai links', c: 'c-l' }, r: { i: '↻', n: 'Draai regs', c: 'c-r' } };
 
-  // shortest program (number of command blocks) using BFS over (x,y,dir,woodMask)
   function solve(P, rep) {
     const { w, h, blocked, wood, sx, sy, sd, gx, gy } = P, full = (1 << wood.length) - 1;
     const woodAt = (x, y) => wood.findIndex(c => c[0] === x && c[1] === y);
     const key = (x, y, d, m) => ((y * w + x) * 4 + d) * 8 + m;
-    const start = { x: sx, y: sy, d: sd, m: 0 }, seen = new Map([[key(sx, sy, sd, 0), null]]), q = [start];
+    const seen = new Map([[key(sx, sy, sd, 0), null]]), q = [{ x: sx, y: sy, d: sd, m: 0 }];
     while (q.length) {
       const s = q.shift();
       if (s.x === gx && s.y === gy && s.m === full) {
@@ -39,12 +38,10 @@
     }
     return null;
   }
-
   function generate(diff, R) {
     const C = CFG[diff]; let best = null;
     for (let att = 0; att < 600; att++) {
-      const { w, h } = C, blocked = new Uint8Array(w * h), dens = C.obs[0] + R.f() * (C.obs[1] - C.obs[0]);
-      const kinds = {};
+      const { w, h } = C, blocked = new Uint8Array(w * h), dens = C.obs[0] + R.f() * (C.obs[1] - C.obs[0]), kinds = {};
       for (let i = 0; i < w * h; i++) if (R.f() < dens) { blocked[i] = 1; kinds[i] = R.pick(['rock', 'aloe', 'tree']); }
       const free = []; for (let i = 0; i < w * h; i++) if (!blocked[i]) free.push(i);
       if (free.length < 8) continue;
@@ -177,9 +174,8 @@
       }
       function finish() {
         done = true; drawProg();
-        const extra = prog.length - P.opt; let base = extra <= 0 ? 3 : extra <= 2 ? 2 : 1;
-        const st = starsFrom(base, hints);
-        api.win(st, `Jy het ${prog.length} bevel${prog.length > 1 ? 'e' : ''} gebruik. ` + (extra <= 0 ? 'Dit is die kortste plan!' : `Dit kan met ${P.opt} gedoen word – kan jy dit regkry?`));
+        const extra = prog.length - P.opt, base = extra <= 0 ? 3 : extra <= 2 ? 2 : 1;
+        api.win(starsFrom(base, hints), `Jy het ${prog.length} bevel${prog.length > 1 ? 'e' : ''} gebruik. ` + (extra <= 0 ? 'Dit is die kortste plan!' : `Dit kan met ${P.opt} gedoen word – kan jy dit regkry?`));
       }
 
       buildBoard(); layout(); drawProg();
@@ -190,7 +186,6 @@
         restart() { if (running || done) return; hist.push(JSON.stringify(prog)); prog = []; sel = -1; resetHiker(); trail = []; drawTrail(); drawProg(); },
         hint() {
           if (running || done) return; hints++; Snd.hint();
-          // walk the best route and show footprints for part (1st hint) or all (2nd+) of it
           let x = P.sx, y = P.sy, d = P.sd; const cells = [];
           for (const c of P.sol) { if (c.c === 'l') d = (d + 3) % 4; else if (c.c === 'r') d = (d + c.n) % 4; else for (let k = 0; k < c.n; k++) { x += DX[d]; y += DY[d]; cells.push([x, y]); } }
           const show = hints === 1 ? Math.ceil(cells.length / 2) : cells.length;

@@ -9,7 +9,6 @@
   const CFG = { 1: { n: 5, k: [4, 5] }, 2: { n: 6, k: [6, 7] }, 3: { n: 7, k: [9, 10] } };
   const D4 = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   const COLORS = ['#2b9fc9', '#e2502d', '#2f9e4a', '#f5b51a', '#8a4fd6', '#ff7ab0'];
-
   function inB(n, r, c) { return r >= 0 && r < n && c >= 0 && c < n; }
 
   function matching(n, trees, campers) {
@@ -20,7 +19,6 @@
     for (let t = 0; t < T.length; t++) if (!tryT(t, [])) return false;
     return true;
   }
-
   function countSolutions(n, trees, rows, cols, limit) {
     const cand = new Uint8Array(n * n);
     for (const t of trees) { const r = Math.floor(t / n), c = t % n; for (const [dr, dc] of D4) { const a = r + dr, b = c + dc; if (inB(n, a, b) && !trees.has(a * n + b)) cand[a * n + b] = 1; } }
@@ -40,7 +38,6 @@
     rec(0);
     return nodes > 400000 ? 99 : count;
   }
-
   function generate(diff, R) {
     const { n, k: [k0, k1] } = CFG[diff]; let fallback = null;
     for (let att = 0; att < 800; att++) {
@@ -108,7 +105,7 @@
         const bad = new Set();
         for (let i = 0; i < n * n; i++) {
           if (g[i] !== 1) continue; const r = Math.floor(i / n), c = i % n;
-          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; if (inB(n, r + dr, c + dc) && g[(r + dr) * n + c + dc] === 1) { bad.add(i); } }
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; if (inB(n, r + dr, c + dc) && g[(r + dr) * n + c + dc] === 1) bad.add(i); }
           if (!D4.some(([dr, dc]) => inB(n, r + dr, c + dc) && P.trees.has((r + dr) * n + c + dc))) bad.add(i);
         }
         for (let i = 0; i < n * n; i++) {
@@ -146,7 +143,6 @@
       const nextToTree = i => { const r = Math.floor(i / n), c = i % n; return D4.some(([dr, dc]) => inB(n, r + dr, c + dc) && P.trees.has((r + dr) * n + c + dc)); };
 
       build(); api.status('Elke 🌳 kry een 🚐 langsaan. Kampeerwaens mag nie aan mekaar raak nie.');
-
       return {
         layout, _debug: () => P,
         undo() { if (!hist.length || done) return; g = hist.pop(); Snd.lift(); clearHL(); paint(); },
@@ -158,12 +154,13 @@
           if (wrong.length) { hints++; flash([wrong[0]]); api.status('💡 Hierdie kampeerwa staan op die verkeerde plek.'); return; }
           const wg = []; for (let i = 0; i < n * n; i++) if (g[i] === 2 && P.sol.has(i)) wg.push(i);
           if (wg.length) { hints++; flash([wg[0]]); api.status('💡 Hier moet tog \'n kampeerwa kom!'); return; }
-          // gentle nudges – these do not cost stars (asking again straight away reveals a van)
-          if (!nudged) { nudged = true;
-          for (let r = 0; r < n; r++) { let k = 0, e = []; for (let c = 0; c < n; c++) { const i = r * n + c; if (g[i] === 1) k++; if (!P.trees.has(i) && g[i] === 0) e.push(i); } if (k === P.rows[r] && e.length) { flash(e); api.status(`💡 Hierdie ry het al ${k === 0 ? 'geen kampeerwaens nodig' : 'genoeg kampeerwaens'} – die oop plekke kry gras.`); return; } }
-          for (let c = 0; c < n; c++) { let k = 0, e = []; for (let r = 0; r < n; r++) { const i = r * n + c; if (g[i] === 1) k++; if (!P.trees.has(i) && g[i] === 0) e.push(i); } if (k === P.cols[c] && e.length) { flash(e); api.status(`💡 Hierdie kolom het al ${k === 0 ? 'geen kampeerwaens nodig' : 'genoeg kampeerwaens'} – die oop plekke kry gras.`); return; } }
-          const far = empties.filter(i => !nextToTree(i)); if (far.length) { flash(far); api.status('💡 Hierdie plekke is nie langs \'n boom nie – hulle kry gras.'); return; }
-          const near = empties.filter(neighbourVan); if (near.length) { flash(near); api.status('💡 Plekke rondom \'n kampeerwa kry gras – kampeerwaens mag nie raak nie.'); return; }
+          // gentle nudges – free. Asking again straight away places a van.
+          if (!nudged) {
+            nudged = true;
+            for (let r = 0; r < n; r++) { let k = 0, e = []; for (let c = 0; c < n; c++) { const i = r * n + c; if (g[i] === 1) k++; if (!P.trees.has(i) && g[i] === 0) e.push(i); } if (k === P.rows[r] && e.length) { flash(e); api.status(`💡 Hierdie ry het al ${k === 0 ? 'geen kampeerwaens nodig' : 'genoeg kampeerwaens'} – die oop plekke kry gras.`); return; } }
+            for (let c = 0; c < n; c++) { let k = 0, e = []; for (let r = 0; r < n; r++) { const i = r * n + c; if (g[i] === 1) k++; if (!P.trees.has(i) && g[i] === 0) e.push(i); } if (k === P.cols[c] && e.length) { flash(e); api.status(`💡 Hierdie kolom het al ${k === 0 ? 'geen kampeerwaens nodig' : 'genoeg kampeerwaens'} – die oop plekke kry gras.`); return; } }
+            const far = empties.filter(i => !nextToTree(i)); if (far.length) { flash(far); api.status('💡 Hierdie plekke is nie langs \'n boom nie – hulle kry gras.'); return; }
+            const near = empties.filter(neighbourVan); if (near.length) { flash(near); api.status('💡 Plekke rondom \'n kampeerwa kry gras – kampeerwaens mag nie raak nie.'); return; }
           }
           nudged = false;
           const todo = [...P.sol].filter(i => g[i] !== 1);

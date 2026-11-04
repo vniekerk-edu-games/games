@@ -1,24 +1,16 @@
 'use strict';
 /* =========================================================
-   APP – screens, profiles, camp map, game shell, rewards
+   APP – screens, profiles, camp hub, Kampwinkel, game shell
    ========================================================= */
-const REWARDS = [
-  { at: 5, id: 'vlag', n: 'Kampvlag', e: '🚩' }, { at: 15, id: 'sokker', n: 'Sokkerbal', e: '⚽' }, { at: 30, id: 'bordspel', n: 'Bordspeletjies', e: '🎲' },
-  { at: 50, id: 'potjie', n: 'Potjiekos-pot', e: '🍲' }, { at: 75, id: 'krieket', n: 'Krieketstel', e: '🏏' }, { at: 100, id: 'rugby', n: 'Rugbybal', e: '🏉' },
-  { at: 140, id: 'ligte', n: 'Kampliggies', e: '💡' }, { at: 190, id: 'kitaar', n: 'Kitaar', e: '🎸' }, { at: 250, id: 'teleskoop', n: 'Teleskoop', e: '🔭' }
-];
-const STATIONS = { skadu: { x: 24, y: 25 }, stapsak: { x: 50, y: 34 }, spoor: { x: 73, y: 24 }, rivier: { x: 85, y: 50 } };
 const PRAISE = ['Mooi so!', 'Uitstekend!', 'Slimkop!', 'Fantasties!', 'Jy het dit!', 'Bakgat!', 'Wonderlik!'];
-
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); $(id).classList.remove('hidden'); }
-const unlockedFor = stars => REWARDS.filter(r => stars >= r.at).map(r => r.id);
 
 /* ---------- title & profiles ---------- */
 $('btnStart').onclick = () => { Snd.init(); Snd.tap(); DB.profiles.length ? showProfiles() : startCreate(); };
 function showProfiles() {
   show('scrProfiles'); const w = $('profileCards'); w.innerHTML = '';
   DB.profiles.forEach(p => {
-    const c = el('div', 'card', `<div class="av">${avatarSVG(p.av)}</div><div class="nm"></div><div class="st">⭐ ${p.stars}</div>`);
+    const c = el('div', 'card', `<div class="av">${avatarSVG(p.av)}</div><div class="nm"></div><div class="st">⭐ ${p.bank} · 🏕️ ${p.owned.length}</div>`);
     c.querySelector('.nm').textContent = p.name;
     c.onclick = () => { Snd.tap(); DB.current = p.id; saveDB(); showHub(); }; w.appendChild(c);
   });
@@ -35,7 +27,7 @@ function startCreate(edit = false) {
 }
 function buildOpts() {
   $('avPreview').innerHTML = avatarSVG(AV);
-  const mk = (host, list, key, render) => { const h = $(host); h.innerHTML = ''; list.forEach((v, i) => { const val = typeof v === 'object' && v && v.v !== undefined ? v.v : i; const b = el('button', 'opt' + (AV[key] === val ? ' sel' : '')); render(b, v, i); b.onclick = () => { Snd.tap(); AV[key] = val; buildOpts(); }; h.appendChild(b); }); };
+  const mk = (host, list, key, render) => { const h = $(host); h.innerHTML = ''; list.forEach((v, i) => { const val = v && typeof v === 'object' && v.v !== undefined ? v.v : i; const b = el('button', 'opt' + (AV[key] === val ? ' sel' : '')); render(b, v, i); b.onclick = () => { Snd.tap(); AV[key] = val; buildOpts(); }; h.appendChild(b); }); };
   mk('optG', [{ v: 'seun', t: '👦 Seun' }, { v: 'meisie', t: '👧 Meisie' }], 'g', (b, v) => b.textContent = v.t);
   mk('optSkin', SKINS, 'skin', (b, v) => { b.classList.add('sw'); b.style.background = v; });
   mk('optHair', HAIRS, 'hair', (b, v) => { b.classList.add('sw'); b.style.background = v; });
@@ -48,37 +40,64 @@ $('btnCreateDone').onclick = () => {
   Snd.good(); $('inName').blur();
   if (editing) { const p = prof(); p.name = name; p.av = { ...AV }; saveDB(); showSettings(); return; }
   const p = newProfile(name, { ...AV }); DB.profiles.push(p); DB.current = p.id; saveDB(); showHub();
+  setTimeout(() => toast('Welkom by jou kamp! Los raaisels op om ⭐ te verdien en koop dan goed vir jou kamp. 🛒', 4500), 400);
 };
 $('inName').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnCreateDone').onclick(); });
 
 /* ---------- hub ---------- */
 function medals(p, gid) {
   const g = p.g[gid] || {}, n1 = Object.values(g).reduce((a, v) => a + v.n, 0), n2 = (g[2] ? g[2].n : 0) + (g[3] ? g[3].n : 0), n3 = g[3] ? g[3].n : 0;
-  const st = Object.values(g).reduce((a, v) => a + v.s, 0);
-  return { html: `<span class="${n1 >= 5 ? '' : 'off'}">🥉</span><span class="${n2 >= 5 ? '' : 'off'}">🥈</span><span class="${n3 >= 5 ? '' : 'off'}">🥇</span>`, st };
+  return `<span class="${n1 >= 5 ? '' : 'off'}">🥉</span><span class="${n2 >= 5 ? '' : 'off'}">🥈</span><span class="${n3 >= 5 ? '' : 'off'}">🥇</span>`;
 }
 function dailyGame() { return GAME_ORDER[todaySeed() % GAME_ORDER.length]; }
-function showHub() {
+function showHub(fresh) {
   const p = prof(); if (!p) { showProfiles(); return; }
-  closeGame(); show('scrHub');
-  $('hubScene').innerHTML = hubSceneSVG(unlockedFor(p.stars));
-  $('hubAv').innerHTML = avatarSVG(p.av); $('hubName').textContent = p.name; $('hubStars').textContent = `⭐ ${p.stars} sterre`;
+  closeGame(); show('scrHub'); closeShop();
+  $('hubScene').innerHTML = campSceneSVG(p.owned, fresh);
+  $('hubAv').innerHTML = avatarSVG(p.av); $('hubName').textContent = p.name; $('hubStars').textContent = `🏕️ ${p.owned.length} / ${SHOP.length} kampgoed`;
   const st = $('stations'); st.innerHTML = '';
   for (const gid of GAME_ORDER) {
-    const G = GAMES[gid], pos = STATIONS[gid], m = medals(p, gid);
-    const b = el('button', 'station', `<div class="ic">${G.icon}</div><div class="nm">${G.name}</div><div class="ds">${G.blurb} · ⭐ ${m.st}</div><div class="med">${m.html}</div>`);
-    b.style.left = pos.x + '%'; b.style.top = pos.y + '%';
+    const G = GAMES[gid];
+    const b = el('button', 'station', `<div class="ic">${G.icon}</div><div class="tx"><div class="nm">${G.name}</div><div class="ds">${G.blurb}</div><div class="med">${medals(p, gid)}</div></div>`);
     b.onclick = () => { Snd.tap(); openGame(gid, p.diff[gid] || 1); };
     st.appendChild(b);
   }
   const d = $('btnDaily'), done = p.daily === todayKey();
   d.classList.toggle('done', done);
-  d.innerHTML = done ? '✅ Vandag se uitdaging is klaar!' : `🔥 Kampvuur-uitdaging van die dag ${GAMES[dailyGame()].icon}`;
+  d.innerHTML = done ? '✅ Uitdaging klaar!' : `🔥 Dag-uitdaging ${GAMES[dailyGame()].icon}`;
   d.onclick = () => { Snd.tap(); if (done) { toast('Kom môre terug vir \'n nuwe uitdaging! 🌙'); return; } openGame(dailyGame(), 2, { daily: true }); };
-  const next = REWARDS.find(r => p.stars < r.at);
-  $('rewardBar').innerHTML = next ? `🎁 Volgende kampgoed: ${next.e} ${next.n} by ${next.at} ⭐ (nog ${next.at - p.stars})` : '🏆 Jy het al die kampgoed oopgesluit!';
+  $('wallet').innerHTML = `⭐ <b>${p.bank}</b>`;
+  const canBuy = SHOP.some(it => !p.owned.includes(it.id) && it.p <= p.bank);
+  $('btnShop').classList.toggle('glow', canBuy);
 }
 $('btnSwitch').onclick = () => { Snd.tap(); showProfiles(); };
+
+/* ---------- Kampwinkel (shop) ---------- */
+let armed = null, armT = null;
+function openShop() { Snd.tap(); $('scrHub').classList.add('shopping'); $('shopPanel').classList.remove('hidden'); renderShop(); }
+function closeShop() { $('scrHub').classList.remove('shopping'); $('shopPanel').classList.add('hidden'); armed = null; }
+$('btnShop').onclick = openShop;
+$('shopClose').onclick = () => { Snd.tap(); closeShop(); };
+function renderShop() {
+  const p = prof(), list = $('shopList'); list.innerHTML = '';
+  $('shopBank').innerHTML = `Jy het <b>⭐ ${p.bank}</b> om te spandeer.<br><small>Kies self wat jy by jou kamp wil sit!</small>`;
+  const items = SHOP.slice().sort((a, b) => (p.owned.includes(a.id) - p.owned.includes(b.id)) || a.p - b.p);
+  for (const it of items) {
+    const own = p.owned.includes(it.id), afford = p.bank >= it.p;
+    const row = el('div', 'shop-item' + (own ? ' own' : ''), `<span class="e">${it.e}</span><span class="n">${it.n}</span>`);
+    const b = el('button', 'buy' + (own ? ' own' : afford ? '' : ' poor') + (armed === it.id ? ' armed' : ''), own ? '✔ In jou kamp' : armed === it.id ? 'Seker? Tik weer!' : `⭐ ${it.p}`);
+    if (!own) b.onclick = () => buy(it);
+    row.appendChild(b); list.appendChild(row);
+  }
+}
+function buy(it) {
+  const p = prof();
+  if (p.bank < it.p) { Snd.bad(); toast(`Jy het nog ⭐ ${it.p - p.bank} nodig. Los nog raaisels op! 🧩`, 2200); return; }
+  if (armed !== it.id) { armed = it.id; Snd.tap(); clearTimeout(armT); armT = setTimeout(() => { armed = null; if (!$('shopPanel').classList.contains('hidden')) renderShop(); }, 3500); renderShop(); return; }
+  armed = null; p.bank -= it.p; p.owned.push(it.id); saveDB(); Snd.coin(); setTimeout(() => Snd.win(), 250);
+  showHub(it.id);
+  toast(`🎉 Jou kamp het nou 'n ${it.n.toLowerCase()}! ${it.e}`, 2800);
+}
 
 /* ---------- settings ---------- */
 function showSettings() { show('scrSettings'); $('swSound').classList.toggle('on', prof().sound); }
@@ -108,7 +127,7 @@ function openGame(gid, diff, opts = {}) {
     win: (stars, msg) => setTimeout(() => winGame(stars, msg), 600)
   };
   CUR = { gid, diff, daily: !!opts.daily, inst: null };
-  $('gBody').innerHTML = '';
+  $('gBody').innerHTML = ''; $('gStatus').innerHTML = '';
   requestAnimationFrame(() => {
     CUR.inst = G.create($('gBody'), diff, makeRng(seed), api);
     if (!p.seenHelp[gid]) { p.seenHelp[gid] = 1; saveDB(); showHelp(); }
@@ -125,16 +144,19 @@ $('gNew').onclick = () => { if (!CUR) return; Snd.tap(); openGame(CUR.gid, CUR.d
 window.addEventListener('resize', () => { if (CUR && CUR.inst && CUR.inst.layout) CUR.inst.layout(); });
 
 function winGame(stars, msg) {
-  if (!CUR) return; const p = prof(), before = unlockedFor(p.stars);
+  if (!CUR) return; const p = prof();
+  const affordBefore = new Set(SHOP.filter(it => !p.owned.includes(it.id) && it.p <= p.bank).map(it => it.id));
   const bonus = CUR.daily ? 2 : 0;
-  p.stars += stars + bonus; const s = gstat(p, CUR.gid, CUR.diff); s.n++; s.s += stars;
+  p.stars += stars + bonus; p.bank += stars + bonus;
+  const s = gstat(p, CUR.gid, CUR.diff); s.n++; s.s += stars;
   if (CUR.daily) p.daily = todayKey();
   saveDB(); Snd.win();
-  const fresh = REWARDS.filter(r => unlockedFor(p.stars).includes(r.id) && !before.includes(r.id));
+  const fresh = SHOP.filter(it => !p.owned.includes(it.id) && it.p <= p.bank && !affordBefore.has(it.id));
   $('winTitle').textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
   $('winStars').innerHTML = [0, 1, 2].map(i => `<span class="${i < stars ? '' : 'off'}">⭐</span>`).join('');
-  $('winMsg').innerHTML = msg + (bonus ? `<br>🔥 Kampvuur-bonus: +${bonus} ⭐` : '');
-  $('winReward').innerHTML = fresh.map(r => `<div class="reward">🎁 Nuwe kampgoed oopgesluit: ${r.e} ${r.n}! Kyk by jou kamp.</div>`).join('');
+  $('winMsg').innerHTML = msg + (bonus ? `<br>🔥 Dag-uitdaging bonus: +${bonus} ⭐` : '');
+  $('winReward').innerHTML = `<div class="reward">⭐ Jy het nou <b>${p.bank}</b> sterre om te spandeer.` +
+    (fresh.length ? `<br>🛒 Jy kan nou ${fresh.length > 1 ? 'onder andere ' : ''}'n <b>${fresh[0].n.toLowerCase()}</b> ${fresh[0].e} koop!` : '') + '</div>';
   $('winNext').textContent = CUR.daily ? 'Speel nog ▶' : 'Volgende raaisel ▶';
   $('ovWin').classList.remove('hidden');
 }
@@ -158,5 +180,4 @@ document.addEventListener('fullscreenchange', fsChange); document.addEventListen
 document.addEventListener('pointerdown', () => Snd.init(), { once: true });
 
 /* ---------- boot ---------- */
-loadDB();
-show('scrTitle');
+loadDB(); show('scrTitle');

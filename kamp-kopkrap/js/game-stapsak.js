@@ -40,7 +40,6 @@
         }
         pieces.push(reg);
       }
-      // merge pieces that are too small into a neighbour
       let ok = true;
       for (let p = 0; p < pieces.length; p++) {
         if (!pieces[p].length || pieces[p].length >= min) continue;
@@ -147,7 +146,7 @@
       function up(ev) {
         if (!drag || ev.pointerId !== drag.pid) return;
         window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
-        const d = drag; drag = null; clearPrev2(d);
+        const d = drag; drag = null; d.prev.forEach(x => x.remove());
         if (d.moving) {
           if (d.fl) d.fl.remove();
           if (d.ax !== null && fits(d.p, d.p.rot, d.ax, d.ay)) { hist.push(snap()); d.p.at = [d.ax, d.ay]; Snd.place(); }
@@ -156,11 +155,10 @@
         } else {
           if (d.p.at) { hist.push(snap()); d.p.at = null; Snd.lift(); }
           else if (cfg.rot) { hist.push(snap()); d.p.rot = (d.p.rot + 1) % 4; Snd.rotate(); }
-          else { toast('Sleep dit na die stapsak 🎒', 1500); }
+          else toast('Sleep dit na die stapsak 🎒', 1500);
         }
         render(); check();
       }
-      function clearPrev2(d) { d.prev.forEach(x => x.remove()); }
       function check() {
         if (occ(null).every(v => v >= 0)) {
           done = true; const left = pieces.find(p => !p.at);
@@ -176,14 +174,14 @@
         restart() { if (done) return; hist.push(snap()); pieces.forEach(p => p.at = null); render(); },
         hint() {
           if (done) return;
-          const real = pieces.filter(p => !p.decoy && p.solX !== undefined);
+          const real = pieces.filter(p => !p.decoy);
           const wrong = real.filter(p => !(p.at && p.rot === 0 && p.at[0] === p.solX && p.at[1] === p.solY));
           const p = wrong.find(q => !q.at) || wrong[0]; if (!p) return;
           hist.push(snap()); hints++; Snd.hint();
           const target = new Set(p.base.map(([x, y]) => (p.solY + y) * W + p.solX + x));
           for (const q of pieces) if (q !== p && q.at && cellsOf(q).some(([x, y]) => target.has((q.at[1] + y) * W + q.at[0] + x))) q.at = null;
           p.rot = 0; p.at = [p.solX, p.solY]; render();
-          const pe = grid.querySelectorAll('.ss-placed'); pe.forEach(e => { if (e.style.left === p.at[0] * S + 'px' && e.style.top === p.at[1] * S + 'px') e.style.animation = 'glow 1s 3'; });
+          grid.querySelectorAll('.ss-placed').forEach(e => { if (e.style.left === p.at[0] * S + 'px' && e.style.top === p.at[1] * S + 'px') e.style.animation = 'glow 1s 3'; });
           api.status(`💡 Die ${p.item[0].toLowerCase()} ${p.item[1]} pas hier!`); check();
         }
       };

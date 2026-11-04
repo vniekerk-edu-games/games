@@ -10,14 +10,14 @@
     hond: { n: 'Hond', e: '🐕' }, vleis: { n: 'Braaivleis', e: '🥩' }, kat: { n: 'Kat', e: '🐈' }, vis: { n: 'Vis', e: '🐟' },
     bobbejaan: { n: 'Bobbejaan', e: '🐒' }, piesangs: { n: 'Piesangs', e: '🍌' }
   };
-  const RULES = [['jakkals', 'hoender', 'eet'], ['hoender', 'mielies', 'eet'], ['hond', 'vleis', 'eet'], ['hond', 'kat', 'jaag'], ['kat', 'vis', 'eet'], ['bobbejaan', 'piesangs', 'steel'], ['bobbejaan', 'mielies', 'steel'], ['hond', 'hoender', 'jaag']];
+  const RULES = [['jakkals', 'hoender', 'eet'], ['hoender', 'mielies', 'eet'], ['hond', 'vleis', 'eet'], ['hond', 'kat', 'jaag'], ['kat', 'vis', 'eet'],
+    ['bobbejaan', 'piesangs', 'steel'], ['bobbejaan', 'mielies', 'steel'], ['hond', 'hoender', 'jaag']];
   const CFG = {
     1: { n: 3, seats: [2], pa: false, range: [5, 9], minR: 2 },
     2: { n: 4, seats: [2, 3], pa: false, range: [7, 13], minR: 2 },
     3: { n: 5, seats: [2, 3], pa: true, range: [9, 19], minR: 3 }
   };
 
-  // entities: [rowers..., items...] ; state = bitmask (1 = right bank) + boat side
   function makeModel(items, rowers, seats) {
     const ents = rowers.concat(items), N = ents.length, R = rowers.length;
     const rules = RULES.filter(([a, b]) => items.includes(a) && items.includes(b));
@@ -45,7 +45,6 @@
     }
     return { ents, N, R, rules, idx, conflict, safe, bfs, seats };
   }
-
   function generate(diff, Rg) {
     const C = CFG[diff], pool = Object.keys(CH); let best = null;
     for (let att = 0; att < 1500; att++) {
@@ -100,16 +99,14 @@
         bt.innerHTML = '<div class="hull"></div>';
         for (const e of M.ents) { const t = tok(e); if (loc[e] === 'L') L.appendChild(t); else if (loc[e] === 'R') Rb.appendChild(t); else { const s = el('div', 'seat'); s.appendChild(t); bt.appendChild(s); } }
         bt.style.left = boat === 'L' ? '30.5%' : 'calc(69.5% - min(26%, 250px))';
-        const hasRower = M.ents.some(e => isRower(e) && loc[e] === 'B');
-        rowB.disabled = !hasRower || moving || done;
+        rowB.disabled = !M.ents.some(e => isRower(e) && loc[e] === 'B') || moving || done;
         api.canUndo(hist.length > 0);
       }
       function tapEnt(e, t) {
         if (moving || done) return;
         if (loc[e] === 'B') { hist.push(snap()); loc[e] = boat; Snd.lift(); hintSet.clear(); render(); return; }
         if (loc[e] !== boat) { Snd.bad(); t.classList.add('shake'); setTimeout(() => t.classList.remove('shake'), 450); toast('Die kano is aan die ander kant!', 1400); return; }
-        const inBoat = M.ents.filter(x => loc[x] === 'B').length;
-        if (inBoat >= M.seats) { Snd.bad(); toast(`Die kano is vol – net plek vir ${M.seats}!`, 1500); return; }
+        if (M.ents.filter(x => loc[x] === 'B').length >= M.seats) { Snd.bad(); toast(`Die kano is vol – net plek vir ${M.seats}!`, 1500); return; }
         hist.push(snap()); loc[e] = 'B'; Snd.place(); render();
       }
       function maskOf() { let m = 0; M.ents.forEach((e, i) => { const side = loc[e] === 'B' ? boat : loc[e]; if (side === 'R') m |= 1 << i; }); return m; }
@@ -117,7 +114,7 @@
         if (moving || done) return;
         const passengers = M.ents.filter(e => loc[e] === 'B'); if (!passengers.some(isRower)) return;
         let after = maskOf(); passengers.forEach(e => after ^= 1 << M.idx[e]);
-        const side = boat === 'L' ? 0 : 1, c = M.conflict(after, side);
+        const c = M.conflict(after, boat === 'L' ? 0 : 1);
         if (c) {
           Snd.bad(); const [a, b, v] = c;
           api.status(`⚠️ Wag! As jy weggaan, ${v} die ${CH[a].n.toLowerCase()} die ${CH[b].n.toLowerCase()}!`);
@@ -148,7 +145,6 @@
           const path = M.bfs(maskOf(), boat === 'L' ? 0 : 1); if (!path || !path.length) return;
           hints++; Snd.hint();
           const mv = path[0].map(i => M.ents[i]); hintSet = new Set(mv);
-          // put the suggested group in the canoe for the child, take others out
           hist.push(snap());
           for (const e of M.ents) if (loc[e] === 'B' && !hintSet.has(e)) loc[e] = boat;
           for (const e of mv) loc[e] = 'B';
