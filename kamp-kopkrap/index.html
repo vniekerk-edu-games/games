@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2f6b45">
+<title>Kamp Kopkrap</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Title -->
+  <div class="screen scene-bg" id="scrTitle">
+    <div class="title-wrap">
+      <div class="logo">KAMP<br><span>KOPKRAP</span></div>
+      <p class="tag">Breinraaisels by die kampeerplek</p>
+      <button class="btn big pulse" id="btnStart">▶ Speel</button>
+    </div>
+  </div>
+
+  <!-- Profiles -->
+  <div class="screen scene-bg hidden" id="scrProfiles">
+    <div class="panel">
+      <h2>Wie speel?</h2>
+      <div class="cards" id="profileCards"></div>
+    </div>
+  </div>
+
+  <!-- Create / edit camper -->
+  <div class="screen scene-bg hidden" id="scrCreate">
+    <div class="panel create">
+      <h2 id="createTitle">Nuwe kampeerder</h2>
+      <div class="create-grid">
+        <div class="av-preview" id="avPreview"></div>
+        <div class="create-opts">
+          <label>Wat is jou naam?</label>
+          <input class="name" id="inName" maxlength="12" placeholder="Jou naam" autocomplete="off">
+          <label>Ek is 'n…</label>
+          <div class="opt-row" id="optG"></div>
+          <label>Vel</label>
+          <div class="opt-row" id="optSkin"></div>
+          <label>Hare</label>
+          <div class="opt-row" id="optHair"></div>
+          <label>Hemp</label>
+          <div class="opt-row" id="optShirt"></div>
+          <label>Hoed</label>
+          <div class="opt-row" id="optHat"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn grey" id="btnCreateBack">◀ Terug</button>
+        <button class="btn" id="btnCreateDone">Kom ons gaan! ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hub / camp map -->
+  <div class="screen hidden" id="scrHub">
+    <div class="hub-scene" id="hubScene"></div>
+    <div class="hub-top">
+      <div class="who"><div class="av-sm" id="hubAv"></div><div><b id="hubName"></b><small id="hubStars"></small></div></div>
+      <div class="row tight">
+        <button class="btn small blue" id="btnSettings">⚙️</button>
+        <button class="btn small grey" id="btnSwitch">👥</button>
+      </div>
+    </div>
+    <div id="stations"></div>
+    <button class="daily" id="btnDaily"></button>
+    <div class="reward-bar" id="rewardBar"></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="screen scene-bg hidden" id="scrSettings">
+    <div class="panel" style="max-width:560px">
+      <h2>⚙️ Instellings</h2>
+      <div class="toggle">🔊 Klank<div class="sw" id="swSound"></div></div>
+      <div class="col">
+        <button class="btn blue" id="btnEditAv">🧑 Verander my kampeerder</button>
+        <button class="btn red small" id="btnDelete">🗑️ Skrap hierdie speler</button>
+        <button class="btn" id="btnSetDone">✔ Klaar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div class="screen hidden" id="scrGame">
+    <div class="gbar">
+      <button class="ibtn" id="gBack" aria-label="Terug">◀</button>
+      <div class="gtitle"><span id="gIcon"></span><span id="gName"></span></div>
+      <div class="diffs" id="gDiffs"></div>
+      <div class="gtools">
+        <button class="ibtn" id="gHelp" aria-label="Hulp">❓</button>
+        <button class="ibtn" id="gHint" aria-label="Wenk">💡</button>
+        <button class="ibtn" id="gUndo" aria-label="Ontdoen">↶</button>
+        <button class="ibtn" id="gRestart" aria-label="Begin oor">🔄</button>
+        <button class="ibtn" id="gNew" aria-label="Nuwe raaisel">🎲</button>
+      </div>
+    </div>
+    <div class="gstatus" id="gStatus"></div>
+    <div class="gbody" id="gBody"></div>
+  </div>
+
+  <!-- Overlays -->
+  <div class="overlay hidden" id="ovWin">
+    <div class="panel winp">
+      <h2 id="winTitle">Mooi so!</h2>
+      <div class="bigstars" id="winStars"></div>
+      <p id="winMsg"></p>
+      <div id="winReward"></div>
+      <div class="row">
+        <button class="btn grey" id="winHub">🏕️ Kamp</button>
+        <button class="btn" id="winNext">Volgende raaisel ▶</button>
+      </div>
+    </div>
+  </div>
+  <div class="overlay hidden" id="ovHelp">
+    <div class="panel helpp">
+      <h2 id="helpTitle"></h2>
+      <div id="helpBody"></div>
+      <div class="row"><button class="btn" id="helpOk">Reg so! ▶</button></div>
+    </div>
+  </div>
+
+  <button id="btnFS" aria-label="Volskerm"></button>
+  <div id="toast"></div>
+  <div id="rotate"><div class="ph">📱</div><p>Draai jou tablet sywaarts om te speel!</p></div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/art.js"></script>
+<script src="js/game-skadu.js"></script>
+<script src="js/game-stapsak.js"></script>
+<script src="js/game-spoor.js"></script>
+<script src="js/game-rivier.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
