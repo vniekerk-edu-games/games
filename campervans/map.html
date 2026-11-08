@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Map | The Camper Vans SA</title>
+<meta name="description" content="Every campsite we've visited, on one interactive map.">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="mappage">
+<nav>
+  <a class="brand" href="index.html"><img src="assets/logo.png" alt=""><span>The Camper Vans SA</span></a>
+  <div class="navlinks"><a href="index.html">Home</a><a href="map.html" aria-current="page">Map</a><a href="index.html#campsites">Campsites</a></div>
+</nav>
+<div class="fm" id="fm">
+  <aside class="fpanel" aria-label="Find a campsite">
+    <div class="fp-top">
+      <input id="fq" type="search" placeholder="Search name, town or keyword" aria-label="Search campsites">
+      <button class="fhide" id="fhide" type="button" aria-label="Hide the list" title="Hide the list">«</button>
+    </div>
+    <div class="fp-label">Areas</div>
+    <div class="fregions" id="fregions"></div>
+    <div class="fp-label">Must have</div>
+    <div class="ffeats" id="ffeats"></div>
+    <div class="fp-count"><span id="fcount" role="status"></span> <button class="clear" id="fclear" type="button" hidden>Clear</button></div>
+    <div class="flist" id="flist"></div>
+    <div class="fp-keys">Tip: <kbd>/</kbd> search · <kbd>←</kbd> <kbd>→</kbd> next campsite · <kbd>Esc</kbd> close</div>
+  </aside>
+  <div class="fmapwrap">
+    <div id="fmap" role="region" aria-label="Map of all campsites"></div>
+    <section class="strip" id="strip" hidden aria-labelledby="strip-h"></section>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+</div>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+<script>fullmap()</script>
+</body>
+</html>

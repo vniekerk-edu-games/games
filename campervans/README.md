@@ -1,7 +1,7 @@
 # The Camper Vans SA – static site mock-up
 
 Plain HTML, CSS and JavaScript. No build step, no server-side code, no database.
-Leaflet (the map library) is bundled in `vendor/`, so the only outside requests are Google Fonts and OpenStreetMap map tiles.
+Leaflet (the map library) is bundled in `vendor/`, so the only outside requests are Google Fonts and map tiles (OpenStreetMap; the full map also offers CARTO, OpenTopoMap and Esri satellite tiles).
 
 ## Run it locally
 The site reads `data/campsites.csv`, so it must be served over HTTP (double-clicking `index.html` won't work):
@@ -38,11 +38,14 @@ Only Kruistementvlei, 22 Watervalle (`1.jpg`) and Groot Breede are your real pho
 
 ## Look and feel
 * `assets/pattern.png` is the faint icon pattern behind the page (a tile, 560px). Swap or delete it, or change the `body` background in `style.css`.
-* The map has a Hide/Show button in the dark filter bar. It starts hidden on phones and narrow windows.
+* The map has a Hide/Show button in the dark filter bar (animated both ways). It starts hidden on phones and narrow windows.
+* Campsites are listed alphabetically within each area. Map pins show names; overlapping names hide until you zoom in, and the "Aa" button turns names on/off (remembered).
+* `map.html` is the full-screen map: search, area and feature filters, a list, base-map switcher (Map / Light / Terrain / Satellite), near-me with distances, zoom-to-results, surprise-me, full screen, and an info strip with photos, nearby campsites, directions and prev/next. Link straight to a campsite with `map.html?id=<slug>`.
 
 ## Files
     index.html        home: logo + about, latest additions, filter tiles, search, area groups, map
     campsite.html     detail page, opened as campsite.html?id=<slug>
+    map.html          full-screen interactive map (map.html?id=<slug> opens one campsite)
     style.css         all styling
     app.js            CSV loader, filters, carousel, maps
     data/campsites.csv
