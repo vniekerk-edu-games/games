@@ -10,6 +10,8 @@ const FEATURES = [
 ];
 const ICON = Object.fromEntries(FEATURES);
 const MAX_PHOTOS = 12;
+const BATCH_DAYS = 14;   // campsites added within this many days of the newest one count as the "latest additions"
+const PANEL_ROWS = 5;
 
 /* ---------- CSV (handles quoted fields with commas, quotes and line breaks) ---------- */
 function parseCSV(text){
@@ -96,12 +98,25 @@ async function home(){
   try { all = await loadCampsites(); }
   catch (e) { $('#regions').append(el('p', { class: 'empty' }, 'Could not load the campsite list. Serve this folder over HTTP (see README).')); return; }
 
-  // feature: newest campsite (first CSV row)
-  const f = all[0];
-  const first = f.highlights.split(/\n\s*\n/)[0];
-  $('#feature-text').replaceChildren(el('div', { class: 'kicker' }, 'Latest addition'), el('h1', {}, f.name), el('p', {}, first),
-    el('a', { class: 'btn gold', href: `campsite.html?id=${f.slug}` }, 'Read the campsite page'));
-  loadPhoto(f.slug, 1).then(u => { if (u) $('#feature-pic').style.backgroundImage = `url(${u})`; });
+  // latest additions: everything added within BATCH_DAYS of the newest `added` date
+  const dated = all.filter(c => c.added).sort((x, y) => y.added.localeCompare(x.added));
+  const newest = dated.length ? new Date(dated[0].added) : null;
+  const batch = newest ? dated.filter(c => (newest - new Date(c.added)) / 864e5 <= BATCH_DAYS) : [];
+  const isNew = c => batch.includes(c);
+  let newOnly = false;
+  const panel = $('#latest');
+  if (!batch.length) panel.hidden = true;
+  else {
+    const when = newest.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+    panel.append(el('div', { class: 'lh' }, el('h2', { id: 'latest-h' }, 'Latest additions'), el('span', {}, `Added ${when}`)),
+      ...batch.slice(0, PANEL_ROWS).map(c => {
+        const th = el('div', { class: 'th' });
+        loadPhoto(c.slug, 1).then(u => { if (u) th.style.backgroundImage = `url(${u})`; });
+        return el('a', { class: 'lrow', href: `campsite.html?id=${c.slug}` }, th, el('div', {}, el('h3', {}, c.name), el('div', { class: 'town', style: 'margin:0' }, c.town)), el('span', { class: 'new' }, 'NEW'));
+      }),
+      el('button', { class: 'lmore', type: 'button', onclick: () => { newOnly = true; draw(); $('#campsites').scrollIntoView(); } },
+        batch.length > PANEL_ROWS ? `+ ${batch.length - PANEL_ROWS} more · show all ${batch.length} new in the list` : `Show only the ${batch.length} new in the list`));
+  }
 
   const sel = new Set(), q = $('#q'), count = $('#count');
   const buttons = [];
@@ -110,9 +125,9 @@ async function home(){
 
   const tiles = QUICK.map(([name, bg, fg]) => {
     const b = el('button', { class: 'tile', type: 'button', 'aria-pressed': 'false', 'data-f': name }, icon(name, 40), name, el('small', {}, `${countOf(name)} campsites`));
-    b.style.background = bg; b.style.color = fg; b.onclick = () => toggle(name); buttons.push(b); return b;
+    b.style.borderTopColor = bg; b.onclick = () => toggle(name); buttons.push(b); return b;
   });
-  const more = el('button', { class: 'tile', type: 'button', 'aria-expanded': 'false', style: 'background:#efd495;color:#1b3a26' }, 'All 15 filters', el('small', {}, 'show or hide'));
+  const more = el('button', { class: 'tile', type: 'button', 'aria-expanded': 'false', style: 'border-top-color:#c9bd98' }, 'All 15 filters', el('small', {}, 'show or hide'));
   more.onclick = () => { const h = $('#more').hidden = !$('#more').hidden; more.setAttribute('aria-expanded', !h); };
   $('#tiles').append(...tiles, more);
 
@@ -120,7 +135,7 @@ async function home(){
     const b = el('button', { class: 'facet', type: 'button', 'aria-pressed': 'false', 'data-f': name }, icon(name, 34), name, el('span', { class: 'n' }, String(countOf(name))));
     b.firstChild.removeAttribute('title'); b.onclick = () => toggle(name); buttons.push(b); return b;
   }));
-  const clear = () => { sel.clear(); q.value = ''; buttons.forEach(b => b.setAttribute('aria-pressed', 'false')); draw(); };
+  const clear = () => { sel.clear(); newOnly = false; q.value = ''; buttons.forEach(b => b.setAttribute('aria-pressed', 'false')); draw(); };
   $('#clear').onclick = clear; q.oninput = draw;
 
   // map
@@ -132,12 +147,13 @@ async function home(){
   }));
   $('#legend').append(...REGIONS.map(r => el('span', {}, el('i', { class: 'dot', style: `background:${r[1]}` }), r[0])));
 
-  const match = c => [...sel].every(x => c.features.includes(x)) &&
+  const match = c => (!newOnly || isNew(c)) && [...sel].every(x => c.features.includes(x)) &&
     (!q.value.trim() || [c.name, c.town, c.highlights].some(t => t.toLowerCase().includes(q.value.trim().toLowerCase())));
 
   function card(c){
     const pic = el('div', { class: 'pic' }, el('span', {}, c.name));
-    loadPhoto(c.slug, 1).then(u => { if (u) pic.replaceChildren(el('img', { src: u, alt: c.name, loading: 'lazy' })); });
+    if (isNew(c)) pic.append(el('em', { class: 'new' }, 'NEW'));
+    loadPhoto(c.slug, 1).then(u => { if (u) pic.prepend(el('img', { src: u, alt: c.name, loading: 'lazy' })); pic.querySelector('span')?.remove(); });
     const a = el('a', { class: 'card', href: `campsite.html?id=${c.slug}` }, pic,
       el('div', { class: 'cn' }, el('i', { class: 'dot', style: `background:${REGION_COLOUR[c.region] || '#1b3a26'}` }), el('h3', {}, c.name)),
       el('div', { class: 'town' }, c.town), el('div', { class: 'icons' }, orderedFeatures(c).map(x => icon(x))));
@@ -152,12 +168,12 @@ async function home(){
       const items = list.filter(c => c.region === r); if (!items.length) return null;
       const [, bg, fg] = REGIONS.find(x => x[0] === r) || [0, '#5d7872', '#fff'];
       const head = el('div', { class: 'rh' }, el('h2', {}, r), el('span', {}, `${items.length} campsite${items.length > 1 ? 's' : ''}`));
-      head.style.background = bg; head.style.color = fg;
+      head.style.borderLeftColor = bg;
       return el('section', {}, head, el('div', { class: 'g3' }, items.map(card)));
     }).filter(Boolean);
     $('#regions').replaceChildren(...(secs.length ? secs : [el('p', { class: 'empty' }, 'No campsite has every one of those. ', el('button', { class: 'clear', onclick: clear }, 'Clear filters'))]));
-    count.textContent = `Showing ${list.length} of ${all.length} campsites`;
-    $('#clear').hidden = !sel.size && !q.value;
+    count.textContent = `Showing ${list.length} of ${all.length} campsites${newOnly ? ' (new only)' : ''}`;
+    $('#clear').hidden = !sel.size && !q.value && !newOnly;
     group.clearLayers(); list.forEach(c => group.addLayer(markers.get(c.slug)));
     if (list.length) map.fitBounds(L.latLngBounds(list.map(c => [c.lat, c.lon])).pad(.15), { maxZoom: 11 });
   }
