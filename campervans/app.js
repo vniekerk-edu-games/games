@@ -60,7 +60,7 @@ function icon(name, size){
 }
 const orderedFeatures = c => FEATURES.map(f => f[0]).filter(f => c.features.includes(f));
 const paragraphs = t => t.split(/\n\s*\n/).map(p => el('p', {}, p.trim()));
-const photo = (slug, n) => `campsites/${slug}/${n}.webp`;
+const photo = (slug, n) => `campsites/${slug}/${n}.jpg`;
 
 function addMap(node, points, opts = {}){
   const map = L.map(node, { scrollWheelZoom: false, ...opts });
