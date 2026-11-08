@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Campsite | The Camper Vans SA</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html"><img src="assets/logo.png" alt=""><span>The Camper Vans SA</span></a>
+  <div class="navlinks"><a href="index.html">Home</a><a href="index.html#map-section">Map</a><a href="index.html#campsites">Campsites</a></div>
+</nav>
+
+<header class="dhero"><h1 id="title"></h1><div class="town" id="town"></div></header>
+
+<main class="detail">
+  <div>
+    <div class="gallery" id="gallery"><div class="nogallery">Loading photos…</div></div>
+    <div class="feats" id="feats"></div>
+    <div id="mini" role="region" aria-label="Location map"></div>
+  </div>
+  <div class="text" id="text"></div>
+</main>
+
+<div class="pager" id="pager" role="navigation" aria-label="More campsites"></div>
+
+<footer>
+  <div>Website done by JEM Design</div>
+  <div>Contact us: <a href="mailto:jem.design.za@gmail.com">jem.design.za@gmail.com</a></div>
+</footer>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+<script>detail()</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+/* The Camper Vans SA – shared styles */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Quicksand:wght@400;500;600&display=swap');
+
+:root{
+  --forest:#1d4a42; --deep:#143c35; --stone:#e0e0db; --parchment:#f3f1ea;
+  --ember:#c8651b; --ink:#16403a; --muted:#5d7872;
+  --hand:'Caveat','Segoe Print',cursive; --body:'Quicksand','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;font-family:var(--body);color:var(--ink);background:var(--stone);line-height:1.65;font-size:16px}
+a{color:var(--forest)}
+:focus-visible{outline:3px solid var(--ember);outline-offset:2px}
+h1,h2,h3{font-family:var(--hand);font-weight:700;line-height:1.1;margin:0}
+
+/* icons are masks, so they take the colour of the text around them */
+.ic{display:inline-block;width:30px;height:30px;background:currentColor;
+  -webkit-mask:var(--src) center/contain no-repeat;mask:var(--src) center/contain no-repeat}
+
+/* top strip + nav */
+.latest{background:var(--deep);color:#f3efe2;text-align:center;font-size:14px;padding:7px 16px}
+.latest a{color:#fff;font-weight:600}
+nav{position:sticky;top:0;z-index:50;background:rgba(251,248,238,.96);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:space-between;padding:10px 5vw;box-shadow:0 1px 8px #0002}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-size:19px;font-weight:500}
+.brand img{height:36px;width:auto}
+.navlinks a{color:var(--ink);text-decoration:none;margin-left:26px;font-size:14px;font-weight:600}
+.navlinks a:hover{color:var(--ember)}
+
+/* hero */
+.hero{background:linear-gradient(180deg,#fbe7b4 0%,#f6efd9 55%,var(--stone) 100%);position:relative;overflow:hidden;text-align:center;padding:34px 20px 46px}
+.hero:before{content:"";position:absolute;inset:auto 0 0 0;height:75%;background:url(assets/bg1.png) center bottom/cover no-repeat;opacity:.9;-webkit-mask:linear-gradient(transparent,#000 45%);mask:linear-gradient(transparent,#000 45%)}
+.hero img{position:relative;width:min(520px,82vw)}
+.intro{max-width:760px;margin:0 auto;padding:34px 24px 10px}
+.intro p{margin:0 0 14px}
+.intro .sign{font-family:var(--hand);font-size:30px;color:var(--forest);margin-top:18px}
+
+/* finder: icon legend that is also the filter */
+.finder{max-width:1080px;margin:0 auto;padding:26px 22px 34px}
+.finder h2{font-size:38px;text-align:center;margin-bottom:4px}
+.finder .hint{text-align:center;color:var(--muted);font-size:14px;margin:0 0 18px}
+.facets{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:6px 10px}
+.facet{display:flex;align-items:center;gap:10px;background:none;border:2px solid transparent;border-radius:10px;
+  padding:6px 8px;cursor:pointer;color:var(--ink);font:500 21px/1.1 var(--hand);text-align:left}
+.facet .ic{width:36px;height:36px;flex:none}
+.facet:hover{background:#0000000a}
+.facet[aria-pressed=true]{background:var(--forest);color:#fff;border-color:var(--forest)}
+.facet .n{margin-left:auto;font:600 12px var(--body);opacity:.6}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:22px}
+.bar input{flex:1 1 260px;max-width:420px;border:2px solid #b9c3bd;border-radius:30px;padding:11px 20px;font:500 15px var(--body);color:var(--ink);background:#fff}
+.bar input:focus{border-color:var(--forest);outline:none}
+.count{font-weight:600;font-size:14px}
+.clear{background:none;border:0;color:var(--ember);font:600 14px var(--body);cursor:pointer;text-decoration:underline;padding:4px}
+
+/* campsite grid */
+.band{background:#27443f url(assets/bg2.png) center top/100% auto no-repeat;padding:70px 22px 70px}
+.grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:34px 28px}
+.card{display:block;text-decoration:none;color:#f3efe2;text-align:center}
+.card .pic{aspect-ratio:5/4;background:linear-gradient(145deg,#2d5f55,#1a463e);overflow:hidden;display:grid;place-items:center}
+.card .pic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
+.card:hover .pic img{transform:scale(1.04)}
+.card .pic span{font:700 26px var(--hand);opacity:.7;padding:10px}
+.card h3{font-size:27px;margin:12px 0 0;color:#fff}
+.card .town{font-size:15px;opacity:.8;margin-bottom:8px}
+.card .icons{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;color:#f3efe2}
+.card .icons .ic{width:25px;height:25px}
+.card:hover h3{color:#ffd9ae}
+.empty{grid-column:1/-1;text-align:center;color:#f3efe2;font-size:18px;padding:30px 0}
+.empty button{margin-left:8px}
+
+/* map */
+.mapwrap{background:var(--stone);padding:50px 22px 60px}
+.mapwrap h2{text-align:center;font-size:38px;margin-bottom:16px}
+#map{max-width:1080px;height:520px;margin:0 auto;border:3px solid var(--forest);background:#cfd8d2}
+.pin{width:18px;height:18px;border-radius:50%;background:var(--forest);border:3px solid #fff;box-shadow:0 1px 5px #0006}
+.leaflet-popup-content{font-family:var(--body);margin:12px 16px}
+.leaflet-popup-content b{font:700 22px var(--hand)}
+
+footer{background:var(--deep);color:#f3efe2;text-align:center;padding:38px 20px;font-size:14px}
+footer a{color:#fff}
+.dim{opacity:.7}
+
+/* detail page */
+.dhero{background:linear-gradient(180deg,#fbe7b4,#f1ead4);position:relative;display:grid;place-items:center;padding:70px 20px}
+.dhero:before{content:"";position:absolute;inset:0;background:url(assets/bg1.png) center bottom/cover;opacity:.8;-webkit-mask:linear-gradient(transparent,#000 60%);mask:linear-gradient(transparent,#000 60%)}
+.dhero h1{position:relative;font:500 clamp(40px,8vw,84px)/1.05 var(--body);letter-spacing:-.01em;color:var(--forest);
+  border:2px solid var(--forest);padding:.3em .7em;text-align:center;background:#ffffff40}
+.dhero .town{position:relative;margin-top:14px;font-weight:600;color:var(--forest)}
+.detail{max-width:1080px;margin:0 auto;padding:38px 22px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:48px;align-items:start}
+.gallery{position:relative}
+.track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;background:#cdd3cd;aspect-ratio:4/3.4}
+.track::-webkit-scrollbar{display:none}
+.track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:center}
+.arrow{position:absolute;top:calc(50% - 22px);width:44px;height:44px;border-radius:50%;border:0;background:#fffc;color:var(--forest);font-size:22px;cursor:pointer;box-shadow:0 1px 6px #0004}
+.arrow.prev{left:10px}.arrow.next{right:10px}
+.dots{display:flex;justify-content:center;gap:8px;margin:12px 0 4px}
+.dots button{width:11px;height:11px;border-radius:50%;border:0;background:#a8b3ad;padding:0;cursor:pointer}
+.dots button[aria-current=true]{background:var(--forest)}
+.nogallery{aspect-ratio:4/3.4;display:grid;place-items:center;background:#cdd3cd;color:var(--muted);font:700 26px var(--hand);text-align:center;padding:20px}
+.feats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px;margin-top:22px}
+.feats div{display:flex;align-items:center;gap:10px;font:500 20px/1.05 var(--hand)}
+.feats .ic{width:38px;height:38px;flex:none}
+.text h2{font-size:36px;color:var(--forest);margin:26px 0 6px}
+.text h2:first-child{margin-top:0}
+.text p{margin:0 0 14px;max-width:68ch}
+.btn{display:inline-block;background:var(--forest);color:#fff;text-decoration:none;font-weight:600;padding:11px 24px;border-radius:30px;margin:4px 10px 8px 0}
+.btn:hover{background:var(--ember)}
+.btn.alt{background:none;color:var(--forest);border:2px solid var(--forest);padding:9px 22px}
+.btn.alt:hover{color:#fff}
+#mini{height:260px;margin-top:22px;border:2px solid var(--forest)}
+.pager{max-width:1080px;margin:0 auto;padding:8px 22px 50px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-weight:600}
+.pager a{text-decoration:none}
+.pager a:hover{color:var(--ember)}
+
+@media(max-width:860px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .detail{grid-template-columns:1fr;gap:28px}
+}
+@media(max-width:560px){
+  .grid{grid-template-columns:1fr}
+  .navlinks a{margin-left:16px}.brand span{display:none}
+  #map{height:420px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card .pic img{transition:none}}
