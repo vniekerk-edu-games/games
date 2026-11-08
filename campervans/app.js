@@ -11,7 +11,7 @@ const FEATURES = [
 const ICON = Object.fromEntries(FEATURES);
 const MAX_PHOTOS = 12;
 const BATCH_DAYS = 14;   // campsites added within this many days of the newest one count as the "latest additions"
-const PANEL_ROWS = 5;
+const PANEL_ROWS = 3;
 
 /* ---------- CSV (handles quoted fields with commas, quotes and line breaks) ---------- */
 function parseCSV(text){
@@ -61,6 +61,7 @@ function icon(name, size){
   return i;
 }
 const orderedFeatures = c => FEATURES.map(f => f[0]).filter(f => c.features.includes(f));
+const blurb = (t, n = 150) => { const s = t.split(/\n\s*\n/)[0].replace(/\s+/g, ' '); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; };
 const paragraphs = t => t.split(/\n\s*\n/).map(p => el('p', {}, p.trim()));
 // tries .webp first, then .jpg, so either format works
 const EXTS = ['webp','jpg'];
@@ -112,7 +113,9 @@ async function home(){
       ...batch.slice(0, PANEL_ROWS).map(c => {
         const th = el('div', { class: 'th' });
         loadPhoto(c.slug, 1).then(u => { if (u) th.style.backgroundImage = `url(${u})`; });
-        return el('a', { class: 'lrow', href: `campsite.html?id=${c.slug}` }, th, el('div', {}, el('h3', {}, c.name), el('div', { class: 'town', style: 'margin:0' }, c.town)), el('span', { class: 'new' }, 'NEW'));
+        return el('a', { class: 'lrow', href: `campsite.html?id=${c.slug}` }, th,
+          el('div', {}, el('div', { class: 'lt' }, el('h3', {}, c.name), el('span', { class: 'new' }, 'NEW')),
+            el('div', { class: 'town', style: 'margin:0 0 6px' }, c.town), el('p', {}, blurb(c.highlights))));
       }),
       el('button', { class: 'lmore', type: 'button', onclick: () => { newOnly = true; draw(); $('#campsites').scrollIntoView(); } },
         batch.length > PANEL_ROWS ? `+ ${batch.length - PANEL_ROWS} more · show all ${batch.length} new in the list` : `Show only the ${batch.length} new in the list`));
@@ -145,6 +148,13 @@ async function home(){
     m.bindPopup(() => el('div', {}, el('b', {}, c.name), el('div', {}, c.town), el('a', { href: `campsite.html?id=${c.slug}` }, 'Open campsite page')));
     return [c.slug, m];
   }));
+  const split = $('.split'), mt = $('#maptoggle');
+  const setMap = open => {
+    split.classList.toggle('nomap', !open); mt.textContent = open ? 'Hide map' : 'Show map'; mt.setAttribute('aria-expanded', open);
+    if (open) setTimeout(() => { map.invalidateSize(); draw(); }, 50);
+  };
+  mt.onclick = () => setMap(split.classList.contains('nomap'));
+  if (window.innerWidth < 900) { split.classList.add('nomap'); mt.textContent = 'Show map'; mt.setAttribute('aria-expanded', 'false'); }
   $('#legend').append(...REGIONS.map(r => el('span', {}, el('i', { class: 'dot', style: `background:${r[1]}` }), r[0])));
 
   const match = c => (!newOnly || isNew(c)) && [...sel].every(x => c.features.includes(x)) &&

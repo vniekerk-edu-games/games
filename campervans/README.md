@@ -36,6 +36,10 @@ Save a 128×128 PNG (black on transparent) in `assets/icons/`, then add one line
 ## Placeholder photos
 Only Kruistementvlei, 22 Watervalle (`1.jpg`) and Groot Breede are your real photos. The other 26 `1.jpg` files are small crops from your index screenshot so the page doesn't look empty. They are `.jpg`; add a `1.webp` alongside and it takes over. `22-watervalle/2.jpg` is a crop from your page screenshot, there only to demonstrate the carousel.
 
+## Look and feel
+* `assets/pattern.png` is the faint icon pattern behind the page (a tile, 560px). Swap or delete it, or change the `body` background in `style.css`.
+* The map has a Hide/Show button in the dark filter bar. It starts hidden on phones and narrow windows.
+
 ## Files
     index.html        home: logo + about, latest additions, filter tiles, search, area groups, map
     campsite.html     detail page, opened as campsite.html?id=<slug>

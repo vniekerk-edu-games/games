@@ -28,15 +28,17 @@
   <h2 id="need-h">Start with what you need</h2>
   <div class="tiles" id="tiles"></div>
   <div id="more" hidden><div class="facets" id="facets"></div></div>
-  <div class="bar">
-    <input id="q" type="search" placeholder="Search by name, town or keyword" aria-label="Search campsites">
-    <span><span class="count" id="count" role="status"></span> <button class="clear" id="clear" type="button" hidden>Clear filters</button></span>
-  </div>
 </section>
+
+<section class="filterbar" aria-label="Search and view options"><div class="inner">
+  <input id="q" type="search" placeholder="Search by name, town or keyword" aria-label="Search campsites">
+  <span class="status"><span class="count" id="count" role="status"></span> <button class="clear" id="clear" type="button" hidden>Clear filters</button></span>
+  <button class="maptoggle" id="maptoggle" type="button" aria-expanded="true" aria-controls="mapcol">Hide map</button>
+</div></section>
 
 <main class="split" id="campsites">
   <div id="regions"></div>
-  <aside class="mapcol">
+  <aside class="mapcol" id="mapcol">
     <h2>Where they are</h2>
     <div id="map" role="region" aria-label="Map of campsites"></div>
     <div class="legend" id="legend"></div>
