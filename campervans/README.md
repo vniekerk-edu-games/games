@@ -42,6 +42,9 @@ Only Kruistementvlei, 22 Watervalle (`1.jpg`) and Groot Breede are your real pho
 * Campsites are listed alphabetically within each area. Map pins show names; overlapping names hide until you zoom in, and the "Aa" button turns names on/off (remembered).
 * `map.html` is the full-screen map: search, area and feature filters, a list, base-map switcher (Map / Light / Terrain / Satellite), near-me with distances, zoom-to-results, surprise-me, full screen, and an info strip with photos, nearby campsites, directions and prev/next. Link straight to a campsite with `map.html?id=<slug>`.
 
+## Campsite page
+The photo mosaic adapts to how many photos a campsite has (1 to 5 show in the grid; "Show all N photos" opens a viewer with arrow keys, or swipe on phones). "More in <region>" lists up to 4 other campsites in the same area, closest first, with distances. Previous/next follow the home page order (area, then A–Z). "Open on the big map" opens `map.html` on that campsite. A broken link shows a "Campsite not found" page. On phones only the first photo shows in the grid; the rest are in the viewer.
+
 ## Files
     index.html        home: logo + about, latest additions, filter tiles, search, area groups, map
     campsite.html     detail page, opened as campsite.html?id=<slug>

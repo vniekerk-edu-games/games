@@ -10,20 +10,28 @@
 <body>
 <nav>
   <a class="brand" href="index.html"><img src="assets/logo.png" alt=""><span>The Camper Vans SA</span></a>
-  <div class="navlinks"><a href="index.html">Home</a><a href="map.html">Map</a><a href="index.html#campsites">Campsites</a></div>
+  <div class="navlinks"><a href="index.html">Home</a><a href="map.html">Map</a><a href="index.html#top">About</a></div>
 </nav>
 
-<header class="dhero"><h1 id="title"></h1><div class="town" id="town"></div></header>
+<div class="crumb" id="crumb"></div>
+<header class="dtitle"><h1 id="title"></h1><div class="meta" id="meta"></div></header>
 
-<main class="detail">
-  <div>
-    <div class="gallery" id="gallery"><div class="nogallery">Loading photos…</div></div>
-    <div class="feats" id="feats"></div>
-    <div id="mini" role="region" aria-label="Location map"></div>
-    <a class="bigmap" id="bigmap" href="map.html">Open on the big map →</a>
+<div class="mosaic" id="mosaic"><div class="nogallery">Loading photos…</div></div>
+
+<main class="dmain">
+  <div class="dtext">
+    <div class="chips" id="feats"></div>
+    <div id="text"></div>
   </div>
-  <div class="text" id="text"></div>
+  <aside class="side">
+    <div class="panel"><h2>Find it</h2><div id="mini" role="region" aria-label="Location map"></div><div id="directions"></div></div>
+    <div class="panel" id="sitepanel"><h2>Book or ask</h2><div id="website"></div></div>
+  </aside>
 </main>
+
+<section class="more" id="more" hidden>
+  <div class="inner"><h2 id="more-h"></h2><div class="g4" id="more-grid"></div></div>
+</section>
 
 <div class="pager" id="pager" role="navigation" aria-label="More campsites"></div>
 
@@ -31,6 +39,14 @@
   <div>Website done by JEM Design</div>
   <div>Contact us: <a href="mailto:jem.design.za@gmail.com">jem.design.za@gmail.com</a></div>
 </footer>
+
+<dialog id="lb" aria-label="Photo viewer">
+  <button class="lbx" id="lbclose" type="button" aria-label="Close">×</button>
+  <button class="lbn prev" id="lbprev" type="button" aria-label="Previous photo">‹</button>
+  <img id="lbimg" alt="">
+  <button class="lbn next" id="lbnext" type="button" aria-label="Next photo">›</button>
+  <div class="lbc" id="lbcount"></div>
+</dialog>
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="app.js"></script>

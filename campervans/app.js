@@ -288,53 +288,77 @@ async function home(){
 }
 
 /* ---------- DETAIL ---------- */
+const deco = (name, size) => { const i = icon(name, size); ['title','role','aria-label'].forEach(a => i.removeAttribute(a)); i.setAttribute('aria-hidden', 'true'); return i; };
 async function detail(){
-  const all = await loadCampsites();
+  let all;
+  try { all = (await loadCampsites()).sort(byRegionName); }   // same order as the home page
+  catch (e) { $('#mosaic').replaceChildren(el('div', { class: 'nogallery' }, 'Could not load the campsite list. Serve this folder over HTTP (see README).')); return; }
   const id = new URLSearchParams(location.search).get('id');
-  const i = Math.max(0, all.findIndex(c => c.slug === id)), c = all[i];
+  const i = all.findIndex(c => c.slug === id);
+  if (i < 0){   // a broken or mistyped link: say so instead of quietly showing another campsite
+    document.title = 'Campsite not found | The Camper Vans SA';
+    $('#title').textContent = 'Campsite not found';
+    $('#crumb').replaceChildren(el('a', { href: 'index.html#campsites' }, '← All campsites'));
+    $('#mosaic').replaceChildren(el('div', { class: 'nogallery' }, 'We couldn’t find that campsite. Try the list or the map.'));
+    $('#text').append(el('p', {}, el('a', { class: 'btn', href: 'index.html#campsites' }, 'Browse the campsites'), ' ', el('a', { class: 'btn alt', href: 'map.html' }, 'Open the map')));
+    $('.side').hidden = true;
+    return;
+  }
+  const c = all[i], col = colourOf(c);
   document.title = `${c.name} | The Camper Vans SA`;
-  $('#title').textContent = c.name; $('#town').textContent = c.town;
-
-  $('#feats').append(...orderedFeatures(c).map(f => el('div', {}, icon(f, 38), f)));
-
+  $('#title').textContent = c.name;
+  $('#crumb').replaceChildren(el('a', { href: 'index.html#campsites' }, '← All campsites'), ` / ${c.region}`);
+  $('#meta').append(el('i', { class: 'dot', style: `background:${col}` }), `${c.town} · ${c.region}`,
+    ...(latestBatch(all).batch.includes(c) ? [' ', el('span', { class: 'new' }, 'NEW')] : []));
+  $('#feats').append(...orderedFeatures(c).map(f => el('span', { class: 'chip' }, deco(f, 26), f)));
   $('#text').append(
     el('h2', {}, 'Highlights of the campsite'), ...paragraphs(c.highlights),
     ...(c.remember ? [el('h2', {}, 'Things to remember'), ...paragraphs(c.remember)] : []),
-    ...(c.spots ? [el('h2', {}, 'Our recommended spots'), ...paragraphs(c.spots)] : []),
-    el('div', {},
-      ...(c.website ? [el('a', { class: 'btn', href: c.website, target: '_blank', rel: 'noopener' }, 'Visit campsite website')] : []),
-      el('a', { class: 'btn alt', href: `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}`, target: '_blank', rel: 'noopener' }, 'Directions')
-    ));
-
-  // gallery: use 1.jpg, 2.jpg, 3.jpg… until one is missing
+    ...(c.spots ? [el('h2', {}, 'Our recommended spots'), ...paragraphs(c.spots)] : []));
+  $('#directions').append(
+    el('a', { class: 'btn alt block', href: `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}`, target: '_blank', rel: 'noopener' }, 'Get directions'),
+    el('a', { class: 'bigmap', href: `map.html?id=${c.slug}` }, 'Open on the big map →'));
+  if (c.website) $('#website').append(el('a', { class: 'btn block', href: c.website, target: '_blank', rel: 'noopener' }, 'Visit campsite website'));
+  else $('#sitepanel').hidden = true;
+  const m = addMap('mini', null, { zoomControl: true }); m.setView([c.lat, c.lon], 11);
+  label(L.marker([c.lat, c.lon], { icon: pinIcon(col), alt: c.name }), c.name).addTo(m);
+  // more in this area: the closest ones first, with distance
+  const near = all.filter(x => x.region === c.region && x.slug !== c.slug).map(x => [x, km(c, x)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
+  if (near.length){
+    $('#more-h').textContent = `More in ${c.region}`;
+    $('#more-grid').append(...near.map(([x, d]) => {
+      const pic = el('div', { class: 'pic' }, el('span', {}, x.name));
+      loadPhoto(x.slug, 1).then(u => { if (u) { pic.prepend(el('img', { src: u, alt: x.name, loading: 'lazy' })); pic.querySelector('span')?.remove(); } });
+      return el('a', { class: 'card', href: `campsite.html?id=${x.slug}` }, pic, el('div', { class: 'cn' }, el('i', { class: 'dot', style: `background:${col}` }), el('h3', {}, x.name)), el('div', { class: 'town' }, `${x.town} · ${fmtKm(d)} away`));
+    }));
+    $('#more').hidden = false;
+  }
+  // previous / next follow the home page order (area, then A–Z)
+  const prev = all[(i - 1 + all.length) % all.length], next = all[(i + 1) % all.length];
+  $('#pager').append(el('a', { href: `campsite.html?id=${prev.slug}` }, `← ${prev.name}`), el('a', { href: 'index.html#campsites' }, 'All campsites'), el('a', { href: `campsite.html?id=${next.slug}` }, `${next.name} →`));
+  // photos: 1.webp/1.jpg, 2.webp/2.jpg … until one is missing
   const urls = [];
   for (let n = 1; n <= MAX_PHOTOS; n++){ const u = await loadPhoto(c.slug, n); if (!u) break; urls.push(u); }
-  const g = $('#gallery');
-  if (!urls.length) g.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.webp (or 1.jpg), 2.webp…`));
-  else {
-    const track = el('div', { class: 'track', tabindex: '0', 'aria-label': `${c.name} photos` }, urls.map((u,k) => el('img', { src: u, alt: `${c.name} photo ${k+1}` })));
-    g.replaceChildren(track);
-    if (urls.length > 1){
-      const dots = el('div', { class: 'dots' }, urls.map((_,k) => el('button', { type: 'button', 'aria-label': `Photo ${k+1}`, onclick: () => go(k) })));
-      const go = k => track.scrollTo({ left: k * track.clientWidth, behavior: 'smooth' });
-      const cur = () => Math.round(track.scrollLeft / track.clientWidth);
-      const sync = () => [...dots.children].forEach((d,k) => d.setAttribute('aria-current', k === cur()));
-      track.addEventListener('scroll', sync, { passive: true });
-      track.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(Math.min(cur()+1, urls.length-1)); if (e.key === 'ArrowLeft') go(Math.max(cur()-1, 0)); });
-      g.append(el('button', { class: 'arrow prev', type: 'button', 'aria-label': 'Previous photo', onclick: () => go(Math.max(cur()-1, 0)) }, '‹'),
-               el('button', { class: 'arrow next', type: 'button', 'aria-label': 'Next photo', onclick: () => go(Math.min(cur()+1, urls.length-1)) }, '›'), dots);
-      sync();
-    }
-  }
-
-  // mini map
-  const m = addMap('mini', null, { zoomControl: true }); m.setView([c.lat, c.lon], 11);
-  L.marker([c.lat, c.lon], { icon: pinIcon(colourOf(c)) }).addTo(m);
-  $('#bigmap').href = `map.html?id=${c.slug}`;
-
-  // newest-first order in the CSV → "previous" is the next row down
-  const prev = all[(i + 1) % all.length], next = all[(i - 1 + all.length) % all.length];
-  $('#pager').append(el('a', { href: `campsite.html?id=${next.slug}` }, `← ${next.name}`), el('a', { href: 'index.html#campsites' }, 'All campsites'), el('a', { href: `campsite.html?id=${prev.slug}` }, `${prev.name} →`));
+  const mo = $('#mosaic');
+  if (!urls.length){ mo.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.jpg (or 1.webp), 2.jpg…`)); return; }
+  const lb = $('#lb'); let cur = 0;
+  const show = k => { cur = (k + urls.length) % urls.length; $('#lbimg').src = urls[cur]; $('#lbimg').alt = `${c.name} photo ${cur + 1}`; $('#lbcount').textContent = `${cur + 1} / ${urls.length}`; };
+  const open = k => { show(k); lb.showModal(); };
+  $('#lbclose').onclick = () => lb.close();
+  $('#lbprev').onclick = () => show(cur - 1); $('#lbnext').onclick = () => show(cur + 1);
+  lb.addEventListener('click', e => { if (e.target === lb) lb.close(); });
+  lb.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') show(cur - 1); if (e.key === 'ArrowRight') show(cur + 1); });
+  let sx = null;   // swipe on phones
+  lb.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); sx = null; });
+  document.querySelectorAll('#lb .lbn').forEach(b => b.hidden = urls.length < 2);
+  const shown = urls.slice(0, 5);
+  mo.className = 'mosaic m' + shown.length;
+  mo.replaceChildren(...shown.map((u, k) => {
+    const b = el('button', { class: 'mt', type: 'button', 'aria-label': `Open photo ${k + 1} of ${urls.length}` });
+    b.style.backgroundImage = `url(${u})`; b.onclick = () => open(k); return b;
+  }));
+  if (urls.length > 1) mo.append(el('button', { class: 'showall', type: 'button', onclick: () => open(0) }, `Show all ${urls.length} photos`));
 }
 
 /* ---------- FULL-SCREEN MAP (map.html) ---------- */
@@ -419,7 +443,7 @@ async function fullmap(){
 
   // filter panel
   const regionChips = REGIONS.filter(r => regionsOn.has(r[0])).map(([name, col]) => {
-    const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': 'true', onclick: () => {
+    const b = el('button', { class: 'rchip', type: 'button', 'aria-pressed': 'true', onclick: () => {
       regionsOn.has(name) ? regionsOn.delete(name) : regionsOn.add(name); b.setAttribute('aria-pressed', regionsOn.has(name)); render(); } },
       el('i', { class: 'dot', style: `background:${col}` }), name);
     return b;
