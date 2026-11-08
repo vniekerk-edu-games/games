@@ -9,35 +9,42 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="latest" id="latest"></div>
 <nav>
   <a class="brand" href="#top"><img src="assets/logo.png" alt=""><span>The Camper Vans SA</span></a>
-  <div class="navlinks"><a href="#top">Home</a><a href="#map-section">Map</a><a href="#campsites">Campsites</a></div>
+  <div class="navlinks"><a href="#top">Home</a><a href="#campsites">Map</a><a href="#about">About</a></div>
 </nav>
 
-<header class="hero" id="top"><img src="assets/logo.png" alt="The Camper Vans SA – Explore, Camp, Share"></header>
+<header class="feature" id="top">
+  <div class="feature-pic" id="feature-pic"></div>
+  <div class="feature-text" id="feature-text"></div>
+</header>
 
-<section class="intro">
-  <p>We are the Van Niekerks, a family of five – Mom, Dad and three boys – who are passionate about camping and the great outdoors. We started with a simple list of things to remember about different campsites, from facilities to the best spots. When we realised how helpful this information could be for other campers, we decided to share it!</p>
-  <p>Over time, our friends started adding their favourite campsites and tips, and so our growing community of campers was born. We hope this site helps you find the perfect spot for your next adventure, whether you’re an experienced camper or just starting out.</p>
-  <p class="sign">Grab your tents, pack your bags, and let’s go camping!</p>
-</section>
-
-<section class="finder" id="campsites" aria-labelledby="finder-h">
-  <h2 id="finder-h">What are you looking for?</h2>
-  <p class="hint">Tap the things you need. Only campsites that have all of them stay on the page.</p>
-  <div class="facets" id="facets"></div>
+<section class="need" aria-labelledby="need-h">
+  <h2 id="need-h">Start with what you need</h2>
+  <div class="tiles" id="tiles"></div>
+  <div id="more" hidden><div class="facets" id="facets"></div></div>
   <div class="bar">
     <input id="q" type="search" placeholder="Search by name, town or keyword" aria-label="Search campsites">
     <span><span class="count" id="count" role="status"></span> <button class="clear" id="clear" type="button" hidden>Clear filters</button></span>
   </div>
 </section>
 
-<main class="band"><div class="grid" id="grid"></div></main>
+<main class="split" id="campsites">
+  <div id="regions"></div>
+  <aside class="mapcol">
+    <h2>Where they are</h2>
+    <div id="map" role="region" aria-label="Map of campsites"></div>
+    <div class="legend" id="legend"></div>
+  </aside>
+</main>
 
-<section class="mapwrap" id="map-section">
-  <h2>Where they are</h2>
-  <div id="map" role="region" aria-label="Map of campsites"></div>
+<section class="about" id="about">
+  <img src="assets/logo.png" alt="The Camper Vans SA – Explore, Camp, Share">
+  <div>
+    <p>We are the Van Niekerks, a family of five – Mom, Dad and three boys – who are passionate about camping and the great outdoors. We started with a simple list of things to remember about different campsites, from facilities to the best spots. When we realised how helpful this information could be for other campers, we decided to share it!</p>
+    <p>Over time, our friends started adding their favourite campsites and tips, and so our growing community of campers was born. We hope this site helps you find the perfect spot for your next adventure, whether you’re an experienced camper or just starting out.</p>
+    <p class="sign">Grab your tents, pack your bags, and let’s go camping!</p>
+  </div>
 </section>
 
 <footer>

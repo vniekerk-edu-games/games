@@ -60,7 +60,26 @@ function icon(name, size){
 }
 const orderedFeatures = c => FEATURES.map(f => f[0]).filter(f => c.features.includes(f));
 const paragraphs = t => t.split(/\n\s*\n/).map(p => el('p', {}, p.trim()));
-const photo = (slug, n) => `campsites/${slug}/${n}.jpg`;
+// tries .webp first, then .jpg, so either format works
+const EXTS = ['webp','jpg'];
+function loadPhoto(slug, n){
+  return new Promise(res => {
+    let i = 0;
+    const next = () => {
+      if (i >= EXTS.length) return res(null);
+      const u = `campsites/${slug}/${n}.${EXTS[i++]}`, im = new Image();
+      im.onload = () => res(u); im.onerror = next; im.src = u;
+    };
+    next();
+  });
+}
+// Areas, in display order. The colours come from the logo.
+const REGIONS = [
+  ['Breede River','#b8551f','#fff'], ['Winelands & Valleys','#5a6c1f','#fff'], ['Cederberg & North','#f0a81f','#1b3a26'],
+  ['Overberg & Route 62','#c24d6b','#fff'], ['Garden Route & Eastern Cape','#3d6b4f','#fff']
+];
+const REGION_COLOUR = Object.fromEntries(REGIONS.map(r => [r[0], r[1]]));
+const QUICK = [['Swimming','#f0a81f','#1b3a26'],['Kids Play Area','#5a6c1f','#fff'],['Hiking Trails','#b8551f','#fff'],['Pet Friendly','#96391f','#fff'],['Private Sites','#1b3a26','#faf3dc']];
 
 function addMap(node, points, opts = {}){
   const map = L.map(node, { scrollWheelZoom: false, ...opts });
@@ -69,57 +88,74 @@ function addMap(node, points, opts = {}){
   }).addTo(map);
   return map;
 }
-const pinIcon = () => L.divIcon({ className: '', html: '<div class="pin"></div>', iconSize: [18,18], iconAnchor: [9,9], popupAnchor: [0,-10] });
+const pinIcon = (col = '#1b3a26') => L.divIcon({ className: '', html: `<div class="pin" style="background:${col}"></div>`, iconSize: [18,18], iconAnchor: [9,9], popupAnchor: [0,-10] });
 
 /* ---------- HOME ---------- */
 async function home(){
   let all;
   try { all = await loadCampsites(); }
-  catch (e) { $('#grid').append(el('p', { class: 'empty' }, 'Could not load the campsite list. Serve this folder over HTTP (see README).')); return; }
+  catch (e) { $('#regions').append(el('p', { class: 'empty' }, 'Could not load the campsite list. Serve this folder over HTTP (see README).')); return; }
 
-  $('#latest').replaceChildren('Latest addition: ', el('a', { href: `campsite.html?id=${all[0].slug}` }, all[0].name));
+  // feature: newest campsite (first CSV row)
+  const f = all[0];
+  const first = f.highlights.split(/\n\s*\n/)[0];
+  $('#feature-text').replaceChildren(el('div', { class: 'kicker' }, 'Latest addition'), el('h1', {}, f.name), el('p', {}, first),
+    el('a', { class: 'btn gold', href: `campsite.html?id=${f.slug}` }, 'Read the campsite page'));
+  loadPhoto(f.slug, 1).then(u => { if (u) $('#feature-pic').style.backgroundImage = `url(${u})`; });
 
-  const sel = new Set();
-  const q = $('#q'), grid = $('#grid'), count = $('#count'), facets = $('#facets');
+  const sel = new Set(), q = $('#q'), count = $('#count');
+  const buttons = [];
+  const toggle = name => { sel.has(name) ? sel.delete(name) : sel.add(name); buttons.forEach(b => b.setAttribute('aria-pressed', sel.has(b.dataset.f))); draw(); };
+  const countOf = name => all.filter(c => c.features.includes(name)).length;
 
-  facets.append(...FEATURES.map(([name]) => {
-    const n = all.filter(c => c.features.includes(name)).length;
-    const b = el('button', { class: 'facet', type: 'button', 'aria-pressed': 'false' }, icon(name, 36), name, el('span', { class: 'n' }, String(n)));
-    b.onclick = () => { sel.has(name) ? sel.delete(name) : sel.add(name); b.setAttribute('aria-pressed', sel.has(name)); draw(); };
-    b.firstChild.removeAttribute('title');
-    return b;
+  const tiles = QUICK.map(([name, bg, fg]) => {
+    const b = el('button', { class: 'tile', type: 'button', 'aria-pressed': 'false', 'data-f': name }, icon(name, 40), name, el('small', {}, `${countOf(name)} campsites`));
+    b.style.background = bg; b.style.color = fg; b.onclick = () => toggle(name); buttons.push(b); return b;
+  });
+  const more = el('button', { class: 'tile', type: 'button', 'aria-expanded': 'false', style: 'background:#efd495;color:#1b3a26' }, 'All 15 filters', el('small', {}, 'show or hide'));
+  more.onclick = () => { const h = $('#more').hidden = !$('#more').hidden; more.setAttribute('aria-expanded', !h); };
+  $('#tiles').append(...tiles, more);
+
+  $('#facets').append(...FEATURES.map(([name]) => {
+    const b = el('button', { class: 'facet', type: 'button', 'aria-pressed': 'false', 'data-f': name }, icon(name, 34), name, el('span', { class: 'n' }, String(countOf(name))));
+    b.firstChild.removeAttribute('title'); b.onclick = () => toggle(name); buttons.push(b); return b;
   }));
-  const clear = () => { sel.clear(); q.value = ''; facets.querySelectorAll('.facet').forEach(b => b.setAttribute('aria-pressed','false')); draw(); };
-  $('#clear').onclick = clear;
-  q.oninput = draw;
+  const clear = () => { sel.clear(); q.value = ''; buttons.forEach(b => b.setAttribute('aria-pressed', 'false')); draw(); };
+  $('#clear').onclick = clear; q.oninput = draw;
 
   // map
   const map = addMap('map'); const group = L.layerGroup().addTo(map);
   const markers = new Map(all.map(c => {
-    const m = L.marker([c.lat, c.lon], { icon: pinIcon(), title: c.name });
+    const m = L.marker([c.lat, c.lon], { icon: pinIcon(REGION_COLOUR[c.region] || '#1b3a26'), title: c.name });
     m.bindPopup(() => el('div', {}, el('b', {}, c.name), el('div', {}, c.town), el('a', { href: `campsite.html?id=${c.slug}` }, 'Open campsite page')));
     return [c.slug, m];
   }));
+  $('#legend').append(...REGIONS.map(r => el('span', {}, el('i', { class: 'dot', style: `background:${r[1]}` }), r[0])));
 
-  function match(c){
-    const t = q.value.trim().toLowerCase();
-    return [...sel].every(f => c.features.includes(f)) &&
-      (!t || [c.name, c.town, c.highlights].some(s => s.toLowerCase().includes(t)));
-  }
+  const match = c => [...sel].every(x => c.features.includes(x)) &&
+    (!q.value.trim() || [c.name, c.town, c.highlights].some(t => t.toLowerCase().includes(q.value.trim().toLowerCase())));
 
   function card(c){
-    const pic = el('div', { class: 'pic' });
-    const img = el('img', { src: photo(c.slug, 1), alt: c.name, loading: 'lazy' });
-    img.onerror = () => { img.remove(); pic.append(el('span', {}, c.name)); };
-    pic.append(img);
-    return el('a', { class: 'card', href: `campsite.html?id=${c.slug}` }, pic, el('h3', {}, c.name), el('div', { class: 'town' }, c.town),
-      el('div', { class: 'icons' }, orderedFeatures(c).map(f => icon(f))));
+    const pic = el('div', { class: 'pic' }, el('span', {}, c.name));
+    loadPhoto(c.slug, 1).then(u => { if (u) pic.replaceChildren(el('img', { src: u, alt: c.name, loading: 'lazy' })); });
+    const a = el('a', { class: 'card', href: `campsite.html?id=${c.slug}` }, pic,
+      el('div', { class: 'cn' }, el('i', { class: 'dot', style: `background:${REGION_COLOUR[c.region] || '#1b3a26'}` }), el('h3', {}, c.name)),
+      el('div', { class: 'town' }, c.town), el('div', { class: 'icons' }, orderedFeatures(c).map(x => icon(x))));
+    a.onmouseenter = () => markers.get(c.slug)._icon?.classList.add('hot'); a.onmouseleave = () => markers.get(c.slug)._icon?.classList.remove('hot');
+    return a;
   }
 
   function draw(){
     const list = all.filter(match);
-    grid.replaceChildren(...(list.length ? list.map(card)
-      : [el('p', { class: 'empty' }, 'No campsite has every one of those. ', el('button', { class: 'clear', onclick: clear }, 'Clear filters'))]));
+    const regions = [...REGIONS.map(r => r[0]), ...new Set(all.map(c => c.region).filter(r => r && !REGION_COLOUR[r]))];
+    const secs = regions.map(r => {
+      const items = list.filter(c => c.region === r); if (!items.length) return null;
+      const [, bg, fg] = REGIONS.find(x => x[0] === r) || [0, '#5d7872', '#fff'];
+      const head = el('div', { class: 'rh' }, el('h2', {}, r), el('span', {}, `${items.length} campsite${items.length > 1 ? 's' : ''}`));
+      head.style.background = bg; head.style.color = fg;
+      return el('section', {}, head, el('div', { class: 'g3' }, items.map(card)));
+    }).filter(Boolean);
+    $('#regions').replaceChildren(...(secs.length ? secs : [el('p', { class: 'empty' }, 'No campsite has every one of those. ', el('button', { class: 'clear', onclick: clear }, 'Clear filters'))]));
     count.textContent = `Showing ${list.length} of ${all.length} campsites`;
     $('#clear').hidden = !sel.size && !q.value;
     group.clearLayers(); list.forEach(c => group.addLayer(markers.get(c.slug)));
@@ -149,12 +185,9 @@ async function detail(){
 
   // gallery: use 1.jpg, 2.jpg, 3.jpg… until one is missing
   const urls = [];
-  for (let n = 1; n <= MAX_PHOTOS; n++){
-    const ok = await new Promise(r => { const t = new Image(); t.onload = () => r(true); t.onerror = () => r(false); t.src = photo(c.slug, n); });
-    if (!ok) break; urls.push(photo(c.slug, n));
-  }
+  for (let n = 1; n <= MAX_PHOTOS; n++){ const u = await loadPhoto(c.slug, n); if (!u) break; urls.push(u); }
   const g = $('#gallery');
-  if (!urls.length) g.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.jpg, 2.jpg…`));
+  if (!urls.length) g.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.webp (or 1.jpg), 2.webp…`));
   else {
     const track = el('div', { class: 'track', tabindex: '0', 'aria-label': `${c.name} photos` }, urls.map((u,k) => el('img', { src: u, alt: `${c.name} photo ${k+1}` })));
     g.replaceChildren(track);

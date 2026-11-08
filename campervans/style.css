@@ -2,8 +2,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Quicksand:wght@400;500;600&display=swap');
 
 :root{
-  --forest:#1d4a42; --deep:#143c35; --stone:#e0e0db; --parchment:#f3f1ea;
-  --ember:#c8651b; --ink:#16403a; --muted:#5d7872;
+  --forest:#1b3a26; --deep:#112f1f; --stone:#f3ead0; --parchment:#faf3dc;
+  --ember:#b8551f; --gold:#f0a81f; --olive:#5a6c1f; --rust:#96391f; --sand:#efd495; --ink:#1b3a26; --muted:#4f5f3c;
   --hand:'Caveat','Segoe Print',cursive; --body:'Quicksand','Segoe UI',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
@@ -12,69 +12,84 @@ body{margin:0;font-family:var(--body);color:var(--ink);background:var(--stone);l
 a{color:var(--forest)}
 :focus-visible{outline:3px solid var(--ember);outline-offset:2px}
 h1,h2,h3{font-family:var(--hand);font-weight:700;line-height:1.1;margin:0}
+.ic{flex:none}
 
 /* icons are masks, so they take the colour of the text around them */
 .ic{display:inline-block;width:30px;height:30px;background:currentColor;
   -webkit-mask:var(--src) center/contain no-repeat;mask:var(--src) center/contain no-repeat}
 
-/* top strip + nav */
-.latest{background:var(--deep);color:#f3efe2;text-align:center;font-size:14px;padding:7px 16px}
-.latest a{color:#fff;font-weight:600}
-nav{position:sticky;top:0;z-index:50;background:rgba(251,248,238,.96);backdrop-filter:blur(6px);
+/* nav */
+nav{position:sticky;top:0;z-index:50;background:rgba(250,243,220,.96);backdrop-filter:blur(6px);
   display:flex;align-items:center;justify-content:space-between;padding:10px 5vw;box-shadow:0 1px 8px #0002}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-size:19px;font-weight:500}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font:700 28px var(--hand)}
 .brand img{height:36px;width:auto}
 .navlinks a{color:var(--ink);text-decoration:none;margin-left:26px;font-size:14px;font-weight:600}
 .navlinks a:hover{color:var(--ember)}
 
-/* hero */
-.hero{background:linear-gradient(180deg,#fbe7b4 0%,#f6efd9 55%,var(--stone) 100%);position:relative;overflow:hidden;text-align:center;padding:34px 20px 46px}
-.hero:before{content:"";position:absolute;inset:auto 0 0 0;height:75%;background:url(assets/bg1.png) center bottom/cover no-repeat;opacity:.9;-webkit-mask:linear-gradient(transparent,#000 45%);mask:linear-gradient(transparent,#000 45%)}
-.hero img{position:relative;width:min(520px,82vw)}
-.intro{max-width:760px;margin:0 auto;padding:34px 24px 10px}
-.intro p{margin:0 0 14px}
-.intro .sign{font-family:var(--hand);font-size:30px;color:var(--forest);margin-top:18px}
+/* feature (newest campsite) */
+.feature{display:grid;grid-template-columns:1.1fr 1fr;background:var(--forest);color:var(--parchment);min-height:420px}
+.feature-pic{background:linear-gradient(170deg,var(--gold),var(--ember) 60%,var(--rust)) center/cover no-repeat}
+.feature-text{padding:52px 5vw 52px 48px;align-self:center}
+.kicker{font-size:14px;font-weight:600;color:var(--gold)}
+.feature h1{font-size:clamp(48px,7vw,76px);margin:4px 0 10px}
+.feature p{margin:0 0 22px;max-width:46ch}
+.btn.gold{background:var(--gold);color:var(--forest)}
+.btn.gold:hover{background:var(--sand)}
 
-/* finder: icon legend that is also the filter */
-.finder{max-width:1080px;margin:0 auto;padding:26px 22px 34px}
-.finder h2{font-size:38px;text-align:center;margin-bottom:4px}
-.finder .hint{text-align:center;color:var(--muted);font-size:14px;margin:0 0 18px}
+/* start with what you need */
+.need{max-width:1280px;margin:0 auto;padding:40px 5vw 8px}
+.need h2{font-size:44px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:14px}
+.tile{border:0;cursor:pointer;padding:18px 10px;font:700 26px/1 var(--hand);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:44px}
+.tile small{font:600 12px var(--body)}
+.tile[aria-pressed=true]{box-shadow:inset 0 0 0 4px var(--forest),0 0 0 3px var(--parchment)}
+#more{margin-top:18px}
 .facets{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:6px 10px}
-.facet{display:flex;align-items:center;gap:10px;background:none;border:2px solid transparent;border-radius:10px;
-  padding:6px 8px;cursor:pointer;color:var(--ink);font:500 21px/1.1 var(--hand);text-align:left}
-.facet .ic{width:36px;height:36px;flex:none}
+.facet{display:flex;align-items:center;gap:10px;background:none;border:2px solid transparent;border-radius:10px;padding:6px 8px;cursor:pointer;color:var(--ink);font:500 21px/1.1 var(--hand);text-align:left}
+.facet .ic{flex:none}
 .facet:hover{background:#0000000a}
 .facet[aria-pressed=true]{background:var(--forest);color:#fff;border-color:var(--forest)}
-.facet .n{margin-left:auto;font:600 12px var(--body);opacity:.6}
-.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:22px}
-.bar input{flex:1 1 260px;max-width:420px;border:2px solid #b9c3bd;border-radius:30px;padding:11px 20px;font:500 15px var(--body);color:var(--ink);background:#fff}
-.bar input:focus{border-color:var(--forest);outline:none}
+.facet .n{margin-left:auto;font:600 12px var(--body);opacity:.7}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:20px}
+.bar input{flex:1 1 260px;max-width:420px;border:2px solid var(--forest);border-radius:30px;padding:11px 20px;font:500 15px var(--body);color:var(--ink);background:#fff}
+.bar input:focus{outline:3px solid var(--ember)}
 .count{font-weight:600;font-size:14px}
 .clear{background:none;border:0;color:var(--ember);font:600 14px var(--body);cursor:pointer;text-decoration:underline;padding:4px}
 
-/* campsite grid */
-.band{background:#27443f url(assets/bg2.png) center top/100% auto no-repeat;padding:70px 22px 70px}
-.grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:34px 28px}
-.card{display:block;text-decoration:none;color:#f3efe2;text-align:center}
-.card .pic{aspect-ratio:5/4;background:linear-gradient(145deg,#2d5f55,#1a463e);overflow:hidden;display:grid;place-items:center}
+/* regions + map */
+.split{max-width:1280px;margin:0 auto;padding:0 5vw 56px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px;align-items:start}
+.rh{display:flex;justify-content:space-between;align-items:baseline;padding:8px 14px;margin:28px 0 14px}
+.rh h2{font-size:32px}.rh span{font:600 13px var(--body)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 16px}
+.card{display:block;text-decoration:none;color:var(--ink)}
+.card .pic{aspect-ratio:4/3;background:linear-gradient(150deg,#6f9a78,#2d5f55);overflow:hidden;display:grid;place-items:end start}
 .card .pic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
 .card:hover .pic img{transform:scale(1.04)}
-.card .pic span{font:700 26px var(--hand);opacity:.7;padding:10px}
-.card h3{font-size:27px;margin:12px 0 0;color:#fff}
-.card .town{font-size:15px;opacity:.8;margin-bottom:8px}
-.card .icons{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;color:#f3efe2}
-.card .icons .ic{width:25px;height:25px}
-.card:hover h3{color:#ffd9ae}
-.empty{grid-column:1/-1;text-align:center;color:#f3efe2;font-size:18px;padding:30px 0}
-.empty button{margin-left:8px}
-
-/* map */
-.mapwrap{background:var(--stone);padding:50px 22px 60px}
-.mapwrap h2{text-align:center;font-size:38px;margin-bottom:16px}
-#map{max-width:1080px;height:520px;margin:0 auto;border:3px solid var(--forest);background:#cfd8d2}
-.pin{width:18px;height:18px;border-radius:50%;background:var(--forest);border:3px solid #fff;box-shadow:0 1px 5px #0006}
+.card .pic span{font:700 22px var(--hand);color:#fff;padding:10px}
+.cn{display:flex;align-items:center;gap:8px;margin-top:8px}
+.cn h3{font-size:25px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;display:inline-block}
+.town{font-size:13px;color:var(--muted);margin-left:20px}
+.card .icons{display:flex;flex-wrap:wrap;gap:3px 6px;margin:6px 0 0 20px}
+.card .icons .ic{width:22px;height:22px}
+.card:hover h3{color:var(--ember)}
+.empty{padding:30px 0;font-size:18px}
+.mapcol{position:sticky;top:76px;padding-top:24px}
+.mapcol h2{font-size:34px;margin-bottom:8px}
+#map{height:560px;border:3px solid var(--forest);background:#c9d3ae}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;font-weight:600}
+.legend span{display:flex;align-items:center;gap:6px}
+.pin{width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px #0006;transition:transform .15s}
+.hot .pin{transform:scale(1.7)}
 .leaflet-popup-content{font-family:var(--body);margin:12px 16px}
 .leaflet-popup-content b{font:700 22px var(--hand)}
+
+/* about */
+.about{background:var(--sand);display:flex;gap:40px;align-items:center;justify-content:center;flex-wrap:wrap;padding:48px 5vw}
+.about img{width:min(360px,80vw)}
+.about div{max-width:560px}
+.about p{margin:0 0 14px}
+.sign{font:700 30px var(--hand);color:var(--rust)}
 
 footer{background:var(--deep);color:#f3efe2;text-align:center;padding:38px 20px;font-size:14px}
 footer a{color:#fff}
@@ -113,11 +128,11 @@ footer a{color:#fff}
 .pager a:hover{color:var(--ember)}
 
 @media(max-width:860px){
-  .grid{grid-template-columns:repeat(2,1fr)}
+  .split{grid-template-columns:1fr}.mapcol{position:static}.feature{grid-template-columns:1fr}.feature-pic{min-height:240px}.tiles{grid-template-columns:repeat(3,1fr)}
   .detail{grid-template-columns:1fr;gap:28px}
 }
 @media(max-width:560px){
-  .grid{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr 1fr}.tiles{grid-template-columns:repeat(2,1fr)}
   .navlinks a{margin-left:16px}.brand span{display:none}
   #map{height:420px}
 }
