@@ -29,7 +29,28 @@ nav{position:sticky;top:0;z-index:50;background:rgba(251,247,234,.96);backdrop-f
 /* top: logo + about, with the latest additions */
 .top{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:stretch;max-width:1280px;margin:0 auto;padding:44px 5vw 36px}
 .about img{width:min(420px,80%);display:block;margin:0 0 14px -6px}
-.about p{margin:0 0 14px;max-width:52ch}
+
+.about p{
+  margin:0;
+  max-width:52ch;
+  background:rgba(251,247,234,.78);
+  padding:10px 16px;
+}
+
+.about p:nth-of-type(1){
+  padding-bottom:7px;
+}
+
+.about p:nth-of-type(2){
+  padding-top:7px;
+}
+
+.about p:last-child{
+  background:none;
+  padding:0;
+  margin-top:18px;
+}
+
 .latest{background:var(--card);border:1px solid var(--line);padding:22px 26px;display:flex;flex-direction:column}
 .lh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
 .lh h2{font-size:32px}.lh span{font:600 12px var(--body);color:var(--muted)}
@@ -111,8 +132,13 @@ footer a{color:#fff}
 /* soft backgrounds: bg1 silhouettes, the icon pattern, bg2 forest (footer, filter bar, map panel) */
 .top,.need,.split,.dmain{position:relative;isolation:isolate}
 .top::before,.need::before,.split::before,.dmain::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:50%;width:100vw;margin-left:-50vw;pointer-events:none}
-.top::before,.dmain::before{background:url(assets/bg1-soft2.jpg) center bottom/max(100%,1100px) auto no-repeat;
-  -webkit-mask:linear-gradient(to bottom,transparent 0%,#000 45%);mask:linear-gradient(to bottom,transparent 0%,#000 45%)}
+
+background:url(assets/bg1-soft2.jpg) 15% top / max(1800px, 100vw) auto no-repeat;
+
+  -webkit-mask:linear-gradient(to bottom,transparent 0%,#000 45%);
+  mask:linear-gradient(to bottom,transparent 0%,#000 45%);
+}
+
 .need::before,.split::before{background:url(assets/pattern.png);opacity:.5}
 .need::before{-webkit-mask:linear-gradient(to bottom,transparent,#000 120px);mask:linear-gradient(to bottom,transparent,#000 120px)}
 .split::before{-webkit-mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent);mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent)}
