@@ -130,18 +130,56 @@ footer a{color:#fff}
 .dim{opacity:.7}
 
 /* soft backgrounds: bg1 silhouettes, the icon pattern, bg2 forest (footer, filter bar, map panel) */
-.top,.need,.split,.dmain{position:relative;isolation:isolate}
-.top::before,.need::before,.split::before,.dmain::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:50%;width:100vw;margin-left:-50vw;pointer-events:none}
+/* soft backgrounds: bg1 silhouettes, the icon pattern, bg2 forest (footer, filter bar, map panel) */
 
-background:url(assets/bg1-soft2.jpg) 15% top / max(1800px, 100vw) auto no-repeat;
+.top,
+.need,
+.split,
+.dmain{
+  position:relative;
+  isolation:isolate;
+}
+
+.top::before,
+.need::before,
+.split::before,
+.dmain::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:0;
+  bottom:0;
+  left:50%;
+  width:100vw;
+  margin-left:-50vw;
+  pointer-events:none;
+}
+
+/* Family silhouette background */
+.top::before,
+.dmain::before{
+  background:url(assets/bg1-soft2.jpg) 15% top / max(1800px, 100vw) auto no-repeat;
 
   -webkit-mask:linear-gradient(to bottom,transparent 0%,#000 45%);
   mask:linear-gradient(to bottom,transparent 0%,#000 45%);
 }
 
-.need::before,.split::before{background:url(assets/pattern.png);opacity:.5}
-.need::before{-webkit-mask:linear-gradient(to bottom,transparent,#000 120px);mask:linear-gradient(to bottom,transparent,#000 120px)}
-.split::before{-webkit-mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent);mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent)}
+/* Icon pattern background */
+.need::before,
+.split::before{
+  background:url(assets/pattern.png);
+  opacity:.5;
+}
+
+.need::before{
+  -webkit-mask:linear-gradient(to bottom,transparent,#000 120px);
+  mask:linear-gradient(to bottom,transparent,#000 120px);
+}
+
+.split::before{
+  -webkit-mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent);
+  mask:linear-gradient(to bottom,#000 calc(100% - 160px),transparent);
+}
 /* detail page */
 .crumb{max-width:1280px;margin:0 auto;padding:18px 5vw 0;font-size:13px;font-weight:600;color:var(--muted)}
 .crumb a{color:var(--muted)}
