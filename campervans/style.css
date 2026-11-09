@@ -111,7 +111,7 @@ footer a{color:#fff}
 /* soft backgrounds: bg1 silhouettes, the icon pattern, bg2 forest (footer, filter bar, map panel) */
 .top,.need,.split,.dmain{position:relative;isolation:isolate}
 .top::before,.need::before,.split::before,.dmain::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:50%;width:100vw;margin-left:-50vw;pointer-events:none}
-.top::before,.dmain::before{background:url(assets/bg1-soft.png) center bottom/max(100%,1100px) auto no-repeat;
+.top::before,.dmain::before{background:url(assets/bg1-soft2.jpg) center bottom/max(100%,1100px) auto no-repeat;
   -webkit-mask:linear-gradient(to bottom,transparent 0%,#000 45%);mask:linear-gradient(to bottom,transparent 0%,#000 45%)}
 .need::before,.split::before{background:url(assets/pattern.png);opacity:.5}
 .need::before{-webkit-mask:linear-gradient(to bottom,transparent,#000 120px);mask:linear-gradient(to bottom,transparent,#000 120px)}
