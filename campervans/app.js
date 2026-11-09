@@ -305,6 +305,7 @@ async function detail(){
     return;
   }
   const c = all[i], col = colourOf(c);
+  loadPhoto(c.slug, 1).then(u => { if (u) { const h = $('#hero'); h.style.setProperty('--hero', `url(${u})`); h.classList.add('hasphoto'); } });   // faded header photo
   document.title = `${c.name} | The Camper Vans SA`;
   $('#title').textContent = c.name;
   $('#crumb').replaceChildren(el('a', { href: 'index.html#campsites' }, '← All campsites'), ` / ${c.region}`);
