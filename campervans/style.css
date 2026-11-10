@@ -33,7 +33,7 @@ nav{position:sticky;top:0;z-index:50;background:rgba(251,247,234,.96);backdrop-f
 .about p{
   margin:0;
   max-width:52ch;
-  background:rgba(251,247,234,.78);
+  background:rgba(251,247,234,.6);
   padding:10px 16px;
 }
 
