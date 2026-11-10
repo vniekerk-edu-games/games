@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lian se Leeu-Avontuur</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--sand:#fdf3dc;--gold:#f4a52a;--mane:#b5651d;--dark:#4a2c0f;--grass:#7aa83b;--sky:#ffe7b0;--red:#d9534f;--ok:#3c9a4b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:'Baloo 2',system-ui,sans-serif;color:var(--dark);background:linear-gradient(180deg,#ffd27a 0%,#ffe9b8 45%,#e8c873 100%);min-height:100vh;font-size:20px}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(74,44,15,.92);color:#fff;position:sticky;top:0;z-index:10}
+header h1{font-size:1.25rem;margin:0;cursor:pointer}
+.hbtns{display:flex;gap:8px;align-items:center}
+.stars{background:var(--gold);color:var(--dark);padding:4px 12px;border-radius:20px;font-weight:800}
+.btn{font-family:inherit;font-size:1rem;font-weight:700;border:none;border-radius:14px;padding:10px 18px;cursor:pointer;background:var(--gold);color:var(--dark);box-shadow:0 4px 0 var(--mane);transition:transform .1s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--mane)}
+.btn.sec{background:#fff}
+.btn.small{padding:6px 12px;font-size:.9rem}
+main{max-width:980px;margin:0 auto;padding:18px}
+.screen{display:none;animation:pop .35s}
+.screen.active{display:block}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.hero{text-align:center;padding:10px}
+.hero .big{font-size:5rem;line-height:1;animation:bob 2.5s infinite ease-in-out}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-3deg)}}
+.hero h2{font-size:2rem;margin:6px 0}
+.hero p{margin:0 auto;max-width:640px}
+h3.sec{margin:22px 0 10px;font-size:1.4rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:20px;padding:16px;text-align:center;cursor:pointer;box-shadow:0 6px 0 rgba(181,101,29,.5);border:3px solid transparent;transition:transform .15s}
+.tile:hover{transform:translateY(-4px);border-color:var(--gold)}
+.tile .ic{font-size:2.6rem}
+.tile b{display:block;font-size:1.1rem}
+.tile small{display:block;font-size:.85rem;opacity:.8}
+.tile .got{margin-top:4px;font-size:1.1rem;letter-spacing:2px}
+.card{background:#fff;border-radius:22px;padding:22px;box-shadow:0 8px 0 rgba(181,101,29,.35)}
+.read p{font-size:1.2rem;line-height:1.6;margin:0 0 14px}
+.read h2{margin-top:0;font-size:1.8rem}
+.word{background:#ffe2a6;border-radius:6px;padding:0 4px;font-weight:700;cursor:help}
+.fact{background:var(--sky);border-left:6px solid var(--gold);padding:10px 14px;border-radius:10px;margin:14px 0;font-size:1.1rem}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px;flex-wrap:wrap}
+.gtitle{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.gtitle .ic{font-size:2.4rem}
+.gtitle h2{margin:0;font-size:1.6rem}
+.instr{background:var(--sky);padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:1.05rem}
+.prog{height:14px;background:#f1dfb5;border-radius:10px;overflow:hidden;margin:8px 0 14px}
+.prog div{height:100%;background:linear-gradient(90deg,var(--gold),var(--mane));transition:width .4s}
+/* Waar/Vals */
+.stmt{font-size:1.45rem;text-align:center;min-height:110px;display:flex;align-items:center;justify-content:center;padding:10px}
+.tfbtns{display:flex;gap:16px;justify-content:center;margin:10px 0}
+.tfbtns .btn{font-size:1.3rem;padding:14px 26px}
+.fb{text-align:center;font-size:1.15rem;min-height:56px;padding:8px;border-radius:12px;margin-top:8px}
+.fb.good{background:#dff3df;color:#1f6b2b}.fb.bad{background:#fbe0df;color:#8a2421}
+.roar{text-align:center;font-size:1rem}
+/* memory */
+.mem{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mc{aspect-ratio:1/1;perspective:600px;cursor:pointer}
+.mc .in{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d}
+.mc.flip .in,.mc.done .in{transform:rotateY(180deg)}
+.mc .f,.mc .b{position:absolute;inset:0;border-radius:14px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;padding:6px;text-align:center}
+.mc .f{background:linear-gradient(135deg,var(--gold),var(--mane));font-size:2.4rem}
+.mc .b{background:#fff;border:3px solid var(--gold);transform:rotateY(180deg);font-size:.95rem;font-weight:700;line-height:1.15}
+.mc.done .b{background:#dff3df;border-color:var(--ok)}
+.mc .b.w{font-size:1.25rem;color:var(--mane)}
+/* gap fill */
+.bank{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px}
+.chip{background:var(--gold);padding:6px 14px;border-radius:20px;font-weight:700;cursor:pointer;box-shadow:0 3px 0 var(--mane);user-select:none}
+.chip.sel{background:var(--dark);color:#fff}
+.chip.used{opacity:.25;pointer-events:none}
+.sent{font-size:1.25rem;margin:10px 0;line-height:1.8}
+.gap{display:inline-block;min-width:120px;border-bottom:3px dashed var(--mane);text-align:center;cursor:pointer;padding:0 6px;font-weight:800;color:var(--mane)}
+.gap.ok{border-color:var(--ok);color:var(--ok);border-bottom-style:solid}
+.gap.no{animation:shake .4s;border-color:var(--red)}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+/* numbers */
+.numq{font-size:1.4rem;text-align:center;margin:8px 0 16px}
+.slider{width:100%;accent-color:var(--mane);height:30px}
+.numval{font-size:3rem;text-align:center;font-weight:800;color:var(--mane)}
+.hint{text-align:center;font-size:1.2rem;min-height:34px}
+/* sort */
+.pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:50px;margin-bottom:14px}
+.bins{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bin{background:var(--sky);border:3px dashed var(--mane);border-radius:18px;padding:10px;min-height:190px;cursor:pointer;text-align:center}
+.bin .bh{font-size:2.4rem}.bin b{display:block;margin-bottom:6px}
+.bin .it{background:#fff;border-radius:10px;padding:4px 8px;margin:4px 0;font-size:.9rem}
+.bin.hot{border-style:solid;background:#fff3d6}
+/* order */
+.olist{display:flex;flex-direction:column;gap:8px}
+.oi{background:#fff;border:3px solid var(--gold);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:1.1rem}
+.oi .em{font-size:1.8rem}.oi .t{flex:1}
+.oi button{font-size:1.2rem;border:none;background:var(--sky);border-radius:10px;width:42px;height:42px;cursor:pointer}
+.oi.ok{border-color:var(--ok);background:#eaf7ea}.oi.no{border-color:var(--red)}
+/* hunt */
+.track{position:relative;height:110px;background:linear-gradient(180deg,#ffe7b0 0 55%,#c9a24a 55%);border-radius:16px;margin:10px 0 16px;overflow:hidden}
+.track .grassl{position:absolute;bottom:0;left:0;right:0;height:30px;font-size:1.4rem;letter-spacing:6px;white-space:nowrap;overflow:hidden}
+.track .lion,.track .zeb{position:absolute;bottom:22px;font-size:3.2rem;transition:left .6s}
+.track .zeb{right:10px}
+.track .lion{transform:scaleX(-1)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.opts .btn{background:#fff;box-shadow:0 4px 0 var(--gold)}
+.opts .btn.ok{background:#bfe6c3}.opts .btn.no{background:#f6c7c5}
+.done-box{text-align:center;padding:10px}
+.done-box .big{font-size:4rem}
+.cert{border:8px double var(--mane);background:#fffaf0;text-align:center;padding:30px;border-radius:20px}
+.cert h2{font-size:2.2rem;margin:4px 0}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+@media(max-width:600px){body{font-size:18px}.mem{grid-template-columns:repeat(3,1fr)}.bins{grid-template-columns:1fr}.bin{min-height:100px}header h1{font-size:1rem}.stmt{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<header>
+  <h1 onclick="go('home')">🦁 Lian se Leeu-Avontuur</h1>
+  <div class="hbtns">
+    <span class="stars" id="starCount">⭐ 0</span>
+    <button class="btn small sec" id="fsBtn" onclick="toggleFS()">⛶ Volskerm</button>
+  </div>
+</header>
+<main>
+
+<!-- HOME -->
+<section class="screen active" id="home">
+  <div class="hero">
+    <div class="big">🦁</div>
+    <h2>Hallo Lian, die Leeu-kenner!</h2>
+    <p>Jou naam klink amper soos <b>Leeu</b> in Engels (<i>Lion</i>)! Kom ons leer alles oor leeus. Lees eers die drie stories, en speel dan die speletjies om sterre te wen. Kan jy al 18 sterre kry?</p>
+  </div>
+  <h3 class="sec">📖 Stap 1: Lees die leeu-stories</h3>
+  <div class="grid" id="readTiles"></div>
+  <h3 class="sec">🎮 Stap 2: Speel en wen sterre</h3>
+  <div class="grid" id="gameTiles"></div>
+  <h3 class="sec">🏆 Stap 3: Jou sertifikaat</h3>
+  <div class="grid"><div class="tile" onclick="showCert()"><div class="ic">📜</div><b>Leeu-kenner Sertifikaat</b><small>Wen 12 of meer sterre</small></div></div>
+</section>
+
+<section class="screen" id="reader"><div class="card read" id="readBox"></div></section>
+<section class="screen" id="game"><div class="card" id="gameBox"></div></section>
+<section class="screen" id="certScr"><div class="card" id="certBox"></div></section>
+
+</main>
+<script>
+/* ---------- DATA ---------- */
+const texts=[
+{ic:"👑",t:"Die Koning van die Diere",s:"Waar leeus woon en hoe hulle lyk",p:[
+"Die leeu word die <span class='word' title='die baas van al die diere'>koning van die diere</span> genoem. Leeus woon in Afrika, op groot grasvlaktes wat ons die <span class='word' title='groot oop veld met gras en \\'n paar bome'>savanne</span> noem. In Suid-Afrika kan jy leeus sien in die Krugerwildtuin en in die Kgalagadi.",
+"'n Leeu het 'n goudbruin pels. Die kleur help hom om weg te kruip in die droë, geel gras. Aan die punt van sy lang stert het hy 'n donker pluimpie hare, net soos 'n kwas.",
+"Die mannetjie-leeu het groot, dik <span class='word' title='lang hare om die kop en nek'>maanhare</span> om sy kop en nek. Hoe donkerder en dikker die maanhare is, hoe sterker en gesonder is die leeu gewoonlik. Die wyfie, wat ons 'n leeuwyfie noem, het nie maanhare nie.",
+"'n Groot mannetjie kan omtrent 190 kilogram weeg. Dis so swaar soos twee of drie grootmense saam!",
+"Leeus is ook baie raserig. 'n Leeu se <span class='word' title='die harde geluid wat \\'n leeu maak'>brul</span> is so hard dat jy dit tot 8 kilometer ver kan hoor. Met hul brul sê leeus vir ander leeus: \"Bly weg, dis óns plek!\""],
+f:"🔎 Wonderlike feit: Geen twee leeus het presies dieselfde kolletjies waar hul snorhare uitgroei nie – dis soos 'n leeu se vingerafdruk!"},
+{ic:"👨‍👩‍👧",t:"Die Leeu-familie",s:"Trop, welpies en baie slaap",p:[
+"Leeus is die enigste groot katte wat in groepe saamleef. So 'n leeu-familie word 'n <span class='word' title='\\'n groep leeus wat saam bly'>trop</span> genoem. 'n Trop kan uit net 'n paar leeus bestaan, maar soms is daar meer as twintig!",
+"In 'n trop is daar 'n paar leeuwyfies, hul kleintjies en een of twee mannetjies. Die leeuwyfies is gewoonlik familie van mekaar: ma's, dogters, susters en tannies.",
+"'n Baba-leeu word 'n <span class='word' title='\\'n baba-leeu'>welpie</span> genoem. 'n Leeuma kry gewoonlik twee tot vier welpies op 'n slag. Wanneer welpies gebore word, is hul oë toe en kan hulle nog niks sien nie. Hulle het klein kolletjies op hul pels wat later verdwyn. Die welpies drink melk by hul ma, en later leer hulle om vleis te eet.",
+"Welpies speel baie. Hulle stoei, spring op mekaar en byt aan hul ma se stert. Deur te speel, leer hulle hoe om eendag self te jag.",
+"Die mannetjie se werk is om die trop en hul <span class='word' title='die stuk grond waar die trop woon'>gebied</span> te beskerm. En weet jy wat leeus die meeste doen? Slaap! 'n Leeu kan tot 20 uur per dag rus en slaap."],
+f:"🔎 Wonderlike feit: Leeuwyfies in 'n trop help mekaar. Soms laat 'n tannie-leeu ander welpies ook by haar melk drink!"},
+{ic:"🦓",t:"Hoe Leeus Jag",s:"Prooi, spanwerk en spoed",p:[
+"Leeus is <span class='word' title='diere wat net vleis eet'>vleisvreters</span>. Dit beteken hulle eet net vleis. Die diere wat hulle jag, word hul <span class='word' title='\\'n dier wat gejag en gevang word'>prooi</span> genoem. Leeus jag graag sebras, wildebeeste, buffels en ander bokke.",
+"Meestal is dit die leeuwyfies wat jag. Hulle werk saam soos 'n span. Party leeuwyfies sluip stilletjies nader, laag teen die grond, terwyl ander wag om die prooi vas te keer.",
+"Leeus jag graag in die aand of nag wanneer dit koeler is. Hulle oë sien baie goed in die donker – baie beter as ons s'n.",
+"'n Leeu kan vinnig hardloop, tot omtrent 80 kilometer per uur, maar net vir 'n kort entjie. Daarom moet hy eers baie naby aan sy prooi sluip voordat hy begin hardloop.",
+"Na 'n groot maaltyd kan 'n leeu 'n paar dae sonder kos klaarkom. Hy kan ook lank sonder water bly, maar drink graag wanneer hy kan.",
+"Vandag is daar baie minder leeus as vroeër, want mense bou huise en plase waar leeus vroeër gewoon het. Daarom is wildtuine so belangrik: daar is leeus veilig."],
+f:"🔎 Wonderlike feit: 'n Leeu se tong is so grof soos skuurpapier. Dit help hom om vleis van bene af te lek!"}
+];
+
+const games=[
+{id:"tf",ic:"📣",t:"Brul of Brom?",s:"Is dit waar of vals?"},
+{id:"mem",ic:"🧠",t:"Leeu-geheue",s:"Vind die pare"},
+{id:"gap",ic:"🧩",t:"Vul die Gaping",s:"Kies die regte woord"},
+{id:"num",ic:"🔢",t:"Leeu-getalle",s:"Skuif en raai die getal"},
+{id:"sort",ic:"🗂️",t:"Wie is wie?",s:"Mannetjie, wyfie of welpie?"},
+{id:"hunt",ic:"🐾",t:"Sluip-Jag",s:"Help die leeu sluip"},
+];
+
+/* ---------- STATE ---------- */
+let score=JSON.parse(localStorage.getItem("lianLeeu")||"{}");
+const total=()=>Object.values(score).reduce((a,b)=>a+b,0);
+function setStars(id,n){if((score[id]||0)<n){score[id]=n;localStorage.setItem("lianLeeu",JSON.stringify(score))}updHdr()}
+function updHdr(){document.getElementById("starCount").textContent="⭐ "+total()+" / 18"}
+const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+const $=id=>document.getElementById(id);
+
+function go(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));$(id).classList.add("active");window.scrollTo(0,0);if(id==="home")renderHome()}
+function renderHome(){
+ $("readTiles").innerHTML=texts.map((x,i)=>`<div class="tile" onclick="openRead(${i})"><div class="ic">${x.ic}</div><b>Storie ${i+1}: ${x.t}</b><small>${x.s}</small></div>`).join("");
+ $("gameTiles").innerHTML=games.map(g=>{const s=score[g.id]||0;return `<div class="tile" onclick="startGame('${g.id}')"><div class="ic">${g.ic}</div><b>${g.t}</b><small>${g.s}</small><div class="got">${"⭐".repeat(s)}${"☆".repeat(3-s)}</div></div>`}).join("");
+ updHdr();
+}
+function openRead(i){const x=texts[i];
+ $("readBox").innerHTML=`<h2>${x.ic} ${x.t}</h2>${x.p.map(p=>`<p>${p}</p>`).join("")}<div class="fact">${x.f}</div>
+ <p style="font-size:1rem;opacity:.8">💡 Tik of hou jou muis oor die <span class="word">geel woorde</span> om te sien wat hulle beteken.</p>
+ <div class="nav">${i>0?`<button class="btn sec" onclick="openRead(${i-1})">⬅ Vorige storie</button>`:"<span></span>"}
+ <button class="btn sec" onclick="go('home')">🏠 Tuis</button>
+ ${i<2?`<button class="btn" onclick="openRead(${i+1})">Volgende storie ➡</button>`:`<button class="btn" onclick="startGame('tf')">Begin speel! 🎮</button>`}</div>`;
+ $("readBox").querySelectorAll(".word").forEach(w=>w.onclick=()=>alert(w.textContent+": "+w.title));
+ go("reader");
+}
+function head(id,instr){const g=games.find(x=>x.id===id);return `<div class="gtitle"><span class="ic">${g.ic}</span><h2>${g.t}</h2></div><div class="instr">${instr}</div>`}
+function finish(id,stars,msg){setStars(id,stars);if(stars>=2)confetti();
+ const idx=games.findIndex(g=>g.id===id),nx=games[idx+1];
+ $("gameBox").innerHTML=`<div class="done-box"><div class="big">${stars===3?"🦁👑":stars===2?"🦁":"🐱"}</div><h2>${stars===3?"BRUL! Fantasties!":stars===2?"Mooi so, Lian!":"Goeie poging!"}</h2>
+ <p style="font-size:2rem">${"⭐".repeat(stars)}${"☆".repeat(3-stars)}</p><p>${msg}</p>
+ <div class="nav" style="justify-content:center"><button class="btn sec" onclick="startGame('${id}')">🔁 Probeer weer</button><button class="btn sec" onclick="go('home')">🏠 Tuis</button>${nx?`<button class="btn" onclick="startGame('${nx.id}')">Volgende: ${nx.t} ➡</button>`:`<button class="btn" onclick="showCert()">📜 Sertifikaat</button>`}</div></div>`}
+function startGame(id){go("game");({tf:gTF,mem:gMem,gap:gGap,num:gNum,sort:gSort,hunt:gHunt})[id]()}
+
+/* ---------- GAME 1: WAAR OF VALS ---------- */
+const tfQ=shuf([
+["Leeus woon in Afrika.",1,"Ja! Leeus woon op die savanne in Afrika."],
+["Leeuwyfies het groot maanhare.",0,"Nee, net die mannetjies het maanhare."],
+["'n Leeu se brul kan tot 8 km ver gehoor word.",1,"Reg! Dis baie, baie hard."],
+["Leeus slaap net 2 uur per dag.",0,"Nee! Leeus kan tot 20 uur per dag rus en slaap."],
+["'n Baba-leeu word 'n welpie genoem.",1,"Ja, 'n welpie!"],
+["Leeus eet gras en blare.",0,"Nee, leeus is vleisvreters. Hulle eet net vleis."],
+["Meestal doen die leeuwyfies die jag.",1,"Reg! Die wyfies werk saam soos 'n span."],
+["Welpies word met oop oë gebore.",0,"Nee, welpies se oë is toe wanneer hulle gebore word."],
+["'n Leeu-familie word 'n trop genoem.",1,"Ja, 'n trop!"],
+["Leeus sien glad nie goed in die donker nie.",0,"Nee, leeus sien baie goed in die donker."]
+]);
+let tfI,tfS,tfStreak;
+function gTF(){tfI=0;tfS=0;tfStreak=0;tfShow()}
+function tfShow(){if(tfI>=tfQ.length){const st=tfS>=9?3:tfS>=7?2:1;return finish("tf",st,`Jy het ${tfS} uit ${tfQ.length} reg gehad.`)}
+ const q=tfQ[tfI];
+ $("gameBox").innerHTML=head("tf","Lees die sin. Is dit <b>waar</b> of <b>vals</b>? Elke regte antwoord in 'n ry maak die leeu se brul harder!")+
+ `<div class="prog"><div style="width:${tfI/tfQ.length*100}%"></div></div><div class="stmt">"${q[0]}"</div>
+ <div class="tfbtns"><button class="btn" onclick="tfAns(1)">🦁 Waar</button><button class="btn sec" onclick="tfAns(0)">❌ Vals</button></div>
+ <div class="fb" id="fb"></div><div class="roar">Brul-meter: ${tfStreak?"<b>"+"R"+"R".repeat(tfStreak)+"AAAAH!"+"</b>":"…stil…"} ${"🔥".repeat(Math.min(tfStreak,5))}</div>`}
+function tfAns(a){const q=tfQ[tfI],ok=a===q[1];if(ok){tfS++;tfStreak++}else tfStreak=0;
+ $("fb").className="fb "+(ok?"good":"bad");$("fb").innerHTML=(ok?"✅ ":"🙈 ")+q[2];
+ document.querySelectorAll(".tfbtns .btn").forEach(b=>b.disabled=true);
+ setTimeout(()=>{tfI++;tfShow()},ok?1500:2600)}
+
+/* ---------- GAME 2: MEMORY ---------- */
+const memP=[["Trop","'n Leeu-familie"],["Welpie","'n Baba-leeu"],["Maanhare","Hare om die mannetjie se kop"],["Prooi","Dier wat gejag word"],["Vleisvreter","Eet net vleis"],["Savanne","Grasvlakte in Afrika"]];
+let memSel,memMoves,memDone,memLock;
+function gMem(){memSel=[];memMoves=0;memDone=0;memLock=false;
+ const cards=shuf(memP.flatMap((p,i)=>[{i,t:p[0],w:1},{i,t:p[1],w:0}]));
+ $("gameBox").innerHTML=head("mem","Draai twee kaarte om. Pas die <b>woord</b> by die <b>betekenis</b>. Probeer dit doen met so min beurte as moontlik!")+
+ `<p>Beurte: <b id="mv">0</b></p><div class="mem">${cards.map(c=>`<div class="mc" data-i="${c.i}" onclick="memFlip(this)"><div class="in"><div class="f">🐾</div><div class="b ${c.w?"w":""}">${c.t}</div></div></div>`).join("")}</div>`}
+function memFlip(el){if(memLock||el.classList.contains("flip")||el.classList.contains("done"))return;
+ el.classList.add("flip");memSel.push(el);
+ if(memSel.length===2){memMoves++;$("mv").textContent=memMoves;const[a,b]=memSel;
+  if(a.dataset.i===b.dataset.i){a.classList.add("done");b.classList.add("done");memSel=[];memDone++;
+   if(memDone===6)setTimeout(()=>finish("mem",memMoves<=10?3:memMoves<=15?2:1,`Jy het al die pare gevind in ${memMoves} beurte.`),800)}
+  else{memLock=true;setTimeout(()=>{a.classList.remove("flip");b.classList.remove("flip");memSel=[];memLock=false},1100)}}}
+
+/* ---------- GAME 3: GAP FILL ---------- */
+const gapS=[["'n Leeu-familie word 'n ___ genoem.","trop"],["Net die mannetjie het ___ om sy kop.","maanhare"],["'n Baba-leeu heet 'n ___.","welpie"],["Leeus woon op die ___ in Afrika.","savanne"],["Die diere wat leeus jag, is hul ___.","prooi"],["'n Leeu se ___ kan 8 km ver gehoor word.","brul"],["Leeus jag graag in die ___ wanneer dit koel is.","nag"]];
+let gapSel,gapErr,gapOk;
+function gGap(){gapSel=null;gapErr=0;gapOk=0;const bank=shuf(gapS.map(s=>s[1]).concat(["gras","oggend"]));
+ $("gameBox").innerHTML=head("gap","Tik eers op 'n <b>woord</b> in die woordbank, en tik dan op die <b>oop plek</b> waar dit hoort. Pasop, daar is twee strikvraag-woorde!")+
+ `<div class="bank">${bank.map(w=>`<span class="chip" onclick="gapPick(this)">${w}</span>`).join("")}</div>`+
+ gapS.map((s,i)=>`<div class="sent">${i+1}. ${s[0].replace("___",`<span class="gap" data-a="${s[1]}" onclick="gapPut(this)">&nbsp;?&nbsp;</span>`)}</div>`).join("")+`<p>Foute: <b id="ge">0</b></p>`}
+function gapPick(c){document.querySelectorAll(".chip").forEach(x=>x.classList.remove("sel"));c.classList.add("sel");gapSel=c}
+function gapPut(g){if(!gapSel||g.classList.contains("ok"))return;
+ if(gapSel.textContent===g.dataset.a){g.textContent=g.dataset.a;g.classList.add("ok");gapSel.classList.add("used");gapSel.classList.remove("sel");gapSel=null;gapOk++;
+  if(gapOk===gapS.length)setTimeout(()=>finish("gap",gapErr<=1?3:gapErr<=3?2:1,`Jy het al die sinne voltooi met ${gapErr} foute.`),700)}
+ else{gapErr++;$("ge").textContent=gapErr;g.classList.remove("no");void g.offsetWidth;g.classList.add("no")}}
+
+/* ---------- GAME 4: NUMBERS ---------- */
+const numQ=[{q:"Hoe ver (in kilometer) kan jy 'n leeu se brul hoor?",a:8,min:0,max:30,u:"km"},{q:"Hoeveel uur per dag kan 'n leeu rus en slaap?",a:20,min:0,max:24,u:"uur"},{q:"Hoeveel kilogram kan 'n groot mannetjie-leeu weeg?",a:190,min:0,max:400,st:10,u:"kg"},{q:"Hoe vinnig (km per uur) kan 'n leeu vir 'n kort entjie hardloop?",a:80,min:0,max:150,st:5,u:"km/h"},{q:"Hoeveel welpies kry 'n leeuma gewoonlik op 'n slag? (Kies die grootste getal.)",a:4,min:1,max:10,u:"welpies"}];
+let nI,nPts,nTries;
+function gNum(){nI=0;nPts=0;nShow()}
+function nShow(){if(nI>=numQ.length){const st=nPts>=12?3:nPts>=8?2:1;return finish("num",st,`Jy het ${nPts} uit 15 getal-punte gekry.`)}
+ nTries=0;const q=numQ[nI],mid=Math.round((q.min+q.max)/2/(q.st||1))*(q.st||1);
+ $("gameBox").innerHTML=head("num","Skuif die skuifbalk na die getal wat jy dink reg is, en druk <b>Raai!</b> Jy kry 3 kanse. Die leeu sal sê of jy te hoog of te laag is.")+
+ `<div class="prog"><div style="width:${nI/numQ.length*100}%"></div></div><div class="numq">${q.q}</div>
+ <div class="numval"><span id="nv">${mid}</span> <small style="font-size:1.2rem">${q.u}</small></div>
+ <input type="range" class="slider" id="ns" min="${q.min}" max="${q.max}" step="${q.st||1}" value="${mid}" oninput="$('nv').textContent=this.value">
+ <div style="text-align:center;margin:12px"><button class="btn" id="nb" onclick="nGuess()">🎯 Raai!</button></div><div class="hint" id="nh">Kanse oor: 3</div>`}
+function nGuess(){const q=numQ[nI],v=+$("ns").value;nTries++;
+ if(v===q.a){nPts+=4-nTries;$("nh").innerHTML=`✅ <b>Reg! ${q.a} ${q.u}.</b> ${"⭐".repeat(4-nTries)}`;$("nb").disabled=true;confettiSmall();setTimeout(()=>{nI++;nShow()},1800)}
+ else if(nTries>=3){$("nh").innerHTML=`🦁 Die antwoord is <b>${q.a} ${q.u}</b>. Onthou dit!`;$("nb").disabled=true;setTimeout(()=>{nI++;nShow()},2600)}
+ else $("nh").innerHTML=(v>q.a?"⬇️ Te hoog! Probeer laer.":"⬆️ Te laag! Probeer hoër.")+` Kanse oor: ${3-nTries}`}
+
+/* ---------- GAME 5: SORT ---------- */
+const sortI=[["Het groot maanhare","m"],["Beskerm die trop en die gebied","m"],["Kan omtrent 190 kg weeg","m"],["Doen meestal die jag","w"],["Het nie maanhare nie","w"],["Kry twee tot vier babas","w"],["Het kolletjies op sy pels","b"],["Oë is toe wanneer hy gebore word","b"],["Drink melk by sy ma","b"]];
+let sSel,sErr,sLeft;
+function gSort(){sSel=null;sErr=0;sLeft=sortI.length;
+ $("gameBox").innerHTML=head("sort","Tik op 'n kaartjie, en tik dan op die regte leeu: die <b>mannetjie</b>, die <b>leeuwyfie</b> of die <b>welpie</b>.")+
+ `<div class="pool" id="pool">${shuf(sortI).map(x=>`<span class="chip" data-a="${x[1]}" onclick="sPick(this)">${x[0]}</span>`).join("")}</div>
+ <div class="bins">${[["m","🦁","Mannetjie"],["w","🐈","Leeuwyfie"],["b","🐾","Welpie"]].map(b=>`<div class="bin" data-b="${b[0]}" onclick="sDrop(this)"><div class="bh">${b[1]}</div><b>${b[2]}</b><div class="items"></div></div>`).join("")}</div>
+ <div class="fb" id="fb"></div>`}
+function sPick(c){document.querySelectorAll("#pool .chip").forEach(x=>x.classList.remove("sel"));c.classList.add("sel");sSel=c;document.querySelectorAll(".bin").forEach(b=>b.classList.add("hot"))}
+function sDrop(b){if(!sSel)return;document.querySelectorAll(".bin").forEach(x=>x.classList.remove("hot"));
+ if(sSel.dataset.a===b.dataset.b){b.querySelector(".items").insertAdjacentHTML("beforeend",`<div class="it">✅ ${sSel.textContent}</div>`);sSel.remove();sSel=null;sLeft--;$("fb").className="fb good";$("fb").textContent="Reg so!";
+  if(!sLeft)setTimeout(()=>finish("sort",sErr<=1?3:sErr<=3?2:1,`Jy het almal gesorteer met ${sErr} foute.`),700)}
+ else{sErr++;$("fb").className="fb bad";$("fb").textContent="Hmm, nie daardie een nie. Dink weer!";sSel.classList.remove("sel");sSel=null}}
+
+/* ---------- GAME 6: HUNT (sequence + questions) ---------- */
+const huntQ=[
+{q:"Wat noem ons 'n groep leeus?",o:["'n Trop","'n Kudde","'n Swerm"],a:0},
+{q:"Wat moet die leeu eers doen voordat hy hardloop?",o:["Hard brul","Stilletjies nader sluip","Gaan slaap"],a:1},
+{q:"Watter dier jag leeus graag?",o:["Sebra","Pikkewyn","Seekat"],a:0},
+{q:"Waarom is 'n leeu se pels goudbruin?",o:["Om mooi te lyk","Om weg te kruip in droë gras","Om warm te bly"],a:1},
+{q:"Wanneer jag leeus graag?",o:["Middag in die son","In die aand en nag","Net as dit reën"],a:1},
+{q:"Waarom speel welpies so baie?",o:["Hulle leer so om te jag","Hulle is verveeld","Hulle wil nie slaap nie"],a:0},
+{q:"Waar is leeus vandag veilig?",o:["In stede","In wildtuine","Op plase"],a:1}];
+const order=[["🐾","Sluip stilletjies nader, laag teen die grond"],["👀","Wag baie stil en kyk"],["💨","Hardloop baie vinnig"],["🦓","Vang die prooi"],["🍖","Die trop eet saam"],["😴","Slaap lekker lank"]];
+let hI,hPos,hMiss,oCur;
+function gHunt(){hI=0;hPos=0;hMiss=0;hShow()}
+function track(){return `<div class="track"><div class="lion" style="left:${8+hPos*11}%">🦁</div><div class="zeb">🦓</div><div class="grassl">🌾🌿🌾🌾🌿🌾🌾🌿🌾🌾🌿🌾🌾🌿🌾🌾🌿🌾🌾🌿</div></div>`}
+function hShow(){if(hI>=huntQ.length)return orderStage();const q=huntQ[hI];
+ $("gameBox").innerHTML=head("hunt","Elke regte antwoord help die leeu om <b>een tree nader</b> aan die sebra te sluip. Elke foutjie maak 'n geraas… 🤫")+track()+
+ `<div class="numq">${q.q}</div><div class="opts">${shuf(q.o.map((o,i)=>[o,i])).map(([o,i])=>`<button class="btn" onclick="hAns(this,${i})">${o}</button>`).join("")}</div><div class="fb" id="fb"></div>`}
+function hAns(b,i){const q=huntQ[hI];document.querySelectorAll(".opts .btn").forEach(x=>x.disabled=true);
+ if(i===q.a){b.classList.add("ok");hPos++;document.querySelector(".lion").style.left=(8+hPos*11)+"%";$("fb").className="fb good";$("fb").textContent="Sjjj… die leeu sluip nader! 🐾"}
+ else{b.classList.add("no");hMiss++;$("fb").className="fb bad";$("fb").textContent="Kraak! 'n Takkie het gebreek. Die regte antwoord was: "+q.o[q.a]}
+ setTimeout(()=>{hI++;hShow()},1600)}
+function orderStage(){oCur=shuf(order.map((x,i)=>[...x,i]));renderOrder()}
+function renderOrder(){
+ $("gameBox").innerHTML=head("hunt","Laaste stap! Sit die jag in die <b>regte volgorde</b>. Gebruik ⬆️ en ⬇️ om die stappe te skuif, en druk dan <b>Kontroleer</b>.")+track()+
+ `<div class="olist">${oCur.map((x,i)=>`<div class="oi"><span class="em">${x[0]}</span><span class="t">${x[1]}</span><button onclick="oMove(${i},-1)">⬆️</button><button onclick="oMove(${i},1)">⬇️</button></div>`).join("")}</div>
+ <div style="text-align:center;margin-top:14px"><button class="btn" onclick="oCheck()">✔ Kontroleer</button></div><div class="fb" id="fb"></div>`}
+function oMove(i,d){const j=i+d;if(j<0||j>=oCur.length)return;[oCur[i],oCur[j]]=[oCur[j],oCur[i]];renderOrder()}
+function oCheck(){const els=document.querySelectorAll(".oi");let ok=true;oCur.forEach((x,i)=>{els[i].className="oi "+(x[2]===i?"ok":"no");if(x[2]!==i)ok=false});
+ if(ok){hPos=8;document.querySelector(".lion").style.left="72%";setTimeout(()=>finish("hunt",hMiss<=1?3:hMiss<=3?2:1,`Die leeu het die sebra bekruip! Jy het ${hMiss} foute by die vrae gehad.`),1300)}
+ else{hMiss++;$("fb").className="fb bad";$("fb").textContent="Die groen stappe is reg. Skuif die rooies en probeer weer!"}}
+
+/* ---------- CERTIFICATE ---------- */
+function showCert(){go("certScr");const t=total();
+ $("certBox").innerHTML=t>=12?`<div class="cert"><div style="font-size:4rem">🦁👑</div><p>Hiermee word gesertifiseer dat</p><h2>Lian</h2><p>'n amptelike</p><h2 style="color:var(--mane)">LEEU-KENNER</h2><p>is, met <b>${t} sterre</b> uit 18!</p><p>⭐ Nou is jy reg om vir jou klas van leeus te vertel! ⭐</p></div><div class="nav" style="justify-content:center"><button class="btn sec" onclick="go('home')">🏠 Tuis</button><button class="btn sec" onclick="if(confirm('Begin van voor af? Al die sterre word uitgevee.')){score={};localStorage.removeItem('lianLeeu');go('home')}">🔄 Begin van voor</button></div>`
+ :`<div class="done-box"><div class="big">🐱</div><h2>Amper daar!</h2><p>Jy het <b>${t}</b> sterre. Jy het <b>12</b> nodig vir jou sertifikaat. Speel nog 'n paar speletjies!</p><button class="btn" onclick="go('home')">🎮 Speel verder</button></div>`;
+ if(t>=12)confetti()}
+
+/* ---------- FULLSCREEN ---------- */
+function toggleFS(){const d=document,e=d.documentElement;
+ if(!(d.fullscreenElement||d.webkitFullscreenElement)){(e.requestFullscreen||e.webkitRequestFullscreen).call(e)}
+ else{(d.exitFullscreen||d.webkitExitFullscreen).call(d)}}
+["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{$("fsBtn").textContent=(document.fullscreenElement||document.webkitFullscreenElement)?"✕ Verlaat volskerm":"⛶ Volskerm"}));
+if(!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen))$("fsBtn").style.display="none";
+
+/* ---------- CONFETTI ---------- */
+const cv=$("confetti"),cx=cv.getContext("2d");let parts=[],anim;
+function confetti(n=140){cv.width=innerWidth;cv.height=innerHeight;for(let i=0;i<n;i++)parts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,s:6+Math.random()*8,c:["#f4a52a","#b5651d","#7aa83b","#ffd27a","#4a2c0f"][i%5],r:Math.random()*6});if(!anim)loop()}
+function confettiSmall(){confetti(40)}
+function loop(){cx.clearRect(0,0,cv.width,cv.height);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=.1;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);cx.restore()});parts=parts.filter(p=>p.y<cv.height+20);anim=parts.length?requestAnimationFrame(loop):(cx.clearRect(0,0,cv.width,cv.height),null)}
+
+renderHome();
+</script>
+</body>
+</html>
