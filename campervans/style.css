@@ -233,8 +233,6 @@ footer a{color:#fff}
 .dtext h2{font-size:32px;margin:26px 0 6px}
 .dtext h2:first-of-type{margin-top:0}
 .dtext p{margin:0 0 14px;max-width:68ch}
-.callout{background:#fbf0d2;border:1px solid #ecd9a0;border-left:5px solid var(--gold);border-radius:12px;padding:18px 24px 6px;margin:26px 0 22px}
-.callout h2{margin:0 0 8px}
 .side{position:sticky;top:76px;display:grid;gap:16px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
 .panel h2{font-size:26px;margin-bottom:10px}
