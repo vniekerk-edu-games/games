@@ -331,7 +331,7 @@ async function detail(){
   $('#feats').append(...orderedFeatures(c).map(f => el('span', { class: 'chip' }, deco(f, 26), f)));
   $('#text').append(
     el('h2', {}, 'Highlights of the campsite'), ...paragraphs(c.highlights),
-    ...(c.remember ? [el('section', { class: 'callout' }, el('h2', {}, 'Things to remember'), ...paragraphs(c.remember))] : []),
+    ...(c.remember ? [el('h2', {}, 'Things to remember'), ...paragraphs(c.remember)] : []),
     ...(c.spots ? [el('h2', {}, 'Our recommended spots'), ...paragraphs(c.spots)] : []));
   const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}`;
   $('#directions').append(
