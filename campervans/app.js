@@ -63,8 +63,8 @@ function icon(name, size){
 const orderedFeatures = c => FEATURES.map(f => f[0]).filter(f => c.features.includes(f));
 const blurb = (t, n = 150) => { const s = t.split(/\n\s*\n/)[0].replace(/\s+/g, ' '); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; };
 const paragraphs = t => t.split(/\n\s*\n/).map(p => el('p', {}, p.trim()));
-// tries .webp first, then .jpg, so either format works. Results are cached, so each photo is only looked up once.
-const EXTS = ['webp','jpg'];
+// photos are .jpg (see optimise-images.ps1). Results are cached, so each photo is only looked up once.
+const EXTS = ['jpg'];
 const photoCache = new Map();
 function loadPhoto(slug, n){
   const key = `${slug}/${n}`;
@@ -128,6 +128,7 @@ function declutter(map, markers){
   });
 }
 const SVG = {
+  share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.4M8.3 13.2l7.4 4.4"/></svg>',
   names: '<svg viewBox="0 0 24 24"><path d="M4 18 9 5h1.6l5 13M6 13.5h7.6M16.5 18v-6.5M16.5 12.2c1-1.4 4-1.6 4 1.3V18m0-2.8c-.7 2.8-4.6 3.4-4.6.8 0-2 2.4-2.3 4.6-2"/></svg>',
   locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg>',
   fit: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><circle cx="12" cy="12" r="2.2"/></svg>',
@@ -289,6 +290,18 @@ async function home(){
 
 /* ---------- DETAIL ---------- */
 const deco = (name, size) => { const i = icon(name, size); ['title','role','aria-label'].forEach(a => i.removeAttribute(a)); i.setAttribute('aria-hidden', 'true'); return i; };
+// short message at the bottom of the screen (detail page)
+function notify(msg){
+  let t = $('.dtoast'); if (!t){ t = el('div', { class: 'dtoast', role: 'status' }); document.body.append(t); }
+  t.textContent = msg; t.classList.add('on'); clearTimeout(notify.t); notify.t = setTimeout(() => t.classList.remove('on'), 2800);
+}
+// phone share sheet where there is one, otherwise copy the link
+async function shareCampsite(c){
+  try {
+    if (navigator.share) await navigator.share({ title: `${c.name} | The Camper Vans SA`, text: `${c.name}, ${c.town}`, url: location.href });
+    else { await navigator.clipboard.writeText(location.href); notify('Link copied'); }
+  } catch (e) { if (e.name !== 'AbortError') notify('Could not share. Copy the address from your browser instead.'); }
+}
 async function detail(){
   let all;
   try { all = (await loadCampsites()).sort(byRegionName); }   // same order as the home page
@@ -309,18 +322,28 @@ async function detail(){
   document.title = `${c.name} | The Camper Vans SA`;
   $('#title').textContent = c.name;
   $('#crumb').replaceChildren(el('a', { href: 'index.html#campsites' }, '← All campsites'), ` / ${c.region}`);
-  $('#meta').append(el('i', { class: 'dot', style: `background:${col}` }), `${c.town} · ${c.region}`,
+  const ym = /^(\d{4})-(\d{2})/.exec(c.added || '');   // "added" is the date of our visit
+  const visited = ym ? new Date(+ym[1], +ym[2] - 1, 1).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }) : '';
+  $('#meta').append(el('i', { class: 'dot', style: `background:${col}` }), `${c.town} · ${c.region}${visited ? ` · Last visited ${visited}` : ''}`,
     ...(latestBatch(all).batch.includes(c) ? [' ', el('span', { class: 'new' }, 'NEW')] : []));
+  const sb = el('button', { class: 'sharebtn', type: 'button', onclick: () => shareCampsite(c) }); sb.innerHTML = `${SVG.share}Share`;
+  $('#hero').append(el('div', { class: 'hactions' }, sb));
   $('#feats').append(...orderedFeatures(c).map(f => el('span', { class: 'chip' }, deco(f, 26), f)));
   $('#text').append(
     el('h2', {}, 'Highlights of the campsite'), ...paragraphs(c.highlights),
-    ...(c.remember ? [el('h2', {}, 'Things to remember'), ...paragraphs(c.remember)] : []),
+    ...(c.remember ? [el('section', { class: 'callout' }, el('h2', {}, 'Things to remember'), ...paragraphs(c.remember))] : []),
     ...(c.spots ? [el('h2', {}, 'Our recommended spots'), ...paragraphs(c.spots)] : []));
+  const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}`;
   $('#directions').append(
-    el('a', { class: 'btn alt block', href: `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}`, target: '_blank', rel: 'noopener' }, 'Get directions'),
+    el('a', { class: 'btn alt block', href: dirUrl, target: '_blank', rel: 'noopener' }, 'Get directions'),
     el('a', { class: 'bigmap', href: `map.html?id=${c.slug}` }, 'Open on the big map →'));
   if (c.website) $('#website').append(el('a', { class: 'btn block', href: c.website, target: '_blank', rel: 'noopener' }, 'Visit campsite website'));
   else $('#sitepanel').hidden = true;
+  // phones: Directions and Website stay in reach at the bottom of the screen
+  document.body.append(el('div', { class: 'actbar' },
+    el('a', { class: c.website ? 'btn alt' : 'btn', href: dirUrl, target: '_blank', rel: 'noopener' }, 'Directions'),
+    ...(c.website ? [el('a', { class: 'btn', href: c.website, target: '_blank', rel: 'noopener' }, 'Visit website')] : [])));
+  document.body.classList.add('hasbar');
   const m = addMap('mini', null, { zoomControl: true }); m.setView([c.lat, c.lon], 11);
   label(L.marker([c.lat, c.lon], { icon: pinIcon(col), alt: c.name }), c.name).addTo(m);
   // more in this area: the closest ones first, with distance
@@ -337,11 +360,11 @@ async function detail(){
   // previous / next follow the home page order (area, then A–Z)
   const prev = all[(i - 1 + all.length) % all.length], next = all[(i + 1) % all.length];
   $('#pager').append(el('a', { href: `campsite.html?id=${prev.slug}` }, `← ${prev.name}`), el('a', { href: 'index.html#campsites' }, 'All campsites'), el('a', { href: `campsite.html?id=${next.slug}` }, `${next.name} →`));
-  // photos: 1.webp/1.jpg, 2.webp/2.jpg … until one is missing
-  const urls = [];
-  for (let n = 1; n <= MAX_PHOTOS; n++){ const u = await loadPhoto(c.slug, n); if (!u) break; urls.push(u); }
+  // photos: 1.jpg, 2.jpg … up to the first one that is missing (all looked up at once)
+  const found = await Promise.all(Array.from({ length: MAX_PHOTOS }, (_, k) => loadPhoto(c.slug, k + 1)));
+  const cut = found.indexOf(null), urls = cut < 0 ? found : found.slice(0, cut);
   const mo = $('#mosaic');
-  if (!urls.length){ mo.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.jpg (or 1.webp), 2.jpg…`)); return; }
+  if (!urls.length){ mo.replaceChildren(el('div', { class: 'nogallery' }, `Add photos to campsites/${c.slug}/ as 1.jpg, 2.jpg…`)); return; }
   const lb = $('#lb'); let cur = 0;
   const show = k => { cur = (k + urls.length) % urls.length; $('#lbimg').src = urls[cur]; $('#lbimg').alt = `${c.name} photo ${cur + 1}`; $('#lbcount').textContent = `${cur + 1} / ${urls.length}`; };
   const open = k => { show(k); lb.showModal(); };
@@ -353,13 +376,12 @@ async function detail(){
   lb.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
   lb.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); sx = null; });
   document.querySelectorAll('#lb .lbn').forEach(b => b.hidden = urls.length < 2);
-  const shown = urls.slice(0, 5);
-  mo.className = 'mosaic m' + shown.length;
-  mo.replaceChildren(...shown.map((u, k) => {
+  mo.className = 'mosaic m' + Math.min(urls.length, 5);   // desktop grid shows the first 5; phones swipe through all
+  mo.replaceChildren(...urls.map((u, k) => {
     const b = el('button', { class: 'mt', type: 'button', 'aria-label': `Open photo ${k + 1} of ${urls.length}` });
     b.style.backgroundImage = `url(${u})`; b.onclick = () => open(k); return b;
   }));
-  if (urls.length > 1) mo.append(el('button', { class: 'showall', type: 'button', onclick: () => open(0) }, `Show all ${urls.length} photos`));
+  if (urls.length > 1) $('#gallery').append(el('button', { class: 'showall', type: 'button', onclick: () => open(0) }, `Show all ${urls.length} photos`));
 }
 
 /* ---------- FULL-SCREEN MAP (map.html) ---------- */
