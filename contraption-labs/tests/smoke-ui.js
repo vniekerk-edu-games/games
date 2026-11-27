@@ -261,7 +261,36 @@ let e4 = '';
 try { for (const id of ['dominoes', 'pulley', 'swing', 'balloon', 'snip']) { sb.loadPreset(id); sb.start(); runFrames(300); sb.stop(); } } catch (e) { e4 = e.stack; }
 check('all Stage 4 experiments run in the full game loop', !e4, e4.split('\n').slice(0, 3).join(' '));
 
-/* ---------- 12. toolbar ---------- */
+/* ---------- 12. shelf categories and the Move hand ---------- */
+console.log('\n12. Folding shelf and the Move hand');
+const cats = els.shelf.children.slice(-(CL.SHELF.sections.length + 1));
+check('shelf has one folding category per section, plus Experiments', cats.length === CL.SHELF.sections.length + 1 &&
+  cats.every(c => c.children.length === 2));
+const openCount = () => cats.filter(c => !c.children[1].hidden).length;
+check('only one category is open at a time', openCount() === 1);
+cats[3].children[0].onclick();
+check('tapping a category header opens it and closes the others', !cats[3].children[1].hidden && openCount() === 1);
+cats[3].children[0].onclick();
+check('tapping the open header folds it shut', openCount() === 0);
+check('the open category is remembered', store['contraption-labs.shelf.open'] === '');
+check('Move is no longer inside a category', !CL.SHELF.sections.some(sec => sec.items.indexOf('hand') >= 0));
+sb.setTool('tennis'); runFrames(1);
+check('holding a part shows it above the shelf', els.holding.hidden === false && els.holdingName.textContent === 'Tennis ball');
+check('...and marks the category it came from', cats[0].className.indexOf('holding') >= 0);
+els.btnHand.onclick();
+check('the ✋ button puts it down (back to Move)', sb.tool === 'hand' && els.holding.hidden === true);
+sb.setTool('rope'); sb.loadPreset('pulley'); sb.setTool('rope');
+click(766, 500);
+check('(rope started)', !!sb.linkFrom);
+fire('pointerdown', 900, 600, { button: 2 });
+check('right-click puts down the rope tool and cancels the half-made rope', sb.tool === 'hand' && !sb.linkFrom);
+const nParts = userParts();
+click(1200, 300);
+check('with the Move hand, tapping empty space adds nothing', userParts() === nParts);
+sb.setTool('crate'); key('Escape');
+check('Esc also goes back to Move', sb.tool === 'hand');
+
+/* ---------- 13. toolbar ---------- */
 console.log('\n11. Toolbar');
 sb.setTool('hand'); sb.loadPreset('gears');
 check('Start button shows ▶ Start in build mode', els.btnStart.innerHTML.indexOf('Start') >= 0);

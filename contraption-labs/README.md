@@ -49,7 +49,9 @@ Machines stay put while the machine runs (balls, planks and critters can still b
 |---|---|
 | Start / Stop | **▶ Start** button or **Enter** (also **R** to stop) |
 | Pause while running | **⏸** button or **Space** |
-| Place a part | Pick it on the shelf, click in the lab |
+| Find a part | Tap a shelf category to fold it open (one opens at a time) |
+| Place a part | Pick it on the shelf, click in the lab. What you're holding shows under the ✋ button |
+| Put it down / back to Move | **✋ Move** button (top of the shelf), **right-click**, or **Esc** |
 | Settings (switch, fan, motor, hamster, cat) | Select the part in build mode; buttons appear on the info card |
 | Turn / stretch | Drag the yellow handle (Shift = no snapping), mouse wheel, or **Q / E** |
 | Undo / redo | **Ctrl+Z** / **Ctrl+Y** |
@@ -57,7 +59,7 @@ Machines stay put while the machine runs (balls, planks and critters can still b
 | Save / open a build | **💾 Save** (Ctrl+S) / **📂 Open** |
 | Slow motion / trails | **S** / **T** |
 | Full screen | **F** or the button |
-| Remove selected | **Delete** · **Esc** cancels a belt/cord in progress |
+| Remove selected | **Delete** |
 
 ## Project structure
 ```

@@ -41,27 +41,57 @@
     return b;
   }
 
+  /* Categories fold open and shut (one open at a time) so the shelf never
+   * becomes a long scroll. The open one is remembered. */
+  const OPEN_KEY = 'contraption-labs.shelf.open';
+  const cats = [];
+  let openCat = null;
+
+  function setOpen(id) {
+    openCat = id;
+    cats.forEach(c => {
+      const on = c.id === id;
+      c.body.hidden = !on;
+      c.wrap.className = 'cat' + (on ? ' open' : '');
+      c.head.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+    try { localStorage.setItem(OPEN_KEY, id || ''); } catch (e) { /* ignore */ }
+  }
+
   function buildShelf(sb) {
     const shelf = $('shelf');
     shelf.innerHTML = '';
-    const add = (title, id) => {
-      const h = document.createElement('h2'); h.textContent = title; shelf.appendChild(h);
-      const g = document.createElement('div'); g.className = 'shelf-group'; if (id) g.id = id; shelf.appendChild(g);
-      return g;
-    };
-    CL.SHELF.sections.forEach(sec => {
-      const g = add(sec.title);
-      sec.items.forEach(t => {
+    cats.length = 0;
+    const list = CL.SHELF.sections.map(s => ({ id: s.title.toLowerCase().replace(/\W+/g, '-'), title: s.title, icon: s.icon, items: s.items }))
+      .concat([{ id: 'experiments', title: 'Experiments', icon: '🧪', presets: CL.PRESET_ORDER }]);
+
+    list.forEach(sec => {
+      const wrap = document.createElement('section');
+      wrap.className = 'cat';
+      const head = document.createElement('button');
+      head.className = 'cat-head';
+      const n = (sec.items || sec.presets).length;
+      head.innerHTML = '<span class="cat-icon">' + sec.icon + '</span><span class="cat-title">' + sec.title +
+        '</span><span class="cat-dot" aria-hidden="true"></span><span class="cat-count">' + n + '</span><span class="chev" aria-hidden="true">▾</span>';
+      const body = document.createElement('div');
+      body.className = 'shelf-group';
+      if (sec.presets) body.id = 'shelfExperiments';
+      (sec.items || []).forEach(t => {
         const kind = kindOf(t);
-        const icon = kind === 'hand' ? '<i class="emoji">✋</i>' : '<canvas data-kind="' + kind + '" data-type="' + t + '"></canvas>';
-        g.appendChild(shelfButton(nameOf(t), icon, () => sb.setTool(t), { tool: t }));
+        body.appendChild(shelfButton(nameOf(t), '<canvas data-kind="' + kind + '" data-type="' + t + '"></canvas>', () => sb.setTool(t), { tool: t }));
       });
+      (sec.presets || []).forEach(id => {
+        const p = CL.PRESETS[id];
+        body.appendChild(shelfButton(p.name, '<i class="emoji">' + p.icon + '</i>', () => sb.loadPreset(id), { preset: id }));
+      });
+      head.onclick = () => setOpen(openCat === sec.id ? null : sec.id);
+      wrap.appendChild(head); wrap.appendChild(body); shelf.appendChild(wrap);
+      cats.push({ id: sec.id, items: sec.items || [], wrap, head, body });
     });
-    const exp = add('Experiments', 'shelfExperiments');
-    CL.PRESET_ORDER.forEach(id => {
-      const p = CL.PRESETS[id];
-      exp.appendChild(shelfButton(p.name, '<i class="emoji">' + p.icon + '</i>', () => sb.loadPreset(id), { preset: id }));
-    });
+
+    let saved = null;
+    try { saved = localStorage.getItem(OPEN_KEY); } catch (e) { /* ignore */ }
+    setOpen(saved !== null && (saved === '' || cats.some(c => c.id === saved)) ? (saved || null) : cats[0].id);
     requestAnimationFrame(() => document.querySelectorAll('.shelf canvas').forEach(c =>
       CL.art.drawIcon(c, c.dataset.kind, c.dataset.type)));
   }
@@ -72,16 +102,34 @@
       b.classList.toggle('active', t === sb.tool);
       const badge = b.querySelector('.count');
       if (!badge) return;
-      if (sb.bin && t !== 'hand') {
+      if (sb.bin) {
         const n = Math.max(0, sb.remaining(t));
         badge.hidden = false; badge.textContent = '×' + n;
         b.classList.toggle('empty', n === 0);
       } else { badge.hidden = true; b.classList.remove('empty'); }
     });
+    // a dot on a closed category shows that's where the part in your hand came from
+    cats.forEach(c => (c.wrap.className = 'cat' + (c.id === openCat ? ' open' : '') + (c.items.indexOf(sb.tool) >= 0 ? ' holding' : '')));
+    refreshHand(sb);
+  }
+
+  /* ---------- the Move hand (always visible at the top of the shelf) ---------- */
+  function refreshHand(sb) {
+    const btn = $('btnHand'), held = $('holding');
+    const hand = sb.tool === 'hand';
+    btn.className = 'hand-btn' + (hand ? ' on' : '');
+    btn.innerHTML = hand ? '✋ <span>Move</span>' : '✋ <span>Back to Move</span>';
+    held.hidden = hand;
+    if (!hand) {
+      $('holdingName').textContent = nameOf(sb.tool);
+      const c = $('holdingIcon');
+      if (c.dataset.type !== sb.tool) { c.dataset.type = sb.tool; CL.art.drawIcon(c, kindOf(sb.tool), sb.tool); }
+    }
   }
 
   /* ---------- toolbar ---------- */
   function bindToolbar(sb) {
+    $('btnHand').onclick = () => sb.toHand();
     $('btnStart').onclick = () => sb.toggleStartStop();
     $('btnPause').onclick = () => sb.togglePause();
     $('btnUndo').onclick = () => sb.undo();
@@ -156,7 +204,7 @@
       else if (k === 's') sb.toggleSlow();
       else if (k === 't') sb.toggleTrails();
       else if (k === 'f') toggleFullscreen();
-      else if (k === 'escape') sb.cancel();
+      else if (k === 'escape') sb.toHand();
     });
   }
 
@@ -257,7 +305,7 @@
 
     let h = modeCard(sb);
     if (!kind) {
-      el.innerHTML = h + '<h3>✋ Move tool</h3><p>Drag things around the lab.</p>' +
+      el.innerHTML = h + '<h3>✋ Move</h3><p>Drag things around the lab. Tap something to see what it does.</p>' +
         '<p>While it is running, <b>flick</b> a ball to throw it, or click a switch to flip it!</p>' + helpHTML();
       return;
     }
@@ -303,7 +351,8 @@
       '<kbd>Enter</kbd> start / stop · <kbd>Space</kbd> pause<br>' +
       '<kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo<br>' +
       '<kbd>G</kbd> snap · <kbd>S</kbd> slow-mo · <kbd>T</kbd> trails<br>' +
-      '<kbd>F</kbd> full screen · <kbd>Del</kbd> remove · <kbd>Esc</kbd> cancel</div>';
+      '<kbd>F</kbd> full screen · <kbd>Del</kbd> remove<br>' +
+      '<b>Right-click</b> or <kbd>Esc</kbd> puts down what you hold</div>';
   }
 
   /* ---------- toast ---------- */

@@ -274,6 +274,8 @@
     }
     select(o) { this.selected = o; this.emit('select', o); }
     cancel() { this.linkFrom = null; this.linkVia = null; this.select(null); }
+    /* Put down whatever you're holding and go back to the Move hand (right-click, Esc, ✋ button) */
+    toHand() { this._cancelDrag(); this.setTool('hand'); }
 
     /* Part settings (switch ON/OFF, fan direction ...) — build mode only */
     setOption(o, key, value) {
@@ -621,7 +623,7 @@
     }
 
     _down(e) {
-      if (e.button === 2) { this.cancel(); return; }
+      if (e.button === 2) { this.toHand(); return; }
       const p = this._pt(e);
       const tol = e.pointerType === 'touch' ? 14 : 5;
       const build = this.building;

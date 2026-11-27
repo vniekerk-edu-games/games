@@ -298,13 +298,13 @@
 
   CL.SHELF = {
     sections: [
-      { title: 'Balls', items: ['bowling', 'basketball', 'tennis', 'bouncy', 'beach', 'balloon'] },
-      { title: 'Build', items: ['hand', 'wood', 'ice', 'trampoline', 'seesaw', 'domino', 'crate', 'bucket'] },
-      { title: 'Ropes', items: ['rope', 'hook', 'pulley'] },
-      { title: 'Machines', items: ['gearSmall', 'gearLarge', 'belt', 'conveyor', 'hamster', 'motor'] },
-      { title: 'Power', items: ['switch', 'cord', 'fan', 'scissors'] },
-      { title: 'Pop & burn', items: ['pin', 'candle'] },
-      { title: 'Critters', items: ['mouse', 'cat', 'cheese'] }
+      { title: 'Balls', icon: '⚽', items: ['bowling', 'basketball', 'tennis', 'bouncy', 'beach', 'balloon'] },
+      { title: 'Build', icon: '🧱', items: ['wood', 'ice', 'trampoline', 'seesaw', 'domino', 'crate', 'bucket'] },
+      { title: 'Ropes', icon: '🪢', items: ['rope', 'hook', 'pulley'] },
+      { title: 'Machines', icon: '⚙️', items: ['gearSmall', 'gearLarge', 'belt', 'conveyor', 'hamster', 'motor'] },
+      { title: 'Power', icon: '⚡', items: ['switch', 'cord', 'fan', 'scissors'] },
+      { title: 'Pop & burn', icon: '🔥', items: ['pin', 'candle'] },
+      { title: 'Critters', icon: '🐭', items: ['mouse', 'cat', 'cheese'] }
     ]
   };
   // kept for older code/tests

@@ -44,7 +44,16 @@
     </header>
 
     <main class="layout">
-      <aside class="shelf" id="shelf" aria-label="Parts shelf"></aside>
+      <aside class="side">
+        <div class="hand-bar">
+          <button id="btnHand" class="hand-btn on" title="Put down what you are holding (right-click or Esc)">✋ <span>Move</span></button>
+          <div class="holding" id="holding" hidden>
+            <canvas id="holdingIcon" data-type=""></canvas>
+            <span><small>Holding</small><b id="holdingName"></b></span>
+          </div>
+        </div>
+        <div class="shelf" id="shelf" aria-label="Parts shelf"></div>
+      </aside>
 
       <section class="stage" id="stage">
         <canvas id="lab" aria-label="Physics lab"></canvas>
