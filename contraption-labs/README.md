@@ -9,6 +9,32 @@ chain-reaction puzzle games.
   switches, cords, fans, a see-saw, and a mouse, a cat and some cheese.
 * **Stage 4 – Things that tip, hang, snip and pop:** dominoes, crates, buckets, ropes, hooks,
   pulleys, scissors, pins and candles.
+* **Stage 4c – Fire and friction:** pendulums slow down and stop; candles light each other;
+  a jumpy mini dragon breathes fire when frightened.
+* **Stage 5 – Puzzles:** six puzzles with goals, a limited parts bin, bolted-down parts,
+  hints, a "Why it worked" card and saved progress. Free play is still one tap away.
+
+## Puzzles
+The game opens on the puzzle list. Each puzzle shows its goal and the parts you get.
+Parts that start in the lab are bolted down; only the parts on your shelf can be added.
+Press **▶ Start** to test, **■ Stop** to adjust. **💡 Hint** helps; **🧹 Start over** clears your parts.
+Your attempt on each puzzle and which puzzles you've solved are remembered in the browser.
+
+| # | Puzzle | Goal | Parts | Science |
+|---|---|---|---|---|
+| 1 | Roll it home | Bowling ball onto the target | 1 plank | Ramps turn falling into rolling |
+| 2 | Hot stuff | Pop the balloon | 1 candle | Fire burns rope; helium floats |
+| 3 | Domino dash | Beach ball onto the target | 10 dominoes | Energy travels along a domino row |
+| 4 | Feed the mouse | The mouse eats the cheese | cord, belt, tennis ball | Power → motor → belt → conveyor |
+| 5 | Heavy lifting | Lift the crate | rope, bowling ball | Pulleys change the direction of a pull |
+| 6 | Birthday surprise | Light the 3 cake candles | ball, 12 candles (unlit) | Heat spreads from hot to cool |
+
+### Adding a puzzle
+Open `js/levels/levels.js`, copy one puzzle object, change it, and save. The comments at the top
+explain every field. Goal types are listed in `js/engine/goals.js`. Then add a known solution to
+`tests/levels-tests.js` and run `node tests/levels-tests.js`: it checks that the puzzle does NOT solve
+itself, and that it CAN be solved with only the parts in its bin.
+Tip: build the puzzle in free play first, press 💾 Save, and copy the positions from the saved file.
 
 ## Play it locally
 Open `index.html` in Edge or Chrome. No install or build step needed.
@@ -36,11 +62,12 @@ Open `index.html` in Edge or Chrome. No install or build step needed.
 
 | Domino / crate / bucket | Solid things that slide, **tip over** and stack. Tall + thin tips easily (domino); wide + heavy hardly tips (crate). Buckets hold things. **Q / E** tilts them in build mode. |
 | Rope (tool) | Click a thing, then a hook or another thing. For a pulley: thing → pulley → thing. Ropes only pull; they are exactly as long as you draw them. Click a rope and press Delete to remove it. |
-| Hook | Holds one end of a rope still (pendulums!). |
+| Hook | Holds one end of a rope still (pendulums!). The rope rubs on the hook, so swings slowly die down: a heavy bowling ball swings for about a minute, a light tennis ball for about 15 s. |
 | Pulley | One side goes down, the other goes up. The heavier side wins. |
 | Scissors | Snip ropes at their pointy end when bumped or when a switch powers them (cord). |
 | Pin | Pops balloons that touch its point. Turn it to aim. |
-| Candle | Burns through ropes (about 0.6 s) and pops balloons. Can start lit or out. |
+| Candle | Burns through ropes (about 0.6 s) and pops balloons. Can start lit or out. An unlit candle catches light when a flame touches its wick, so a row of candles about 2 small grid squares apart lights one after another. |
+| Mini dragon | Asleep or awake. A bump, a balloon popping nearby or an awake cat close by frightens it: "Hic!", then it breathes fire for about 1.6 s in the direction it faces, then rests for 3 s before it can do it again. Its fire lights candles, burns rope (faster than a candle), pops balloons and wakes hamsters and sleeping cats. |
 
 Machines stay put while the machine runs (balls, planks and critters can still be thrown and moved in the sandbox).
 
@@ -52,7 +79,7 @@ Machines stay put while the machine runs (balls, planks and critters can still b
 | Find a part | Tap a shelf category to fold it open (one opens at a time) |
 | Place a part | Pick it on the shelf, click in the lab. What you're holding shows under the ✋ button |
 | Put it down / back to Move | **✋ Move** button (top of the shelf), **right-click**, or **Esc** |
-| Settings (switch, fan, motor, hamster, cat) | Select the part in build mode; buttons appear on the info card |
+| Settings (switch, fan, motor, hamster, cat, candle, dragon) | Select the part in build mode; buttons appear on the info card |
 | Turn / stretch | Drag the yellow handle (Shift = no snapping), mouse wheel, or **Q / E** |
 | Undo / redo | **Ctrl+Z** / **Ctrl+Y** |
 | Snap to grid | **🧲 Snap** or **G** |
@@ -72,13 +99,16 @@ js/engine/              PHYSICS + DATA (no drawing — testable in Node)
   collide.js            collision detection
   world.js              fixed-step impulse solver (deterministic)
   ropes.js              ropes and pulleys (pull-only constraints)
-  machines.js           drive network (gears, belts), power, switches, fans, snip/pop/burn
-  creatures.js          mouse & cat brains
-  layout.js             the saved-build format (also the future level format)
+  machines.js           drive network (gears, belts), power, switches, fans, snip/pop, fire
+  creatures.js          mouse, cat & dragon brains
+  layout.js             the saved-build format (also used by puzzles)
+  goals.js              checks puzzle goals while it runs
+  js/levels/
+  levels.js             the puzzles (plain data — add more here)
 js/render/
   art.js                balls, planks, icons
   art-machines.js       machines, belts, cords, wind
-  art-critters.js       mouse, cat, cheese
+  art-critters.js       mouse, cat, dragon, cheese
   art-ropes.js          dominoes, crates, buckets, ropes, pulleys, scissors, pins, candles
   renderer.js           lab, trails, bubbles, selection
 js/sandbox/
@@ -90,6 +120,8 @@ tests/
   run-tests.js          ball physics            node tests/run-tests.js
   machine-tests.js      machines and critters   node tests/machine-tests.js
   stage4-tests.js       boxes, ropes, pulleys    node tests/stage4-tests.js
+  stage4c-tests.js      swing friction, fire, dragon node tests/stage4c-tests.js
+  levels-tests.js       every puzzle unsolved at start, solvable with its bin
   smoke-ui.js           whole game, mock browser node tests/smoke-ui.js
 tools/bundle.js         one-file source bundle (pack / unpack)
 ```

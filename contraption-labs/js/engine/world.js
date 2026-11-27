@@ -173,6 +173,7 @@
         if (CL.Ropes) CL.Ropes.solveVelocity(this);
       }
 
+      if (CL.Ropes) CL.Ropes.damp(this, h);
       warm.clear();
       for (const c of contacts) if (c.key && !c.skip) warm.set(c.key, { jn: c.jn, jt: c.jt });
 

@@ -43,6 +43,7 @@
       ctx.save();
       ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
       this._background(ctx, build);
+      this._goals(ctx, sb);
       if (build && sb.ghostTrails.length) this._paths(ctx, sb.ghostTrails, 0.28, 2);
       for (const k of world.blocks) CL.art.drawBlockBack(ctx, k);
       for (const k of world.blocks) CL.art.drawBlock(ctx, k);
@@ -54,6 +55,7 @@
       if (!build && sb.trails) this._paths(ctx, sb.trailMap.values(), 0.75, 2.6);
       for (const b of world.balls) CL.art.drawBall(ctx, b);
       if (!build && sb.trails) this._apexes(ctx, sb);
+      CL.ropeArt.drawFire(ctx, world);
       CL.ropeArt.drawEffects(ctx, world);
       this._jams(ctx, world);
       if (!build) this._bubbles(ctx, world);
@@ -80,6 +82,26 @@
         ctx.strokeStyle = (F - y) % 100 ? minor : major;
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
+    }
+
+    /* puzzle targets: a soft green box with a flag */
+    _goals(ctx, sb) {
+      if (!sb.level) return;
+      const st = sb.goal ? sb.goal.state : null;
+      sb.level.goals.forEach((g, i) => {
+        if (g.type !== 'zone') return;
+        const hot = st && st[i].inside, done = st && st[i].ok;
+        ctx.fillStyle = done ? 'rgba(140,198,63,0.6)' : hot ? 'rgba(140,198,63,0.45)' : 'rgba(140,198,63,0.3)';
+        CL.art.rrect(ctx, g.x, g.y, g.w, g.h, 12); ctx.fill();
+        ctx.strokeStyle = T.green; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+        CL.art.rrect(ctx, g.x, g.y, g.w, g.h, 12); ctx.stroke(); ctx.setLineDash([]);
+        // flag
+        const fx = g.x + 14, fy = g.y - 4;
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 40); ctx.stroke();
+        ctx.fillStyle = T.green; ctx.beginPath(); ctx.moveTo(fx, fy - 40); ctx.lineTo(fx + 26, fy - 32); ctx.lineTo(fx, fy - 24); ctx.closePath(); ctx.fill();
+        ctx.font = 'bold 16px ' + FONT; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText((done ? '✓ ' : '') + (g.label || 'Target'), fx + 32, fy - 30);
+      });
     }
 
     _ruler(ctx) {
@@ -258,8 +280,12 @@
         const msg = sb.linkFrom ? (sb.tool === 'rope' ? (sb.linkVia ? 'Now click the thing on the other side of the pulley' : 'Now click a hook or thing to tie it to (or a pulley first)') : 'Now click the part to join it to') :
           (sb.tool === 'belt' ? 'Click a part with a wheel to start the belt' : sb.tool === 'rope' ? 'Click a ball, box, bucket or hook to tie the rope on' : 'Click a switch, motor, fan or scissors to start the cord');
         this._pill(ctx, '🔗  ' + msg, W / 2, 36, T.yellow, T.jem);
+      } else if (build && sb.level) {
+        this._pill(ctx, '🎯  ' + sb.level.goalText, W / 2, 36, T.green, T.jem);
       } else if (build) {
         this._pill(ctx, '🛠  BUILD MODE  ·  arrange your parts, then press ▶ Start', W / 2, 36, T.bright, T.jem);
+      } else if (sb.won) {
+        this._pill(ctx, '🎉  SOLVED!', W / 2, 36, T.green, T.jem);
       } else {
         const tags = [sb.running ? '▶ RUNNING' : '⏸ PAUSED'];
         if (sb.slowmo) tags.push('🐢 SLOW MOTION');

@@ -45,6 +45,41 @@
     for (const b of world.balls) {
       if (b.def.creature === 'mouse') mouse(world, b);
       else if (b.def.creature === 'cat') cat(world, b);
+      else if (b.def.creature === 'dragon') dragon(world, b);
+    }
+  }
+
+  /* DRAGON  asleep/awake → (a fright!) → "Hic!" → breathes fire → catches its breath → awake
+   * Frights: a bump, a balloon popping nearby, an awake cat coming close. */
+  const SCARE_POP = 320, SCARE_CAT = 230;
+  function frightened(world, d) {
+    for (const im of world.impacts) if ((im.a === d || im.b === d) && im.speed >= 60) return 'bump';
+    for (const e of world.effects) {
+      if (e.type === 'pop' && world.time - e.t <= world.stepDt + 1e-9 && Math.hypot(e.x - d.x, e.y - d.y) < SCARE_POP) return 'pop';
+    }
+    if (nearest(world, d, o => o.def.creature === 'cat' && o.state !== 'sleep', SCARE_CAT)) return 'cat';
+    return null;
+  }
+
+  function dragon(world, d) {
+    const D = d.def, t = world.time;
+    d.walk = 0;
+    if (d.held) return;
+    if (d.state === 'sleep' || d.state === 'idle') {
+      const why = frightened(world, d);
+      if (!why) return;
+      d.state = 'startle'; d.until = t + D.startleTime;
+      say(d, why === 'cat' ? 'Eep! A cat! Hic!' : 'Hic!', world);
+      world.events.push({ type: 'dragon-startle', obj: d, why: why });
+    } else if (d.state === 'startle' && t >= d.until) {
+      d.state = 'breathe'; d.breathT = t; d.until = t + D.breathTime;
+      say(d, 'RAWRRR!', world);
+      world.events.push({ type: 'dragon-fire', obj: d });
+    } else if (d.state === 'breathe' && t >= d.until) {
+      d.state = 'rest'; d.until = t + D.restTime;
+      say(d, 'Phew\u2026 *cough*', world);
+    } else if (d.state === 'rest' && t >= d.until) {
+      d.state = 'idle';
     }
   }
 

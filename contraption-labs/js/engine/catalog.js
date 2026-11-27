@@ -109,6 +109,19 @@
       notice: 'The cat is heavier than the mouse, but the mouse is faster. Who wins the race?',
       options: [{ key: 'awake', label: 'Cat starts', values: [[false, '😴 Asleep'], [true, '👀 Awake']] }]
     },
+    dragon: {
+      name: 'Mini dragon', radius: 30, mass: 1.5, bounce: 0.15, friction: 0.9,
+      drag: 0.0001, gravityScale: 1, inertiaK: 0.4, rollingResistance: 0, noSpin: true,
+      creature: 'dragon', flameRange: 190, flameSpread: 0.42, startleTime: 0.35, breathTime: 1.6, restTime: 3,
+      trailColor: '#8CC63F',
+      stats: [['Weight', 3, 'w'], ['Fire', 5, 'b'], ['Jumpy', 5, 'a']],
+      fact: 'A jumpy little dragon. When something gives it a fright, it hiccups out a big puff of FIRE! Fire lights candles, burns rope and pops balloons.',
+      notice: 'Its fire is HEAT. Heat moves from hot things to cooler things, which is how a flame lights a candle.',
+      options: [
+        { key: 'faceLeft', label: 'Faces', values: [[false, '→ Right'], [true, '← Left']] },
+        { key: 'awake', label: 'Dragon starts', values: [[false, '😴 Asleep'], [true, '👀 Awake']] }
+      ]
+    },
     cheese: {
       name: 'Cheese', radius: 12, mass: 0.15, bounce: 0.15, friction: 0.7,
       drag: 0.0002, gravityScale: 1, inertiaK: 0.4, rollingResistance: 0, noSpin: true,
@@ -263,8 +276,8 @@
       name: 'Candle', shape: 'box', length: 18, thickness: 50, bounce: 0.3, friction: 0.6,
       flame: true,
       stats: [['Heat', 4, 'w']],
-      fact: 'A flame is very hot. It burns through a rope and pops a balloon.',
-      notice: 'Burning a rope takes a moment. Count how long it takes!',
+      fact: 'A flame is very hot. It burns through rope and pops balloons. An unlit candle catches fire when a flame touches its wick.',
+      notice: 'Stand candles side by side (2 small grid squares apart) and light the first one. Watch the fire spread!',
       options: [{ key: 'lit', label: 'Candle starts', values: [[true, '🔥 Lit'], [false, '🕯️ Out']] }]
     },
 
@@ -304,7 +317,7 @@
       { title: 'Machines', icon: '⚙️', items: ['gearSmall', 'gearLarge', 'belt', 'conveyor', 'hamster', 'motor'] },
       { title: 'Power', icon: '⚡', items: ['switch', 'cord', 'fan', 'scissors'] },
       { title: 'Pop & burn', icon: '🔥', items: ['pin', 'candle'] },
-      { title: 'Critters', icon: '🐭', items: ['mouse', 'cat', 'cheese'] }
+      { title: 'Critters', icon: '🐭', items: ['mouse', 'cat', 'dragon', 'cheese'] }
     ]
   };
   // kept for older code/tests

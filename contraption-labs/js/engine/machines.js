@@ -88,19 +88,104 @@
     for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - p.x, b.y - p.y) < b.r + 14) pop(world, b);
   }
 
+  /* ---------- FIRE ----------
+   * Every flame is a "fire source": a lit candle (a small hot spot) or a
+   * dragon breathing fire (a cone in front of its mouth). One set of rules
+   * for all of them:
+   *   • balloons pop        • rope burns through (dragon fire is hotter: faster)
+   *   • unlit candles catch light when a flame touches the wick
+   *   • hamsters and sleeping cats get a hot surprise
+   */
+  const CANDLE_HEAT = 14;      // px radius of a candle's hot spot
+  const ROPE_BURN = 0.6;       // seconds of candle heat to burn through a rope
+  const CATCH_LIGHT = 0.25;    // seconds of heat on a wick to light a candle
+
+  function mouth(d) { return { x: d.x + d.face * d.r * 0.95, y: d.y - d.r * 0.25 }; }
+
+  /* reach of a breathing dragon's flame right now (it whooshes out, then holds) */
+  function flameReach(d, time) {
+    return d.def.flameRange * Math.min(1, (time - d.breathT) / 0.25);
+  }
+
+  function fireSources(world) {
+    const out = [];
+    for (const k of world.blocks) if (k.def.flame && k.lit) out.push({ kind: 'spot', obj: k, p: flamePoint(k), heat: 1 });
+    for (const d of world.balls) {
+      if (d.def.creature !== 'dragon' || d.state !== 'breathe') continue;
+      out.push({ kind: 'cone', obj: d, p: mouth(d), dir: d.face, reach: flameReach(d, world.time), spread: d.def.flameSpread, heat: 2 });
+    }
+    return out;
+  }
+
+  /* how hot is point (x, y), including things of radius pad touching it? */
+  function heatAt(src, x, y, pad, skip) {
+    let h = 0;
+    for (const f of src) {
+      if (f.obj === skip) continue;
+      if (f.kind === 'spot') {
+        if (Math.hypot(x - f.p.x, y - f.p.y) < CANDLE_HEAT + pad) h = Math.max(h, f.heat);
+      } else {
+        const along = (x - f.p.x) * f.dir, across = Math.abs(y - f.p.y);
+        if (along < -pad || along > f.reach + pad) continue;
+        if (across <= 8 + Math.max(0, along) * f.spread + pad) h = Math.max(h, f.heat);
+      }
+    }
+    return h;
+  }
+
+  /* hottest point along a rope (sampled every 8 px) */
+  function ropeHeat(src, l) {
+    let h = 0;
+    for (const [p, q] of CL.Ropes.segments(l)) {
+      const n = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 8));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        h = Math.max(h, heatAt(src, p.x + (q.x - p.x) * t, p.y + (q.y - p.y) * t, 0));
+        if (h >= 2) return h;
+      }
+    }
+    return h;
+  }
+
   function hazards(world, dt) {
     for (const k of world.blocks) {
-      if (k.def.popper) {
-        const t = pinTip(k);
-        for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - t.x, b.y - t.y) < b.r + 3) pop(world, b);
-      } else if (k.def.flame && k.lit) {
-        const f = flamePoint(k);
-        for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - f.x, b.y - f.y) < b.r + 10) pop(world, b);
-        for (const l of world.links.slice()) {
-          if (l.type !== 'rope' || CL.Ropes.distTo(l, f.x, f.y) > 12) continue;
-          l.burn = (l.burn || 0) + dt;
-          if (l.burn > 0.6) { CL.Ropes.cut(world, l, 'burn'); effect(world, 'burn', f.x, f.y - 6); }
-        }
+      if (!k.def.popper) continue;
+      const t = pinTip(k);
+      for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - t.x, b.y - t.y) < b.r + 3) pop(world, b);
+    }
+    const src = fireSources(world);
+    if (!src.length) return;
+    for (const b of world.balls.slice()) {
+      if (b.def.pops && heatAt(src, b.x, b.y, b.r - 2)) pop(world, b);
+      else if (b.def.creature === 'cat' && b.state === 'sleep' && heatAt(src, b.x, b.y, b.r)) {
+        b.state = 'idle'; say(b, 'MROWW! Hot!', world); world.events.push({ type: 'cat-wake', obj: b });
+      }
+    }
+    for (const l of world.links.slice()) {
+      if (l.type !== 'rope') continue;
+      const h = ropeHeat(src, l);
+      if (!h) continue;
+      l.burn = (l.burn || 0) + dt * h;
+      if (l.burn > ROPE_BURN) {
+        const g = CL.Ropes.geom(l);
+        CL.Ropes.cut(world, l, 'burn');
+        effect(world, 'burn', (g.pa.x + g.pb.x) / 2, (g.pa.y + g.pb.y) / 2);
+      }
+    }
+    for (const k of world.blocks) {
+      if (k.def.flame && !k.lit) {
+        const w = flamePoint(k);
+        if (heatAt(src, w.x, w.y, 12, k)) {              // a flame within ~26 px of the wick
+          k.heat += dt;
+          if (k.heat >= CATCH_LIGHT) {
+            k.lit = true; k.heat = 0;
+            effect(world, 'ignite', w.x, w.y);
+            world.events.push({ type: 'ignite', obj: k });
+          }
+        } else k.heat = 0;
+      } else if (k.type === 'hamster' && !k.running && heatAt(src, k.x, k.y, k.r)) {
+        k.running = true; say(k, 'Yikes! HOT!', world);
+        world.events.push({ type: 'hamster', obj: k });
       }
     }
   }
@@ -237,5 +322,6 @@
     return null;
   }
 
-  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed, bladePoint, pinTip, flamePoint, snip };
+  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed, bladePoint, pinTip, flamePoint, snip,
+    mouth, flameReach, fireSources, heatAt };
 })(window.CL = window.CL || {});

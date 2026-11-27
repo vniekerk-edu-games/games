@@ -57,6 +57,8 @@ const check = (n, c, info) => { console.log((c ? '  PASS ' : '  FAIL ') + n + (i
 /* ---------- 1. boot ---------- */
 console.log('\n1. Start-up');
 runFrames(100);
+check('opens on the puzzle list', els.overlay.hidden === false && els.overlayCard.innerHTML.indexOf('Puzzles') >= 0);
+CL.UI.hideOverlay();
 check('boots into BUILD mode with the Mouse power experiment', sb.mode === 'build' && !!findBlock('hamster') && sb.world.links.length === 3);
 const y0 = sb.world.balls[0].y;
 runFrames(100);
@@ -300,5 +302,61 @@ key(' ');
 check('Space pauses while running', sb.running === false);
 sb.stop();
 
-console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
-process.exit(fail ? 1 : 0);
+/* ---------- 14. puzzles ---------- */
+console.log('\n14. Playing a puzzle');
+sb.loadPreset('gears');
+const sandboxSave = store['contraption-labs.sandbox.v1'];
+const L1 = CL.LEVELS[0];
+CL.UI.showLevels(sb);
+check('puzzle list shows every puzzle', CL.LEVELS.every(l => els.overlayCard.innerHTML.indexOf(l.name) >= 0));
+CL.UI.showIntro(sb, L1);
+check('start card shows the goal and the parts you get', els.overlayCard.innerHTML.indexOf(L1.goalText) >= 0 && els.overlayCard.innerHTML.indexOf('Wood plank') >= 0);
+els.ovGo.onclick(); runFrames(2);
+check('puzzle loaded: bowling ball bolted down, banner says Puzzle 1', sb.level === L1 && sb.world.balls[0].locked && els.modeTag.textContent === 'Puzzle 1');
+const lastCat = els.shelf.children[els.shelf.children.length - 1];   // (the mock DOM keeps old children)
+check('the shelf only offers the puzzle\u2019s parts', lastCat.children[0].innerHTML.indexOf('Your parts') >= 0 && lastCat.children[1].children.length === 1);
+drag(300, 200, 700, 500);
+check('bolted-down ball can\u2019t be dragged', sb.world.balls[0].x === 300 && sb.world.balls[0].y === 200);
+sb.setTool('bowling'); click(900, 300);
+check('parts that are not in the bin can\u2019t be added', sb.world.balls.length === 1);
+sb.setTool('wood'); click(420, 430);
+const pl = sb.world.blocks.find(k => k.type === 'wood' && !k.locked);
+const hp = sb.handlePos(pl);
+drag(hp.x, hp.y, 420 + 200 * Math.cos(25 * Math.PI / 180), 430 + 200 * Math.sin(25 * Math.PI / 180));
+sb.setTool('wood'); click(1000, 300);
+check('bin: only one plank (a second is refused)', sb.world.blocks.filter(k => k.type === 'wood').length === 1 && sb.remaining('wood') === 0);
+check('the save/open buttons are off during puzzles', els.btnSave.disabled && els.btnOpen.disabled && els.btnHint.hidden === false);
+let wonEvt = false; sb.on(t => { if (t === 'win') wonEvt = true; });
+sb.start(); runFrames(60 * 7);
+check('the ball rolls home and the puzzle is solved', wonEvt && sb.won);
+check('progress is remembered', JSON.parse(store['contraption-labs.progress']).done.ramp === true);
+const attempt = store['contraption-labs.level.ramp'];
+sb.stop();
+check('Stop puts the ball back (and keeps your plank)', sb.world.balls[0].y === 200 && sb.world.blocks.some(k => k.type === 'wood'));
+sb.leaveLevel(); runFrames(2);
+check('free play comes back exactly as it was', store['contraption-labs.sandbox.v1'] === sandboxSave && !sb.level && !!sb.world.blocks.find(k => k.type === 'motor'));
+sb.loadLevel(L1);
+check('reopening the puzzle brings back your last attempt', sb.world.blocks.some(k => k.type === 'wood' && !k.locked) && store['contraption-labs.level.ramp'] === attempt);
+sb.resetLevel();
+check('Start over takes your parts out again', !sb.world.blocks.some(k => k.type === 'wood'));
+const L6 = CL.LEVELS.find(l => l.id === 'dragon');
+sb.loadLevel(L6); sb.setTool('candle'); click(500, 835);
+const myCandle = sb.world.blocks.find(k => k.type === 'candle' && !k.locked);
+sb.setOption(myCandle, 'lit', true);
+check('puzzle rules: candles from the bin start unlit and can\u2019t be switched on', myCandle && !myCandle.lit && !myCandle.opts.lit);
+const L2 = CL.LEVELS.find(l => l.id === 'hot');
+sb.loadLevel(L2); sb.select(sb.world.links[0]); key('Delete');
+check('a rope that is part of the puzzle can\u2019t be removed', sb.world.links.length === 1);
+let e5 = '';
+try { CL.LEVELS.forEach(l => { sb.loadLevel(l); runFrames(2); sb.start(); runFrames(120); sb.stop(); }); } catch (e) { e5 = e.stack; }
+check('every puzzle draws and runs in the full game loop', !e5, e5.split('\n').slice(0, 3).join(' '));
+
+/* the "solved" card appears a moment after winning */
+sb.loadLevel(L1); sb.start(); runFrames(60 * 7);
+setTimeout(() => {
+  check('a "Solved!" card explains the science', els.overlay.hidden === false && els.overlayCard.innerHTML.indexOf(L1.why) >= 0 && !!els.ovNext);
+  els.ovNext.onclick();
+  check('"Next puzzle" opens the start card for puzzle 2', els.overlayCard.innerHTML.indexOf(CL.LEVELS[1].name) >= 0);
+  console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
+  process.exit(fail ? 1 : 0);
+}, 1300);

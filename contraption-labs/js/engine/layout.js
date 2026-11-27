@@ -47,6 +47,7 @@
       if (k.def.rotatable) p.angle = r4(k.angle);
       writeOptions(p, k);
       if (k.locked) p.locked = true;
+      if (k.tag) p.tag = k.tag;
       ids.set(k, id++); parts.push(p);
     }
     for (const r of world.rigids || []) {
@@ -54,12 +55,14 @@
       if (r.angle) p.angle = r4(r.angle);
       writeOptions(p, r);
       if (r.locked) p.locked = true;
+      if (r.tag) p.tag = r.tag;
       ids.set(r, id++); parts.push(p);
     }
     for (const b of world.balls) {
       const p = { id: id, type: b.type, x: r1(b.x), y: r1(b.y) };
       writeOptions(p, b);
       if (b.locked) p.locked = true;
+      if (b.tag) p.tag = b.tag;
       ids.set(b, id++); parts.push(p);
     }
     const links = [];
@@ -67,6 +70,7 @@
       if (!ids.has(l.a) || !ids.has(l.b)) continue;
       const q = { type: l.type, a: ids.get(l.a), b: ids.get(l.b) };
       if (l.via && ids.has(l.via)) q.via = ids.get(l.via);
+      if (l.locked) q.locked = true;
       links.push(q);
     }
     return { format: FORMAT, version: VERSION, parts: parts, links: links };
@@ -107,6 +111,7 @@
         q[op.key] = ok ? p[op.key] : op.values[0][0];
       });
       if (p.locked) q.locked = true;
+      if (typeof p.tag === 'string' && p.tag) q.tag = p.tag.slice(0, 40);
       parts.push(q);
     }
     skipped += Math.max(0, obj.parts.length - MAX_PARTS);
@@ -116,6 +121,7 @@
       if (l && CL.LINKS[l.type] && used.has(l.a) && used.has(l.b) && l.a !== l.b) {
         const q = { type: l.type, a: l.a, b: l.b };
         if (l.type === 'rope' && used.has(l.via)) q.via = l.via;
+        if (l.locked) q.locked = true;
         links.push(q);
       } else skipped++;
     }
@@ -139,6 +145,7 @@
         : kind === 'rigid' ? new CL.Rigid(p.type, p.x, p.y, { angle: p.angle, opts: optionsOf(p) })
         : new CL.Block(p.type, p.x, p.y, { length: p.length, angle: p.angle, opts: optionsOf(p) });
       o.locked = !!p.locked;
+      if (p.tag) o.tag = p.tag;
       world.add(o);
       map.set(p.id, o);
     }
@@ -147,6 +154,7 @@
       if (a && b && !CL.Machines.canLink(world, l.type, a, b, via)) {
         const link = { type: l.type, a: a, b: b, kind: 'link' };
         if (via) link.via = via;
+        if (l.locked) link.locked = true;
         world.links.push(link);
       }
     }

@@ -77,6 +77,23 @@
     }
   }
 
+  /* Friction where the rope rubs on its hook or pulley. It slows the SWING
+   * (movement across the rope), so a pendulum gradually dies down.
+   * The rub is about the same for every ball, so light things lose their
+   * swing much sooner than heavy ones: k = base + rub / mass. */
+  const SWING_BASE = 0.1, SWING_RUB = 0.015, SWING_MAX = 1.2;
+  function damp(world, h) {
+    for (const l of world.links) {
+      if (l.type !== 'rope' || !l.taut || !l.ends || l.ends.length !== 1) continue;
+      const e = l.ends[0], o = e.o;
+      const k = Math.min(SWING_MAX, SWING_BASE + SWING_RUB / o.mass);
+      const along = o.vx * e.ux + o.vy * e.uy;
+      const px = o.vx - along * e.ux, py = o.vy - along * e.uy;   // the swinging part
+      const f = 1 - 1 / (1 + k * h);
+      o.vx -= px * f; o.vy -= py * f;
+    }
+  }
+
   function solvePosition(world) {
     for (const l of world.links) {
       if (l.type !== 'rope' || !l.ends || !l.ends.length) continue;
@@ -138,5 +155,5 @@
     return null;
   }
 
-  CL.Ropes = { geom, length, resetLengths, preStep, solveVelocity, solvePosition, afterStep, segments, distTo, cut, canRope, isMover };
+  CL.Ropes = { geom, length, resetLengths, preStep, solveVelocity, damp, solvePosition, afterStep, segments, distTo, cut, canRope, isMover };
 })(window.CL = window.CL || {});

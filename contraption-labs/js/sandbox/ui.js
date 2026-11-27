@@ -14,11 +14,14 @@
     new ResizeObserver(() => sb.renderer.resize()).observe($('stage'));
 
     sb.on((type, data) => {
+      if (type === 'mode') maybeRebuildShelf(sb);
       if (type === 'change' || type === 'select' || type === 'mode') { refreshShelf(sb); refreshToolbar(sb); renderInfo(sb); }
+      if (type === 'win') onWin(sb, data);
       if (type === 'tick') liveInfo(sb);
       if (type === 'toast') toast(data);
     });
     refreshShelf(sb); refreshToolbar(sb); renderInfo(sb);
+    UI.sb = sb;
   }
 
   /* ---------- shelf ---------- */
@@ -58,12 +61,21 @@
     try { localStorage.setItem(OPEN_KEY, id || ''); } catch (e) { /* ignore */ }
   }
 
+  let shelfFor = null;
+  function maybeRebuildShelf(sb) {
+    const key = sb.level ? 'level:' + sb.level.id : 'sandbox';
+    if (key !== shelfFor) buildShelf(sb);
+  }
+
   function buildShelf(sb) {
     const shelf = $('shelf');
     shelf.innerHTML = '';
     cats.length = 0;
-    const list = CL.SHELF.sections.map(s => ({ id: s.title.toLowerCase().replace(/\W+/g, '-'), title: s.title, icon: s.icon, items: s.items }))
-      .concat([{ id: 'experiments', title: 'Experiments', icon: '🧪', presets: CL.PRESET_ORDER }]);
+    shelfFor = sb.level ? 'level:' + sb.level.id : 'sandbox';
+    const list = sb.level
+      ? [{ id: 'puzzle-parts', title: 'Your parts', icon: '🧰', items: Object.keys(sb.level.bin), fixed: true }]
+      : CL.SHELF.sections.map(s => ({ id: s.title.toLowerCase().replace(/\W+/g, '-'), title: s.title, icon: s.icon, items: s.items }))
+        .concat([{ id: 'experiments', title: 'Experiments', icon: '🧪', presets: CL.PRESET_ORDER }]);
 
     list.forEach(sec => {
       const wrap = document.createElement('section');
@@ -84,14 +96,15 @@
         const p = CL.PRESETS[id];
         body.appendChild(shelfButton(p.name, '<i class="emoji">' + p.icon + '</i>', () => sb.loadPreset(id), { preset: id }));
       });
-      head.onclick = () => setOpen(openCat === sec.id ? null : sec.id);
+      head.onclick = () => { if (!sec.fixed) setOpen(openCat === sec.id ? null : sec.id); };
       wrap.appendChild(head); wrap.appendChild(body); shelf.appendChild(wrap);
       cats.push({ id: sec.id, items: sec.items || [], wrap, head, body });
     });
 
     let saved = null;
     try { saved = localStorage.getItem(OPEN_KEY); } catch (e) { /* ignore */ }
-    setOpen(saved !== null && (saved === '' || cats.some(c => c.id === saved)) ? (saved || null) : cats[0].id);
+    if (sb.level) { openCat = cats[0].id; cats[0].body.hidden = false; cats[0].wrap.className = 'cat open'; }
+    else setOpen(saved !== null && (saved === '' || cats.some(c => c.id === saved)) ? (saved || null) : cats[0].id);
     requestAnimationFrame(() => document.querySelectorAll('.shelf canvas').forEach(c =>
       CL.art.drawIcon(c, c.dataset.kind, c.dataset.type)));
   }
@@ -130,6 +143,14 @@
   /* ---------- toolbar ---------- */
   function bindToolbar(sb) {
     $('btnHand').onclick = () => sb.toHand();
+    $('btnPuzzles').onclick = () => showLevels(sb);
+    $('btnHint').onclick = () => { if (sb.level) toast('💡 ' + sb.level.hint, 9000); };
+    $('btnRestart').onclick = () => sb.resetLevel();
+    $('btnInfo').onclick = () => {
+      const on = !document.body.classList.contains('info-open');
+      document.body.classList.toggle('info-open', on);
+      $('btnInfo').setAttribute('aria-pressed', on);
+    };
     $('btnStart').onclick = () => sb.toggleStartStop();
     $('btnPause').onclick = () => sb.togglePause();
     $('btnUndo').onclick = () => sb.undo();
@@ -159,6 +180,15 @@
     $('btnSnap').setAttribute('aria-pressed', sb.snap);
     $('btnSlow').setAttribute('aria-pressed', sb.slowmo);
     $('btnTrails').setAttribute('aria-pressed', sb.trails);
+    const lv = sb.level;
+    $('modeTag').textContent = lv ? 'Puzzle ' + (CL.LEVELS.indexOf(lv) + 1) : 'Sandbox';
+    $('btnHint').hidden = !lv;
+    $('btnRestart').hidden = !lv;
+    $('btnRestart').disabled = !build;
+    $('btnSave').disabled = !!lv;
+    $('btnOpen').disabled = !!lv;
+    $('btnClearBalls').hidden = !!lv;
+    document.body.classList.toggle('mode-level', !!lv);
     document.body.classList.toggle('mode-run', !build);
     document.body.classList.toggle('mode-build', build);
   }
@@ -188,6 +218,7 @@
     document.addEventListener('keydown', e => {
       if (e.target.closest && e.target.closest('input, textarea, select')) return;
       const k = e.key.toLowerCase();
+      if (!$('overlay').hidden) { if (k === 'escape' && overlayCanClose) hideOverlay(); return; }
       if (e.ctrlKey || e.metaKey) {
         if (k === 'z' && !e.shiftKey) { e.preventDefault(); sb.undo(); }
         else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); sb.redo(); }
@@ -216,10 +247,15 @@
   }
 
   function modeCard(sb) {
+    if (sb.building && sb.level) {
+      return '<div class="mode-card goal"><b>🎯 ' + esc(sb.level.name) + '</b>' + esc(sb.level.goalText) +
+        ' Add parts from <b>Your parts</b>, then press <b>▶ Start</b>.</div>';
+    }
     if (sb.building) {
       return '<div class="mode-card build"><b>🛠 Build mode</b>Arrange your parts. Nothing moves yet. ' +
         'Press <b>▶ Start</b> to test your idea.</div>';
     }
+    if (sb.won) return '<div class="mode-card goal"><b>🎉 Solved!</b>Brilliant. Press <b>■ Stop</b> to tweak it, or pick another puzzle.</div>';
     return '<div class="mode-card run"><b>▶ Running!</b>Watch what happens. Press <b>■ Stop</b> to go back ' +
       'to your build and try a change.</div>';
   }
@@ -249,7 +285,8 @@
     return rows;
   }
   function mood(o) {
-    return { sleep: '😴 asleep', idle: '🙂 calm', seek: '🧀 hungry', flee: '😱 scared', eat: '😋 munching', chase: '😼 chasing' }[o.state] || '🙂 calm';
+    return { sleep: '😴 asleep', idle: '🙂 calm', seek: '🧀 hungry', flee: '😱 scared', eat: '😋 munching', chase: '😼 chasing',
+      startle: '😨 startled!', breathe: '🔥 breathing fire', rest: '😮‍💨 catching breath' }[o.state] || '🙂 calm';
   }
 
   function optionsHTML(sb, o) {
@@ -357,11 +394,84 @@
 
   /* ---------- toast ---------- */
   let toastTimer = 0;
-  function toast(msg) {
+  function toast(msg, ms) {
     const t = $('toast');
     t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 4600);
+    toastTimer = setTimeout(() => t.classList.remove('show'), ms || 4600);
+  }
+
+  /* ---------- puzzles: list, start card, solved card ---------- */
+  const PROGRESS_KEY = 'contraption-labs.progress';
+  let overlayCanClose = true;
+  function progress() {
+    try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || { done: {} }; } catch (e) { return { done: {} }; }
+  }
+  function markDone(id) {
+    const p = progress(); p.done[id] = true;
+    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function showOverlay(html, canClose) {
+    overlayCanClose = canClose !== false;
+    $('overlayCard').innerHTML = html;
+    $('overlay').hidden = false;
+    $('overlayCard').querySelectorAll('canvas[data-type]').forEach(c => CL.art.drawIcon(c, c.dataset.kind, c.dataset.type));
+  }
+  function hideOverlay() { $('overlay').hidden = true; }
+
+  function showLevels(sb) {
+    if (!sb.building) sb.stop();
+    const done = progress().done;
+    const n = CL.LEVELS.filter(l => done[l.id]).length;
+    let h = '<div class="card-head"><h2>🧩 Puzzles</h2><span class="pill">' + n + ' of ' + CL.LEVELS.length + ' solved</span></div>' +
+      '<p class="card-sub">Each puzzle gives you a few parts. Build a contraption that makes the goal happen!</p><div class="level-grid">';
+    CL.LEVELS.forEach((l, i) => {
+      h += '<button class="level-tile' + (done[l.id] ? ' done' : '') + '" data-level="' + i + '">' +
+        '<span class="lt-icon">' + l.icon + '</span><span class="lt-num">Puzzle ' + (i + 1) + '</span>' +
+        '<span class="lt-name">' + esc(l.name) + '</span>' + (done[l.id] ? '<span class="lt-done">✓ Solved</span>' : '') + '</button>';
+    });
+    h += '</div><div class="card-actions"><button class="btn" id="ovSandbox">🧪 Free play sandbox</button>' +
+      (sb.level || shelfFor ? '<button class="btn" id="ovClose">✕ Close</button>' : '') + '</div>';
+    showOverlay(h);
+    $('overlayCard').querySelectorAll('[data-level]').forEach(b => (b.onclick = () => showIntro(sb, CL.LEVELS[+b.dataset.level])));
+    $('ovSandbox').onclick = () => { hideOverlay(); if (sb.level) sb.leaveLevel(); };
+    if ($('ovClose')) $('ovClose').onclick = hideOverlay;
+  }
+
+  function partChips(bin) {
+    return Object.keys(bin).map(t => '<span class="chip"><canvas data-kind="' + kindOf(t) + '" data-type="' + t + '"></canvas>' +
+      '<b>×' + bin[t] + '</b> ' + esc(nameOf(t)) + '</span>').join('');
+  }
+
+  function showIntro(sb, lv) {
+    const i = CL.LEVELS.indexOf(lv);
+    showOverlay('<div class="card-head"><span class="big-icon">' + lv.icon + '</span><div><small class="kicker">Puzzle ' + (i + 1) + '</small>' +
+      '<h2>' + esc(lv.name) + '</h2></div></div>' +
+      '<p>' + esc(lv.intro) + '</p><div class="goal-box">🎯 <b>Goal:</b> ' + esc(lv.goalText) + '</div>' +
+      '<p class="card-sub">Your parts:</p><div class="chips">' + partChips(lv.bin) + '</div>' +
+      '<p class="card-sub">The parts already in the lab are bolted down. Build, press <b>▶ Start</b>, watch, then try again!</p>' +
+      '<div class="card-actions"><button class="btn" id="ovBack">← All puzzles</button><button class="btn big go" id="ovGo">Let\u2019s go!</button></div>');
+    $('ovBack').onclick = () => showLevels(sb);
+    $('ovGo').onclick = () => { hideOverlay(); sb.loadLevel(lv); };
+  }
+
+  function onWin(sb, lv) {
+    markDone(lv.id);
+    setTimeout(() => {
+      if (sb.level !== lv) return;
+      const i = CL.LEVELS.indexOf(lv), next = CL.LEVELS[i + 1];
+      showOverlay('<div class="card-head"><span class="big-icon">🎉</span><div><small class="kicker">Puzzle ' + (i + 1) + ' solved!</small>' +
+        '<h2>' + esc(lv.name) + '</h2></div></div>' +
+        '<div class="why-box"><b>🔬 Why it worked</b><p>' + esc(lv.why) + '</p></div>' +
+        '<div class="card-actions"><button class="btn" id="ovLevels">🧩 All puzzles</button><button class="btn" id="ovStay">👀 Keep watching</button>' +
+        (next ? '<button class="btn big go" id="ovNext">Next puzzle ▶</button>' : '<button class="btn big go" id="ovSandbox2">🧪 Free play</button>') + '</div>');
+      $('ovLevels').onclick = () => showLevels(sb);
+      $('ovStay').onclick = hideOverlay;
+      if (next) $('ovNext').onclick = () => showIntro(sb, next);
+      else $('ovSandbox2').onclick = () => { hideOverlay(); sb.leaveLevel(); };
+    }, 1100);
   }
 
   /* ---------- full screen ---------- */
@@ -389,5 +499,6 @@
     upd();
   }
 
-  CL.UI = { init, toast };
+  const UI = { init, toast, showLevels, showIntro, hideOverlay, progress };
+  CL.UI = UI;
 })(window.CL = window.CL || {});

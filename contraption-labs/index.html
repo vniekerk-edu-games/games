@@ -17,9 +17,14 @@
       <div class="brand">
         <span class="logo" aria-hidden="true">⚙️</span>
         <span class="title">Contraption <b>Labs</b></span>
-        <span class="tag">Sandbox</span>
+        <span class="tag" id="modeTag">Sandbox</span>
       </div>
       <nav class="controls" aria-label="Lab controls">
+        <div class="group">
+          <button id="btnPuzzles" class="btn accent" title="Choose a puzzle">🧩 <span>Puzzles</span></button>
+          <button id="btnHint" class="btn" title="Get a hint" hidden>💡 <span>Hint</span></button>
+          <button id="btnRestart" class="btn" title="Take out all your parts and start the puzzle again" hidden>🧹 <span>Start over</span></button>
+        </div>
         <div class="group">
           <button id="btnStart" class="btn big go">▶ <span>Start</span></button>
           <button id="btnPause" class="btn" title="Pause / play (Space)" disabled>⏸ <span>Pause</span></button>
@@ -38,6 +43,7 @@
           <button id="btnSave" class="btn" title="Save your build as a file (Ctrl+S)">💾 <span>Save</span></button>
           <button id="btnOpen" class="btn" title="Open a saved build">📂 <span>Open</span></button>
           <button id="btnFull" class="btn accent" title="Full screen (F)">⛶ <span>Full screen</span></button>
+          <button id="btnInfo" class="btn info-toggle" title="Show or hide the info panel" aria-pressed="false">ℹ️ <span>Info</span></button>
         </div>
         <input type="file" id="fileOpen" accept=".json,application/json" hidden>
       </nav>
@@ -62,6 +68,9 @@
 
       <aside class="info" id="info" aria-live="polite"></aside>
     </main>
+    <div class="overlay" id="overlay" hidden>
+      <div class="card" id="overlayCard" role="dialog" aria-modal="true"></div>
+    </div>
   </div>
 
   <script src="js/theme.js"></script>
@@ -74,6 +83,9 @@
   <script src="js/engine/machines.js"></script>
   <script src="js/engine/creatures.js"></script>
   <script src="js/engine/layout.js"></script>
+  <script src="js/engine/goals.js"></script>
+  <!-- puzzles (plain data: add new ones here) -->
+  <script src="js/levels/levels.js"></script>
   <!-- drawing -->
   <script src="js/render/art.js"></script>
   <script src="js/render/art-machines.js"></script>

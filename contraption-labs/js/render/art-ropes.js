@@ -46,8 +46,7 @@
 
   function drawRigid(ctx, r) {
     ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.angle);
-    RIGID_ART[r.type](ctx, r);
-    if (r.locked) A.bolt(ctx, 0, 0);
+    RIGID_ART[r.type](ctx, r);   // (locked boxes still tip and slide, so no bolt is drawn on them)
     ctx.restore();
   }
 
@@ -150,6 +149,49 @@
     [g.pa, g.pb].forEach(p => { ctx.fillStyle = '#6b4a22'; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, TAU); ctx.fill(); });
   }
 
+  /* ---------- dragon fire (a flickering tongue of flame, clipped at the floor) ---------- */
+  function flameShape(ctx, m, dir, reach, spread, t, scale, seed) {
+    const N = 14, top = [], bot = [];
+    for (let i = 0; i <= N; i++) {
+      const k = i / N, along = k * reach;
+      const half = (6 + along * spread) * scale * Math.sin(Math.PI * Math.min(1, k * 1.15 + 0.08));
+      const wob = Math.sin(k * 9 + t * 21 + seed) * 4 * k + Math.sin(k * 15 - t * 33 + seed) * 2.5 * k;
+      const lift = -along * along * 0.0009;                 // hot air rises: the tip curls up a little
+      top.push([m.x + dir * along, m.y + lift - half + wob]);
+      bot.push([m.x + dir * along, m.y + lift + half + wob * 0.6]);
+    }
+    ctx.beginPath(); ctx.moveTo(m.x, m.y);
+    top.forEach(p => ctx.lineTo(p[0], p[1]));
+    for (let i = bot.length - 1; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
+    ctx.closePath();
+  }
+
+  function drawFire(ctx, world) {
+    const t = world.time, F = CL.WORLD.floorY;
+    for (const d of world.balls) {
+      if (d.def.creature !== 'dragon' || d.state !== 'breathe') continue;
+      const m = CL.Machines.mouth(d), reach = CL.Machines.flameReach(d, t), sp = d.def.flameSpread, dir = d.face;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, CL.WORLD.width, F); ctx.clip();
+      const glow = ctx.createRadialGradient(m.x + dir * reach * 0.45, m.y, 4, m.x + dir * reach * 0.45, m.y, reach * 0.75);
+      glow.addColorStop(0, 'rgba(255,210,0,0.28)'); glow.addColorStop(1, 'rgba(255,140,0,0)');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(m.x + dir * reach * 0.45, m.y, reach * 0.75, 0, TAU); ctx.fill();
+      const lg = (a, b) => { const g = ctx.createLinearGradient(m.x, m.y, m.x + dir * reach, m.y); a.forEach(([o, c]) => g.addColorStop(o, c)); return g; };
+      ctx.fillStyle = lg([[0, '#FFD200'], [0.55, '#FF8C00'], [1, 'rgba(255,90,40,0.15)']]);
+      flameShape(ctx, m, dir, reach * 1.12, sp, t, 1, 0); ctx.fill();   // the tip tapers, so draw a little past the hot zone
+      ctx.fillStyle = lg([[0, '#FFFBE0'], [0.5, '#FFD200'], [1, 'rgba(255,210,0,0)']]);
+      flameShape(ctx, m, dir, reach * 0.8, sp, t, 0.5, 2); ctx.fill();
+      for (let i = 0; i < 8; i++) {                           // embers drifting up
+        const k = (t * 1.8 + i * 0.173) % 1, along = (0.3 + 0.7 * ((i * 0.37) % 1)) * reach;
+        ctx.globalAlpha = 0.9 * (1 - k);
+        ctx.fillStyle = i % 2 ? '#FFD200' : '#FF8C00';
+        ctx.beginPath(); ctx.arc(m.x + dir * along + Math.sin(i + t * 5) * 4, m.y - k * 46 - along * sp * 0.4, 2.2, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+
   /* ---------- effects ---------- */
   function drawEffects(ctx, world) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -164,6 +206,12 @@
           ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r1, e.y + Math.sin(a) * r1); ctx.lineTo(e.x + Math.cos(a) * r2, e.y + Math.sin(a) * r2); ctx.stroke();
         }
         ctx.font = '900 26px ' + FONT; ctx.fillStyle = '#ffffff'; ctx.fillText('POP!', e.x, e.y - 10 - t * 20);
+      } else if (e.type === 'ignite') {
+        ctx.strokeStyle = '#FFD200'; ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const a = -Math.PI / 2 + (i - 2.5) * 0.45, r1 = 6 + t * 8, r2 = 12 + t * 22;
+          ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r1, e.y + Math.sin(a) * r1); ctx.lineTo(e.x + Math.cos(a) * r2, e.y + Math.sin(a) * r2); ctx.stroke();
+        }
       } else if (e.type === 'snip') {
         ctx.font = '900 20px ' + FONT; ctx.fillStyle = '#FFD200'; ctx.fillText('SNIP!', e.x, e.y - 22 - t * 16);
       } else {
@@ -187,5 +235,5 @@
 
   CL.art.drawRigid = drawRigid;
   CL.art.RIGID_ART = RIGID_ART;
-  CL.ropeArt = { drawRope, drawEffects };
+  CL.ropeArt = { drawRope, drawEffects, drawFire };
 })(window.CL = window.CL || {});

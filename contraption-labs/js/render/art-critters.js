@@ -90,5 +90,78 @@
     ctx.restore();
   };
 
-  A.FLAT.mouse = A.FLAT.cat = A.FLAT.cheese = true;
+  /* Mini dragon: green, round and silly. Faces b.face (1 = right).
+   * sleep: curled, eyes shut, zzz · idle: sitting, blinking · startle: eyes wide, wings up
+   * breathe: mouth wide open (the flames are drawn by drawFire) · rest: smoke puffs */
+  A.BALL_ART.dragon = (ctx, r, angle, b) => {
+    const s = r / 24, t = A.time;
+    const st = b ? b.state : 'idle';
+    const GREEN = '#8CC63F', DARK = '#4f7a1d', BELLY = '#FFD200', SPIKE = '#FF8C00';
+    ctx.save(); ctx.scale((b ? b.face : 1) * s, s);
+    const jump = st === 'startle' ? -6 : 0;
+    ctx.translate(0, jump);
+    // tail
+    ctx.strokeStyle = GREEN; ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-14, 14); ctx.quadraticCurveTo(-34, 18, -36, st === 'sleep' ? 14 : 2); ctx.stroke();
+    ctx.fillStyle = SPIKE; ctx.beginPath(); ctx.moveTo(-36, -4); ctx.lineTo(-43, 4); ctx.lineTo(-33, 6); ctx.closePath(); ctx.fill();
+    // wing (flaps when startled / breathing)
+    const flap = st === 'startle' ? -0.9 : st === 'breathe' ? -0.4 + Math.sin(t * 30) * 0.15 : st === 'sleep' ? 0.35 : 0;
+    ctx.save(); ctx.translate(-6, -6); ctx.rotate(flap);
+    ctx.fillStyle = '#6aa52a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-20, -18); ctx.lineTo(-16, -4); ctx.lineTo(-24, -2); ctx.lineTo(-12, 6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // feet
+    ctx.fillStyle = DARK;
+    ctx.beginPath(); ctx.ellipse(-8, 21, 6, 3.5, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(8, 21, 6, 3.5, 0, 0, TAU); ctx.fill();
+    // body + belly
+    ctx.fillStyle = GREEN; ctx.beginPath(); ctx.ellipse(-2, 6, 19, 16, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = BELLY; ctx.beginPath(); ctx.ellipse(3, 10, 10, 10, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(176,123,0,0.6)'; ctx.lineWidth = 1.2;
+    [4, 9, 14].forEach(y => { ctx.beginPath(); ctx.moveTo(-5, y); ctx.lineTo(11, y); ctx.stroke(); });
+    // back spikes
+    ctx.fillStyle = SPIKE;
+    [[-16, -4], [-9, -9], [-1, -11]].forEach(([x, y]) => { ctx.beginPath(); ctx.moveTo(x - 4, y + 4); ctx.lineTo(x, y - 5); ctx.lineTo(x + 4, y + 4); ctx.closePath(); ctx.fill(); });
+    // head
+    const hy = st === 'sleep' ? 2 : -10, hx = st === 'sleep' ? 12 : 13;
+    ctx.fillStyle = GREEN; ctx.beginPath(); ctx.ellipse(hx, hy, 13, 11, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx + 10, hy + 3, 9, 7, 0, 0, TAU); ctx.fill();               // snout
+    ctx.fillStyle = SPIKE;                                                                     // horns
+    ctx.beginPath(); ctx.moveTo(hx - 6, hy - 8); ctx.lineTo(hx - 10, hy - 18); ctx.lineTo(hx - 1, hy - 10); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx + 1, hy - 10); ctx.lineTo(hx + 1, hy - 20); ctx.lineTo(hx + 7, hy - 10); ctx.fill();
+    ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(hx + 15, hy, 1.4, 0, TAU); ctx.fill();      // nostril
+    // eyes
+    if (st === 'sleep') {
+      ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(hx + 2, hy - 2, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+    } else {
+      const wide = st === 'startle' || st === 'breathe';
+      const blink = st === 'idle' && (t % 3.2) < 0.12;
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(hx + 2, hy - 3, wide ? 5.5 : 4.5, blink ? 0.8 : (wide ? 6 : 4.5), 0, 0, TAU); ctx.fill();
+      if (!blink) { ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.arc(hx + 3.5, hy - 3, wide ? 2 : 2.4, 0, TAU); ctx.fill(); }
+    }
+    // mouth
+    if (st === 'breathe' || st === 'startle') {
+      ctx.fillStyle = '#7a1f28';
+      ctx.beginPath(); ctx.ellipse(hx + 15, hy + 7, st === 'breathe' ? 5 : 2.5, st === 'breathe' ? 4.5 : 2.5, 0, 0, TAU); ctx.fill();
+    } else if (st !== 'sleep') {
+      ctx.strokeStyle = DARK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(hx + 12, hy + 5, 4, 0.2, Math.PI * 0.7); ctx.stroke();
+    }
+    ctx.restore();
+    if (!b) return;
+    if (st === 'sleep') zzz(ctx, 6 * s, -20 * s);
+    if (st === 'startle') {
+      ctx.fillStyle = '#FFD200'; ctx.font = '900 18px Nunito, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('!', -b.face * 10 * s, -34 * s);
+    }
+    if (st === 'rest') {                                                                      // little smoke puffs
+      const nx = b.face * 26 * s, ny = -8 * s;
+      for (let i = 0; i < 3; i++) {
+        const k = ((t * 0.9 + i / 3) % 1);
+        ctx.fillStyle = 'rgba(210,214,226,' + (0.6 * (1 - k)).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(nx + b.face * k * 10, ny - k * 26, 3 + k * 5, 0, TAU); ctx.fill();
+      }
+    }
+  };
+
+  A.FLAT.mouse = A.FLAT.cat = A.FLAT.cheese = A.FLAT.dragon = true;
 })(window.CL = window.CL || {});

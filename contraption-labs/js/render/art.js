@@ -114,8 +114,7 @@
 
   function drawBall(ctx, b) {
     ctx.save(); ctx.translate(b.x, b.y);
-    drawBallShape(ctx, b.type, b.r, b.angle, b);
-    if (b.locked) bolt(ctx, 0, 0);
+    drawBallShape(ctx, b.type, b.r, b.angle, b);   // (locked balls still roll, so no bolt is drawn on them)
     ctx.restore();
   }
 
@@ -167,12 +166,7 @@
       BLOCK_ART[k.type](ctx, k.hw * 2, k.hh * 2, k);
       ctx.restore();
     }
-    if (k.locked) {
-      ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(k.angle);
-      if (k.shape === 'circle') bolt(ctx, 0, 0);
-      else { bolt(ctx, -k.hw + 9, 0); bolt(ctx, k.hw - 9, 0); }
-      ctx.restore();
-    }
+    // (bolted-down parts look the same; trying to move one shows a message instead)
   }
   function drawBlockBack(ctx, k) {
     if (!BACK_ART[k.type]) return;
@@ -203,7 +197,7 @@
     if (kind === 'ball') {
       if (FLAT[type]) {
         const b = new CL.Ball(type, 0, 0);
-        const ext = b.def.creature === 'cat' ? 1.75 : b.def.creature === 'mouse' ? 1.9 : 1.6;
+        const ext = b.def.creature === 'cat' ? 1.75 : b.def.creature === 'mouse' ? 1.9 : b.def.creature === 'dragon' ? 1.75 : 1.6;
         const s = (size * 0.44) / (b.r * ext);
         ctx.scale(s, s); ctx.translate(0, b.r * 0.15);
         drawBallShape(ctx, type, b.r, 0, b);

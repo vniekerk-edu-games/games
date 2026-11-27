@@ -147,7 +147,7 @@
     },
     swing: {
       name: 'Pendulums', icon: '⏱️',
-      blurb: 'Three balls on three ropes: short, medium and long. Which one swings back and forth fastest?',
+      blurb: 'Three balls on three ropes: short, medium and long. Which one swings back and forth fastest? Keep watching: do they swing for ever?',
       build() {
         const parts = [], links = [];
         [[400, 150], [800, 300], [1200, 500]].forEach(([x, L]) => {
@@ -181,11 +181,25 @@
           links: [link('rope', hook, bw), link('cord', sw, sc)] };
       }
     },
+    dragon: {
+      name: 'Dragon fire', icon: '🐉',
+      blurb: 'A ball lands on a sleeping dragon. Hic! RAWR! The fire lights a candle, and the flame jumps from candle to candle. What happens at the end of the row?',
+      build() {
+        const parts = [part('dragon', 180, F - 30 - 0.5), part('tennis', 180, 480)];
+        const xs = [];
+        for (let i = 0; i < 9; i++) xs.push(380 + i * 24);
+        xs.forEach(x => parts.push(part('candle', x, F - 25, { lit: false })));
+        const rx = xs[xs.length - 1] + 13;                                 // the string runs past the last flame
+        const hook = part('hook', rx, F - 9), bal = part('balloon', rx, 560);
+        parts.push(hook, bal, part('pin', rx, 120, { angle: Math.PI / 2 }));
+        return { parts: parts, links: [link('rope', hook, bal)] };
+      }
+    },
     empty: {
       name: 'Empty lab', icon: '🧹',
       blurb: 'A clean lab. Build anything you like!',
       build() { return { parts: [] }; }
     }
   };
-  CL.PRESET_ORDER = ['dominoes', 'pulley', 'swing', 'balloon', 'snip', 'chain', 'gears', 'wind', 'seesaw', 'bounce', 'ramps', 'crash', 'empty'];
+  CL.PRESET_ORDER = ['dragon', 'dominoes', 'pulley', 'swing', 'balloon', 'snip', 'chain', 'gears', 'wind', 'seesaw', 'bounce', 'ramps', 'crash', 'empty'];
 })(window.CL = window.CL || {});

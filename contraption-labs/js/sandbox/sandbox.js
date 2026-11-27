@@ -33,6 +33,11 @@
       this.freePlay = opts.freePlay !== false;
       this.bin = opts.bin || null;
       this.autosave = opts.autosave !== false;
+      this.saveKey = SAVE_KEY;
+      this.level = null;            // the puzzle being played (null = sandbox)
+      this.goal = null;             // goal checker while a puzzle runs
+      this.won = false;
+      this.forceOpts = null;
       this.tool = 'basketball';
       this.selected = null;
       this.drag = null;
@@ -78,19 +83,29 @@
         return this.world.add(r);
       }
       const r = CL.BALLS[type].radius;
-      return this.world.add(new CL.Ball(type, clamp(x, r, W - r), clamp(y, r, F - r)));
+      return this._force(this.world.add(new CL.Ball(type, clamp(x, r, W - r), clamp(y, r, F - r))));
+    }
+
+    /* puzzle settings for parts taken from the bin (e.g. candles start unlit) */
+    _force(o) {
+      const f = this.forceOpts && this.forceOpts[o.type];
+      if (!f || !o.opts) return o;
+      Object.assign(o.opts, f);
+      if (o.kind === 'block') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = !!o.def.flame && o.opts.lit !== false; }
+      return o;
     }
 
     addBlock(type, x, y, length, angle) {
       const def = CL.SURFACES[type];
       const len = def.stretchable ? clamp(length || def.defaultLength, def.minLength, def.maxLength) : undefined;
-      return this.world.add(new CL.Block(type, clamp(x, 0, W), clamp(y, 0, F), { length: len, angle: angle || 0 }));
+      return this._force(this.world.add(new CL.Block(type, clamp(x, 0, W), clamp(y, 0, F), { length: len, angle: angle || 0 })));
     }
 
     remove(o) {
       if (!o || o.fixed) return;
       if (o.kind === 'link') {
         if (!this.building) { this.emit('toast', 'Stop the machine first to change belts and cords.'); return; }
+        if (o.locked) { this.emit('toast', '🔩 That one is part of the puzzle. It can\u2019t be removed.'); return; }
         this.world.links = this.world.links.filter(l => l !== o);
       } else {
         if (o.locked && this.building) { this.emit('toast', '🔩 That part is bolted down. It can\u2019t be removed.'); return; }
@@ -177,15 +192,17 @@
 
     _store(s) {
       if (!this.autosave) return;
-      try { localStorage.setItem(SAVE_KEY, s); } catch (e) { /* private mode etc. */ }
+      try { localStorage.setItem(this.saveKey, s); } catch (e) { /* private mode etc. */ }
     }
 
     loadSaved() {
       if (!this.autosave) return false;
       try {
-        const s = localStorage.getItem(SAVE_KEY);
+        const s = localStorage.getItem(this.saveKey);
         if (!s) return false;
-        this.restore(CL.Layout.parse(s));
+        const layout = CL.Layout.parse(s);
+        if (this.level && layout.parts.filter(p => p.locked).length !== this.level.parts.length) return false;
+        this.restore(layout);
         this._saved = JSON.stringify(this.serialize());
         this.emit('change');
         return true;
@@ -198,6 +215,51 @@
       this.ghostTrails = [];
       this.select(null);
       this.commit(); // undoable: Undo brings back what you had before
+      this.emit('change');
+    }
+
+    /* ---------- puzzles ---------- */
+    /* Switch between the free sandbox and a puzzle */
+    configure(o) {
+      this.stop();
+      this.freePlay = o.freePlay !== false;
+      this.bin = o.bin || null;
+      this.forceOpts = o.forceOpts || null;
+      this.saveKey = o.saveKey || SAVE_KEY;
+      this.level = o.level || null;
+      this.past = []; this.future = []; this._saved = null;
+      this.ghostTrails = []; this.won = false; this.goal = null;
+      this.tool = 'hand';
+      this._ghosts = {};
+      this.emit('mode');
+    }
+
+    /* The level's own parts, all bolted down */
+    levelLayout(lv) {
+      return CL.Layout.parse({
+        parts: lv.parts.map(p => Object.assign({}, p, { locked: true })),
+        links: (lv.links || []).map(l => Object.assign({}, l, { locked: true }))
+      });
+    }
+
+    loadLevel(lv, fresh) {
+      this.configure({ freePlay: false, bin: lv.bin, forceOpts: lv.forceOpts, level: lv,
+        saveKey: 'contraption-labs.level.' + lv.id });
+      this.trails = false;
+      if (fresh || !this.loadSaved()) {
+        this.restore(this.levelLayout(lv));
+        this.commit();
+      }
+      this.select(null);
+      this.emit('change');
+    }
+
+    /* Take out everything the player added */
+    resetLevel() { if (this.level) { this.loadLevel(this.level, true); this.emit('toast', '↺ Back to the start of the puzzle.'); } }
+
+    leaveLevel() {
+      this.configure({ freePlay: true });
+      if (!this.loadSaved()) this.loadPreset('chain');
       this.emit('change');
     }
 
@@ -231,6 +293,8 @@
       this.restore(this.snapshot);  // run from the saved numbers: same build = same result
       this.mode = 'run';
       this.running = true;
+      this.won = false;
+      this.goal = this.level ? CL.Goals.create(this.level) : null;
       this._acc = 0;
       this.trailMap.clear();
       this.ghostTrails = [];
@@ -248,6 +312,7 @@
       this.trailMap.clear();
       this.restore(this.snapshot);
       this.mode = 'build';
+      this.goal = null; this.won = false;
       this.select(null);
       this.emit('mode');
       this.emit('change');
@@ -280,9 +345,13 @@
     /* Part settings (switch ON/OFF, fan direction ...) — build mode only */
     setOption(o, key, value) {
       if (!this.building || !o || !o.opts || o.locked) return;
+      if (this.forceOpts && this.forceOpts[o.type] && key in this.forceOpts[o.type]) {
+        this.emit('toast', '🔒 In this puzzle you can\u2019t change that setting.'); return;
+      }
       o.opts[key] = value;
       if (o.kind === 'block') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = o.opts.lit !== false; }
       else if (o.def.creature === 'cat') o.state = o.opts.awake ? 'idle' : 'sleep';
+      else if (o.def.creature === 'dragon') { o.state = o.opts.awake ? 'idle' : 'sleep'; o.face = o.opts.faceLeft ? -1 : 1; }
       this.commit();
       this.emit('change');
     }
@@ -322,7 +391,7 @@
       for (const o of this.world.balls) if (o.type === type && !o.locked) used++;
       for (const o of this.world.rigids) if (o.type === type && !o.locked) used++;
       for (const o of this.world.blocks) if (o.type === type && !o.locked) used++;
-      for (const l of this.world.links) if (l.type === type) used++;
+      for (const l of this.world.links) if (l.type === type && !l.locked) used++;
       return (this.bin[type] || 0) - used;
     }
     canPlace(type) { return this.remaining(type) > 0; }
@@ -484,13 +553,21 @@
         if (n === 12) this._acc = 0; // device too slow: drop time rather than spiral
       }
       this.renderer.draw(this);
-      if (this.world.events.length) { this.emit('events', this.world.events.slice()); this.world.events.length = 0; }
+      if (this.world.events.length) {
+        this.emit('events', this.world.events.slice());
+        this.world.events.length = 0;
+        if (this.goal) this.goal.seen = 0;
+      }
       if (++this._frameNo % 6 === 0) this.emit('tick');
       requestAnimationFrame(tt => this._frame(tt));
     }
 
     _afterStep() {
       const w = this.world;
+      if (this.goal && !this.won && this.goal.update(w)) {
+        this.won = true;
+        this.emit('win', this.level);
+      }
       const sample = this.trails && w.stepCount % 2 === 0;
       for (let i = w.balls.length - 1; i >= 0; i--) {
         const b = w.balls[i];
@@ -607,6 +684,7 @@
       if (!k || k === a) { this.select(null); this.emit('change'); return; }
       const existing = this.world.links.find(l => l.type === type && (l.via || null) === via &&
         ((l.a === a && l.b === k) || (l.a === k && l.b === a)));
+      if (existing && existing.locked) { this.emit('toast', '🔩 That one is part of the puzzle. It can\u2019t be removed.'); this.select(null); return; }
       if (existing) {
         this.world.links = this.world.links.filter(l => l !== existing);
         this.emit('toast', '✂️ ' + L.name + ' removed.');
@@ -640,7 +718,7 @@
       }
       const ball = this._hitBall(p, tol);
       if (ball) {
-        if (!this.canEdit(ball)) { this.select(ball); return; }
+        if (!this.canEdit(ball)) { this.select(ball); if (ball.locked && this.building) this._boltedToast(); return; }
         this._grabBall(ball, p, false);
         return;
       }
@@ -660,7 +738,7 @@
         if (this.canEdit(blk)) {
           this.drag = { mode: 'block', block: blk, ox: blk.x - p.x, oy: blk.y - p.y,
             start: { x: blk.x, y: blk.y }, valid: true };
-        }
+        } else if (blk.locked && this.building) this._boltedToast();
         return;
       }
       const isPart = CL.BALLS[this.tool] || CL.RIGIDS[this.tool] || CL.SURFACES[this.tool];   // (link tools act like Move while running)
@@ -779,7 +857,7 @@
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._rigidClear(g)) };
       } else if (CL.SURFACES[t]) {
         if (!this.building && CL.SURFACES[t].machine) return;
-        const g = this._ghosts[t] || (this._ghosts[t] = new CL.Block(t, 0, 0));
+        const g = this._force(this._ghosts[t] || (this._ghosts[t] = new CL.Block(t, 0, 0)));
         g.x = clamp(this._sn(p.x), 0, W); g.y = clamp(this._sn(p.y), 0, F); g.update();
         if (this.building) this._snapGear(g);
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._blockClear(g)) };
@@ -810,6 +888,8 @@
       this.canvas.style.cursor = 'crosshair';
       this.emit('change');
     }
+
+    _boltedToast() { this.emit('toast', '🔩 That part is bolted down. Use the parts on your shelf!'); }
 
     _name(t) { return ((CL.BALLS[t] || CL.RIGIDS[t] || CL.SURFACES[t] || CL.LINKS[t]).name).toLowerCase(); }
   }

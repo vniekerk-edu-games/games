@@ -49,6 +49,7 @@
       this.state = null;     // critters: see creatures.js
       this.say = null; this.sayT = -9;
       if (d.creature === 'cat') this.state = this.opts.awake ? 'idle' : 'sleep';
+      if (d.creature === 'dragon') { this.state = this.opts.awake ? 'idle' : 'sleep'; this.face = this.opts.faceLeft ? -1 : 1; this.until = 0; this.breathT = 0; }
     }
     ropePos() { return { x: this.x, y: this.y }; }
   }
@@ -91,8 +92,9 @@
       this.powered = false;
       this.on = !!this.opts.on;          // switches
       this.running = !!this.opts.awake;  // hamster
-      this.lit = this.opts.lit !== false; // candle
+      this.lit = !!s.flame && this.opts.lit !== false; // candle
       this.snipT = -9;                   // scissors: when they last snipped
+      this.heat = 0;                     // candle: how long a flame has been on its wick
       this.coolUntil = 0;
       this.update();
     }

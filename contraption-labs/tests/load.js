@@ -4,7 +4,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 global.window = global; // game files attach themselves to window.CL
 ['js/theme.js', 'js/engine/catalog.js', 'js/engine/bodies.js', 'js/engine/collide.js',
- 'js/engine/world.js', 'js/engine/ropes.js', 'js/engine/machines.js', 'js/engine/creatures.js', 'js/engine/layout.js',
+ 'js/engine/world.js', 'js/engine/ropes.js', 'js/engine/machines.js', 'js/engine/creatures.js', 'js/engine/layout.js', 'js/engine/goals.js',
  'js/sandbox/presets.js'].forEach(f => require(path.join(ROOT, f)));
 const CL = global.CL;
 const { WORLD } = CL;
