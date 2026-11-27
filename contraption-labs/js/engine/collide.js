@@ -46,5 +46,10 @@
     };
   }
 
-  CL.collide = { circleCircle, circleBox };
+  /* ball against any fixed part */
+  function ballBlock(ball, k) {
+    return k.shape === 'circle' ? circleCircle(ball, k) : circleBox(ball, k);
+  }
+
+  CL.collide = { circleCircle, circleBox, ballBlock };
 })(window.CL = window.CL || {});

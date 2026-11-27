@@ -4,7 +4,7 @@
 (function (CL) {
   'use strict';
   const $ = id => document.getElementById(id);
-  const M = CL.WORLD.pxPerMetre, F = CL.WORLD.floorY;
+  const M = CL.WORLD.pxPerMetre, F = CL.WORLD.floorY, TAU = Math.PI * 2;
 
   function init(sb) {
     buildShelf(sb);
@@ -22,6 +22,16 @@
   }
 
   /* ---------- shelf ---------- */
+  function kindOf(t) {
+    if (t === 'hand') return 'hand';
+    if (CL.LINKS[t]) return 'link';
+    return CL.BALLS[t] ? 'ball' : 'block';
+  }
+  function nameOf(t) {
+    if (t === 'hand') return 'Move';
+    return (CL.BALLS[t] || CL.SURFACES[t] || CL.LINKS[t]).name;
+  }
+
   function shelfButton(label, html, onClick, data) {
     const b = document.createElement('button');
     b.className = 'shelf-item';
@@ -32,12 +42,22 @@
   }
 
   function buildShelf(sb) {
-    const balls = $('shelfBalls'), build = $('shelfBuild'), exp = $('shelfExperiments');
-    build.appendChild(shelfButton('Move', '<i class="emoji">✋</i>', () => sb.setTool('hand'), { tool: 'hand' }));
-    CL.SHELF.balls.forEach(t => balls.appendChild(
-      shelfButton(CL.BALLS[t].name, '<canvas data-kind="ball" data-type="' + t + '"></canvas>', () => sb.setTool(t), { tool: t })));
-    CL.SHELF.build.forEach(t => build.appendChild(
-      shelfButton(CL.SURFACES[t].name, '<canvas data-kind="block" data-type="' + t + '"></canvas>', () => sb.setTool(t), { tool: t })));
+    const shelf = $('shelf');
+    shelf.innerHTML = '';
+    const add = (title, id) => {
+      const h = document.createElement('h2'); h.textContent = title; shelf.appendChild(h);
+      const g = document.createElement('div'); g.className = 'shelf-group'; if (id) g.id = id; shelf.appendChild(g);
+      return g;
+    };
+    CL.SHELF.sections.forEach(sec => {
+      const g = add(sec.title);
+      sec.items.forEach(t => {
+        const kind = kindOf(t);
+        const icon = kind === 'hand' ? '<i class="emoji">✋</i>' : '<canvas data-kind="' + kind + '" data-type="' + t + '"></canvas>';
+        g.appendChild(shelfButton(nameOf(t), icon, () => sb.setTool(t), { tool: t }));
+      });
+    });
+    const exp = add('Experiments', 'shelfExperiments');
     CL.PRESET_ORDER.forEach(id => {
       const p = CL.PRESETS[id];
       exp.appendChild(shelfButton(p.name, '<i class="emoji">' + p.icon + '</i>', () => sb.loadPreset(id), { preset: id }));
@@ -136,7 +156,7 @@
       else if (k === 's') sb.toggleSlow();
       else if (k === 't') sb.toggleTrails();
       else if (k === 'f') toggleFullscreen();
-      else if (k === 'escape') sb.select(null);
+      else if (k === 'escape') sb.cancel();
     });
   }
 
@@ -156,9 +176,70 @@
       'to your build and try a change.</div>';
   }
 
+  /* live numbers for the selected thing: [label, valueFn, unit] */
+  function liveRows(o) {
+    if (o.kind === 'ball') {
+      const rows = [['Speed', () => { const sp = o.held ? 0 : Math.hypot(o.vx, o.vy) / M; return sp < 0.05 ? '0' : sp.toFixed(1); }, 'm/s'],
+        ['Height', () => Math.max(0, (F - o.y - o.r) / M).toFixed(1), 'm']];
+      if (o.def.creature) rows.push(['Mood', () => mood(o), '']);
+      return rows;
+    }
+    const rows = [];
+    if (o.def.axle) rows.push(['Turns', () => (Math.abs(o.omega) / TAU).toFixed(2), 'per sec']);
+    if (o.def.conveyor) rows.push(['Belt speed', () => (Math.abs(o.omega) * CL.DRIVE.conveyorGain / M).toFixed(1), 'm/s']);
+    if (o.def.gear) rows.push(['Teeth', () => o.def.teeth, '']);
+    if (o.def.powered) rows.push(['Power', () => (o.powered ? '⚡ ON' : 'OFF'), '']);
+    if (o.type === 'switch') rows.push(['Switch', () => (o.on ? 'ON' : 'OFF'), '']);
+    if (o.type === 'hamster') rows.push(['Hamster', () => (o.running ? (o.jammed ? 'stuck!' : 'running') : 'asleep'), '']);
+    if (o.def.pivoted) rows.push(['Tilt', () => Math.round(-o.angle * 180 / Math.PI) + '°', '']);
+    return rows;
+  }
+  function mood(o) {
+    return { sleep: '😴 asleep', idle: '🙂 calm', seek: '🧀 hungry', flee: '😱 scared', eat: '😋 munching', chase: '😼 chasing' }[o.state] || '🙂 calm';
+  }
+
+  function optionsHTML(sb, o) {
+    const ops = o.def.options || [];
+    if (!ops.length) return '';
+    const can = sb.building && !o.locked;
+    let h = '';
+    ops.forEach(op => {
+      h += '<div class="opt"><small>' + op.label + '</small><div class="seg">';
+      op.values.forEach((v, i) => {
+        h += '<button data-opt="' + op.key + '" data-i="' + i + '" class="' + (o.opts[op.key] === v[0] ? 'on' : '') + '"' +
+          (can ? '' : ' disabled') + '>' + v[1] + '</button>';
+      });
+      h += '</div></div>';
+    });
+    if (!sb.building) h += '<p class="tip">Settings can be changed in build mode.</p>';
+    return h;
+  }
+
+  function linkCard(sb, l) {
+    const L = CL.LINKS[l.type];
+    let h = modeCard(sb) + '<div class="info-head"><canvas id="infoIcon" data-kind="link" data-type="' + l.type + '"></canvas><h3>' + L.name + '</h3></div>';
+    h += '<p>' + L.fact + '</p>';
+    h += '<p class="tip">Joins the <b>' + l.a.def.name.toLowerCase() + '</b> and the <b>' + l.b.def.name.toLowerCase() + '</b>.</p>';
+    if (sb.building) h += '<button class="danger" id="btnDelete">✂️ Remove ' + L.name.toLowerCase() + '</button>';
+    return h;
+  }
+
   function renderInfo(sb) {
     const el = $('info');
     const o = sb.selected;
+    if (o && o.kind === 'link') {
+      el.innerHTML = linkCard(sb, o);
+      CL.art.drawIcon($('infoIcon'), 'link', o.type);
+      if ($('btnDelete')) $('btnDelete').onclick = () => sb.remove(o);
+      return;
+    }
+    if (!o && CL.LINKS[sb.tool]) {
+      const L = CL.LINKS[sb.tool];
+      el.innerHTML = modeCard(sb) + '<div class="info-head"><canvas id="infoIcon" data-kind="link" data-type="' + sb.tool + '"></canvas><h3>' + L.name + '</h3></div>' +
+        '<p>' + L.fact + '</p><p class="notice">👉 ' + L.notice + '</p><p class="tip">Click the same two parts again to take it off.</p>';
+      CL.art.drawIcon($('infoIcon'), 'link', sb.tool);
+      return;
+    }
     let kind, type;
     if (o) { kind = o.kind; type = o.type; }
     else if (CL.BALLS[sb.tool]) { kind = 'ball'; type = sb.tool; }
@@ -167,40 +248,43 @@
     let h = modeCard(sb);
     if (!kind) {
       el.innerHTML = h + '<h3>✋ Move tool</h3><p>Drag things around the lab.</p>' +
-        '<p>While it is running, <b>flick</b> a ball to throw it!</p>' + helpHTML();
+        '<p>While it is running, <b>flick</b> a ball to throw it, or click a switch to flip it!</p>' + helpHTML();
       return;
     }
     const d = kind === 'ball' ? CL.BALLS[type] : CL.SURFACES[type];
     h += '<div class="info-head"><canvas id="infoIcon" data-kind="' + kind + '" data-type="' + type + '"></canvas><h3>' + d.name + '</h3></div>';
-    if (kind === 'ball') {
-      h += bars('Weight', d.stats.weight, 'w') + bars('Bounce', d.stats.bounce, 'b') + bars('Air push', d.stats.air, 'a');
-      if (d.gravityScale < 0) h += '<p class="badge">⬆ Floats up!</p>';
-    } else {
-      h += bars('Grip', d.stats.grip, 'w') + bars('Spring', d.stats.spring, 'b');
-    }
+    (d.stats || []).forEach(s => (h += bars(s[0], s[1], s[2])));
+    if (kind === 'ball' && d.gravityScale < 0) h += '<p class="badge">⬆ Floats up!</p>';
+    if (o && o.jammed) h += '<p class="warn">⚠️ <b>Jammed!</b> These parts are locked together and can\u2019t turn. Look for gears in a loop, or two motors pulling against each other.</p>';
     h += '<p>' + d.fact + '</p><p class="notice">👀 ' + d.notice + '</p>';
-    if (o && kind === 'ball') {
-      h += '<div class="live"><div><small>Speed</small><b id="liveSpeed">0</b> m/s</div>' +
-        '<div><small>Height</small><b id="liveHeight">0</b> m</div></div>';
+    if (o) {
+      h += optionsHTML(sb, o);
+      const rows = liveRows(o);
+      if (rows.length) {
+        h += '<div class="live">' + rows.map((r, i) => '<div><small>' + r[0] + '</small><b id="live' + i + '">–</b> ' + r[2] + '</div>').join('') + '</div>';
+      }
     }
     if (o && o.locked) h += '<p class="tip">🔩 This part is bolted down.</p>';
-    else if (o && kind === 'block') h += '<p class="tip">Drag the <b>yellow handle</b> to turn or stretch it. Keys <kbd>Q</kbd> <kbd>E</kbd> also turn it.</p>';
-    if (o && !o.locked) h += '<button class="danger" id="btnDelete">🗑 Remove</button>';
+    else if (o && sb.hasHandle(o)) h += '<p class="tip">Drag the <b>yellow handle</b> to ' + (d.rotatable ? (d.stretchable ? 'turn or stretch' : 'turn') : 'stretch') + ' it.' + (d.rotatable ? ' Keys <kbd>Q</kbd> <kbd>E</kbd> also turn it.' : '') + '</p>';
+    if (o && (d.axle || d.powered || d.powerSource) && sb.building) h += '<p class="tip">🔗 Use the <b>' + (d.axle ? 'Belt' : 'Power cord') + '</b> tool to join it to other machines.</p>';
+    if (o && !o.locked && (sb.building || sb.canEdit(o))) h += '<button class="danger" id="btnDelete">🗑 Remove</button>';
     else if (!o) h += '<p class="tip">Click in the lab to place one.</p>';
     el.innerHTML = h;
     CL.art.drawIcon($('infoIcon'), kind, type);
-    if (o && !o.locked) $('btnDelete').onclick = () => sb.remove(o);
+    if ($('btnDelete')) $('btnDelete').onclick = () => sb.remove(o);
+    el.querySelectorAll('[data-opt]').forEach(btn => {
+      btn.onclick = () => {
+        const op = d.options.find(x => x.key === btn.dataset.opt);
+        sb.setOption(o, op.key, op.values[+btn.dataset.i][0]);
+      };
+    });
     liveInfo(sb);
   }
 
   function liveInfo(sb) {
     const o = sb.selected;
-    if (!o || o.kind !== 'ball') return;
-    const s = $('liveSpeed'), hgt = $('liveHeight');
-    if (!s) return;
-    const sp = (o.held || sb.building) ? 0 : Math.hypot(o.vx, o.vy) / M;
-    s.textContent = sp < 0.05 ? '0' : sp.toFixed(1);
-    hgt.textContent = Math.max(0, (F - o.y - o.r) / M).toFixed(1);
+    if (!o || o.kind === 'link') return;
+    liveRows(o).forEach((r, i) => { const el = $('live' + i); if (el) el.textContent = r[1](); });
   }
 
   function helpHTML() {
@@ -208,7 +292,7 @@
       '<kbd>Enter</kbd> start / stop · <kbd>Space</kbd> pause<br>' +
       '<kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo<br>' +
       '<kbd>G</kbd> snap · <kbd>S</kbd> slow-mo · <kbd>T</kbd> trails<br>' +
-      '<kbd>F</kbd> full screen · <kbd>Del</kbd> remove</div>';
+      '<kbd>F</kbd> full screen · <kbd>Del</kbd> remove · <kbd>Esc</kbd> cancel</div>';
   }
 
   /* ---------- toast ---------- */
@@ -217,7 +301,7 @@
     const t = $('toast');
     t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 4200);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 4600);
   }
 
   /* ---------- full screen ---------- */

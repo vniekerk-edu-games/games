@@ -1,14 +1,14 @@
 /* Contraption Labs — renderer.js
  * Draws the lab. The world is always 1600 × 900; it is scaled to fit any
  * screen size (including full screen) with letterboxing.
- * BUILD mode looks like a blueprint (Bright Blue grid + frame);
- * RUN mode is the calm JEM Blue lab.
+ * BUILD mode shows a blueprint grid; RUN mode is the calm JEM Blue lab.
  */
 (function (CL) {
   'use strict';
   const { width: W, height: H, floorY: F, pxPerMetre: M } = CL.WORLD;
   const T = CL.THEME;
   const FONT = 'Nunito, "Segoe UI", sans-serif';
+  const TAU = Math.PI * 2;
 
   class Renderer {
     constructor(canvas) {
@@ -33,7 +33,8 @@
 
     draw(sb) {
       const ctx = this.ctx, s = this.scale * this.dpr;
-      const build = sb.building;
+      const build = sb.building, world = sb.world;
+      CL.art.time = world.time;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = T.jemDeep;
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -43,14 +44,20 @@
       ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
       this._background(ctx, build);
       if (build && sb.ghostTrails.length) this._paths(ctx, sb.ghostTrails, 0.28, 2);
-      for (const k of sb.world.blocks) CL.art.drawBlock(ctx, k);
+      for (const k of world.blocks) CL.art.drawBlockBack(ctx, k);
+      for (const k of world.blocks) CL.art.drawBlock(ctx, k);
+      for (const l of world.links) CL.machineArt.drawLink(ctx, l, sb.selected === l ? T.yellow : null);
+      if (!build) CL.machineArt.drawWind(ctx, world);
       this._ruler(ctx);
       if (!build && sb.trails) this._paths(ctx, sb.trailMap.values(), 0.75, 2.6);
-      for (const b of sb.world.balls) CL.art.drawBall(ctx, b);
+      for (const b of world.balls) CL.art.drawBall(ctx, b);
       if (!build && sb.trails) this._apexes(ctx, sb);
+      this._jams(ctx, world);
+      if (!build) this._bubbles(ctx, world);
+      this._linkTool(ctx, sb);
       this._ghost(ctx, sb);
       this._selection(ctx, sb);
-      this._frameAndBanner(ctx, sb);
+      this._banner(ctx, sb);
       ctx.restore();
     }
 
@@ -75,7 +82,7 @@
     _ruler(ctx) {
       ctx.fillStyle = 'rgba(5,21,58,0.6)'; ctx.fillRect(0, 0, 46, F);
       ctx.strokeStyle = T.yellow; ctx.fillStyle = T.yellow;
-      ctx.font = 'bold 13px ' + FONT; ctx.textBaseline = 'middle';
+      ctx.font = 'bold 13px ' + FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
       for (let m = 0; m * M <= F; m++) {
         const y = F - m * M;
         ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(46, y); ctx.stroke();
@@ -91,7 +98,7 @@
         ctx.fillStyle = t.color;
         for (let i = 0; i < pts.length; i++) {
           ctx.globalAlpha = alpha * (0.2 + 0.8 * (i / pts.length));
-          ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], size, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(pts[i][0], pts[i][1], size, 0, TAU); ctx.fill();
         }
       }
       ctx.globalAlpha = 1;
@@ -114,18 +121,65 @@
       }
     }
 
+    _jams(ctx, world) {
+      ctx.font = 'bold 20px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const k of world.blocks) {
+        if (!k.jammed || !k.def.gear) continue;
+        ctx.fillStyle = T.invalid; ctx.beginPath(); ctx.arc(k.x, k.y - k.r - 14, 12, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillText('!', k.x, k.y - k.r - 13);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    _bubbles(ctx, world) {
+      ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const all = world.balls.concat(world.blocks);
+      for (const o of all) {
+        if (!o.say || world.time - o.sayT > 1.6) continue;
+        const w = ctx.measureText(o.say).width + 18, h = 26;
+        const x = Math.max(w / 2 + 4, Math.min(W - w / 2 - 4, o.x));
+        const y = Math.max(h, o.y - (o.r || o.hh) - 26);
+        ctx.fillStyle = '#ffffff';
+        CL.art.rrect(ctx, x - w / 2, y - h / 2, w, h, 12); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(o.x - 5, y + h / 2 - 1); ctx.lineTo(o.x + 5, y + h / 2 - 1); ctx.lineTo(o.x, y + h / 2 + 7); ctx.fill();
+        ctx.fillStyle = T.jem; ctx.fillText(o.say, x, y + 1);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    _linkTool(ctx, sb) {
+      const L = CL.LINKS[sb.tool];
+      if (!L || !sb.building) return;
+      ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
+      for (const k of sb.world.blocks) {
+        if (k.fixed || !L.fits(k)) continue;
+        ctx.strokeStyle = k === sb.linkFrom ? T.yellow : 'rgba(0,174,239,0.8)';
+        const p = sb.tool === 'belt' ? k.axlePos() : k.plugPos();
+        ctx.beginPath(); ctx.arc(p.x, p.y, k === sb.linkFrom ? 18 : 15, 0, TAU); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      const a = sb.linkFrom, c = sb.cursor;
+      if (a && c) {
+        const p = sb.tool === 'belt' ? a.axlePos() : a.plugPos();
+        ctx.strokeStyle = T.yellow; ctx.lineWidth = 4; ctx.setLineDash([10, 6]);
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
     _ghost(ctx, sb) {
       const g = sb.ghost; if (!g || sb.drag) return;
       ctx.globalAlpha = 0.45;
-      if (g.obj.kind === 'ball') CL.art.drawBall(ctx, g.obj); else CL.art.drawBlock(ctx, g.obj);
+      if (g.obj.kind === 'ball') CL.art.drawBall(ctx, g.obj);
+      else { CL.art.drawBlockBack(ctx, g.obj); CL.art.drawBlock(ctx, g.obj); }
       ctx.globalAlpha = 1;
       this._outline(ctx, g.obj, g.valid ? 'rgba(255,255,255,0.7)' : T.invalid);
     }
 
     _outline(ctx, o, color) {
       ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
-      if (o.kind === 'ball') {
-        ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); ctx.stroke();
+      if (o.kind === 'ball' || o.shape === 'circle') {
+        ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, TAU); ctx.stroke();
       } else {
         ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.angle);
         CL.art.rrect(ctx, -o.hw - 6, -o.hh - 6, o.hw * 2 + 12, o.hh * 2 + 12, 8); ctx.stroke();
@@ -135,29 +189,33 @@
     }
 
     _selection(ctx, sb) {
-      const o = sb.selected; if (!o) return;
+      const o = sb.selected; if (!o || o.kind === 'link') return;
       const d = sb.drag;
       const invalid = sb.building && d && d.valid === false;
       this._outline(ctx, o, invalid ? T.invalid : T.yellow);
       if (invalid) {
         ctx.font = 'bold 22px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
         ctx.fillStyle = T.invalid;
-        const top = o.kind === 'ball' ? o.y - o.r - 10 : o.y - Math.max(o.hh, Math.abs(o.s * o.hw)) - 12;
+        const top = (o.kind === 'ball' || o.shape === 'circle') ? o.y - o.r - 10 : o.y - Math.max(o.hh, Math.abs(o.s * o.hw)) - 12;
         ctx.fillText('🚫', o.x, top);
         ctx.textAlign = 'left';
       }
-      if (o.kind !== 'block' || o.locked || (!sb.building && !sb.freePlay)) return;
+      if (!sb.hasHandle(o)) return;
       const h = sb.handlePos(o);
-      ctx.fillStyle = T.yellow; ctx.beginPath(); ctx.arc(h.x, h.y, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = T.yellow; ctx.beginPath(); ctx.arc(h.x, h.y, 14, 0, TAU); ctx.fill();
       ctx.strokeStyle = T.jem; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(h.x, h.y, 7, -2.4, 1.2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(h.x + 2.6, h.y + 6.5); ctx.lineTo(h.x + 7.5, h.y + 2); ctx.lineTo(h.x + 8.2, h.y + 8.6); ctx.stroke();
-      let deg = Math.round(-o.angle * 180 / Math.PI);       // up-slope positive
-      deg = ((deg + 180) % 360 + 360) % 360 - 180;           // keep in -180..179
-      const len = (o.hw * 2 / M).toFixed(1);
+      const parts = [];
+      if (o.def.rotatable) {
+        let deg = Math.round(-o.angle * 180 / Math.PI);       // up-slope positive
+        deg = ((deg + 180) % 360 + 360) % 360 - 180;           // keep in -180..179
+        parts.push(deg + '°');
+      }
+      if (o.def.stretchable) parts.push((o.hw * 2 / M).toFixed(1) + ' m');
       ctx.font = 'bold 13px ' + FONT; ctx.fillStyle = T.yellow;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(deg + '°  ·  ' + len + ' m', h.x, h.y + 18);
+      ctx.fillText(parts.join('  ·  '), h.x, h.y + 18);
       ctx.textAlign = 'left';
     }
 
@@ -169,15 +227,8 @@
       ctx.textAlign = 'left';
     }
 
-    _frameAndBanner(ctx, sb) {
+    _banner(ctx, sb) {
       const build = sb.building;
-      // mode frame
-      ctx.strokeStyle = build ? T.bright : T.orange;
-      ctx.lineWidth = 6;
-      if (build) ctx.setLineDash([18, 10]);
-      ctx.strokeRect(3, 3, W - 6, H - 6);
-      ctx.setLineDash([]);
-
       const empty = !sb.world.balls.length && sb.world.blocks.every(k => k.fixed);
       if (empty && build) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -187,12 +238,14 @@
         ctx.fillText('Or open an experiment from the shelf', W / 2, H / 2);
         ctx.textAlign = 'left';
       }
-
-      if (build) {
+      if (CL.LINKS[sb.tool] && build) {
+        const msg = sb.linkFrom ? 'Now click the part to join it to' :
+          (sb.tool === 'belt' ? 'Click a part with a wheel to start the belt' : 'Click a switch, motor or fan to start the cord');
+        this._pill(ctx, '🔗  ' + msg, W / 2, 36, T.yellow, T.jem);
+      } else if (build) {
         this._pill(ctx, '🛠  BUILD MODE  ·  arrange your parts, then press ▶ Start', W / 2, 36, T.bright, T.jem);
       } else {
-        const tags = ['▶ RUNNING'];
-        if (!sb.running) tags[0] = '⏸ PAUSED';
+        const tags = [sb.running ? '▶ RUNNING' : '⏸ PAUSED'];
         if (sb.slowmo) tags.push('🐢 SLOW MOTION');
         this._pill(ctx, tags.join('   '), W / 2, 36, sb.running ? T.orange : T.yellow, T.jem);
       }

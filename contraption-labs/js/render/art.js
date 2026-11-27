@@ -1,6 +1,7 @@
 /* Contraption Labs — art.js
- * How each part looks. Balls have patterns that rotate with them, so
- * learners can SEE spinning vs sliding.
+ * How balls and planks look. Balls have patterns that rotate with them, so
+ * learners can SEE spinning vs sliding. Machines and critters live in
+ * art-machines.js and art-critters.js and register themselves here.
  */
 (function (CL) {
   'use strict';
@@ -9,7 +10,7 @@
   function circle(ctx, r) { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); }
 
   function rrect(ctx, x, y, w, h, r) {
-    r = Math.min(r, w / 2, h / 2);
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -99,9 +100,12 @@
       ctx.beginPath(); ctx.ellipse(0, -r * 0.03, r * 0.94, r, 0, 0, TAU); ctx.fill();
     }
   };
+  /* balls that are not shiny spheres (critters, cheese) set flat: true */
+  const FLAT = {};
 
   function drawBallShape(ctx, type, r, angle, b) {
     BALL_ART[type](ctx, r, angle, b);
+    if (FLAT[type]) return;
     if (type === 'balloon') {
       ctx.save(); ctx.beginPath(); ctx.ellipse(0, -r * 0.03, r * 0.94, r, 0, 0, TAU); ctx.clip();
       shine(ctx, r); ctx.restore();
@@ -150,15 +154,35 @@
     },
     wall(ctx, w, h) { ctx.fillStyle = '#071D47'; ctx.fillRect(-w / 2, -h / 2, w, h); }
   };
+  /* Parts drawn in WORLD space (they handle their own turning): k → draw(ctx, k) */
+  const WORLD_ART = {};
+  /* Optional "behind" layer (stands, supports) drawn before everything else */
+  const BACK_ART = {};
 
   function drawBlock(ctx, k) {
-    ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(k.angle);
-    BLOCK_ART[k.type](ctx, k.hw * 2, k.hh * 2);
-    if (k.locked) { bolt(ctx, -k.hw + 9, 0); bolt(ctx, k.hw - 9, 0); }
-    ctx.restore();
+    if (WORLD_ART[k.type]) {
+      ctx.save(); WORLD_ART[k.type](ctx, k); ctx.restore();
+    } else {
+      ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(k.angle);
+      BLOCK_ART[k.type](ctx, k.hw * 2, k.hh * 2, k);
+      ctx.restore();
+    }
+    if (k.locked) {
+      ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(k.angle);
+      if (k.shape === 'circle') bolt(ctx, 0, 0);
+      else { bolt(ctx, -k.hw + 9, 0); bolt(ctx, k.hw - 9, 0); }
+      ctx.restore();
+    }
+  }
+  function drawBlockBack(ctx, k) {
+    if (!BACK_ART[k.type]) return;
+    ctx.save(); BACK_ART[k.type](ctx, k); ctx.restore();
   }
 
-  /* Small icon for the shelf */
+  /* ---------- shelf / info icons ---------- */
+  const ICON_LENGTH = { wood: 90, ice: 90, trampoline: 90, seesaw: 110, conveyor: 110 };
+  const LINK_ICON = {};
+
   function drawIcon(canvas, kind, type) {
     const dpr = window.devicePixelRatio || 1;
     const size = canvas.clientWidth || 48;
@@ -166,15 +190,37 @@
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.translate(size / 2, size / 2);
+    if (kind === 'link') { ctx.scale(size / 48, size / 48); LINK_ICON[type](ctx); return; }
     if (kind === 'ball') {
+      if (FLAT[type]) {
+        const b = new CL.Ball(type, 0, 0);
+        const ext = b.def.creature === 'cat' ? 1.75 : b.def.creature === 'mouse' ? 1.9 : 1.6;
+        const s = (size * 0.44) / (b.r * ext);
+        ctx.scale(s, s); ctx.translate(0, b.r * 0.15);
+        drawBallShape(ctx, type, b.r, 0, b);
+        return;
+      }
       const r = size * 0.36;
       if (type === 'balloon') { ctx.translate(0, -r * 0.45); drawBallShape(ctx, type, r * 0.72, 0, null); }
       else drawBallShape(ctx, type, r, -0.4, null);
-    } else {
-      ctx.rotate(-0.35);
-      BLOCK_ART[type](ctx, size * 0.85, type === 'trampoline' ? 12 : 11);
+      return;
     }
+    const k = new CL.Block(type, 0, 0, { length: ICON_LENGTH[type], angle: 0 });
+    if (k.def.pivoted) k.angle = -0.25; else if (k.def.rotatable && !k.def.fan) k.angle = -0.35;
+    k.update();
+    let ext = k.shape === 'circle' ? k.r + 7 : Math.max(Math.abs(k.c * k.hw) + Math.abs(k.s * k.hh), Math.abs(k.s * k.hw) + Math.abs(k.c * k.hh));
+    if (k.type === 'hamster') ext = k.r + 22;
+    if (k.type === 'switch') ext = k.hh + 30;
+    if (k.def.pivoted) ext = Math.max(ext, k.def.standHeight);
+    const s = (size * 0.46) / ext;
+    ctx.scale(s, s);
+    if (k.def.pivoted) ctx.translate(0, -k.def.standHeight * 0.35);
+    if (k.type === 'hamster') ctx.translate(0, -10);
+    if (k.type === 'switch') ctx.translate(0, 12);
+    drawBlockBack(ctx, k);
+    drawBlock(ctx, k);
   }
 
-  CL.art = { drawBall, drawBlock, drawIcon, rrect };
+  CL.art = { drawBall, drawBlock, drawBlockBack, drawIcon, drawBallShape, rrect, bolt, circle,
+    BALL_ART, BLOCK_ART, WORLD_ART, BACK_ART, FLAT, LINK_ICON, ICON_LENGTH, time: 0 };
 })(window.CL = window.CL || {});

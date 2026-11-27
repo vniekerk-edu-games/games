@@ -44,14 +44,7 @@
     </header>
 
     <main class="layout">
-      <aside class="shelf" aria-label="Parts shelf">
-        <h2>Balls</h2>
-        <div class="shelf-group" id="shelfBalls"></div>
-        <h2>Build</h2>
-        <div class="shelf-group" id="shelfBuild"></div>
-        <h2>Experiments</h2>
-        <div class="shelf-group" id="shelfExperiments"></div>
-      </aside>
+      <aside class="shelf" id="shelf" aria-label="Parts shelf"></aside>
 
       <section class="stage" id="stage">
         <canvas id="lab" aria-label="Physics lab"></canvas>
@@ -68,9 +61,13 @@
   <script src="js/engine/bodies.js"></script>
   <script src="js/engine/collide.js"></script>
   <script src="js/engine/world.js"></script>
+  <script src="js/engine/machines.js"></script>
+  <script src="js/engine/creatures.js"></script>
   <script src="js/engine/layout.js"></script>
   <!-- drawing -->
   <script src="js/render/art.js"></script>
+  <script src="js/render/art-machines.js"></script>
+  <script src="js/render/art-critters.js"></script>
   <script src="js/render/renderer.js"></script>
   <!-- sandbox -->
   <script src="js/sandbox/presets.js"></script>

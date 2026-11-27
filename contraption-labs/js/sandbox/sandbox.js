@@ -2,12 +2,13 @@
  * Lab controller with two modes:
  *
  *   BUILD  Nothing moves. Place, drag, turn, stretch and delete parts.
- *          Parts can't overlap; balls dropped on a plank settle on top.
+ *          Join machines with belts and cords. Parts can't overlap; balls
+ *          dropped on a plank settle on top; gears click into mesh.
  *          Every change can be undone and is autosaved.
  *   RUN    Physics on. Press Stop to return to EXACTLY what you built.
- *          In the sandbox (freePlay) you can still throw balls and add
- *          things while it runs — those are temporary and vanish on Stop.
- *          Levels will switch freePlay off (hands off while it runs).
+ *          In the sandbox (freePlay) you can still throw balls, move planks
+ *          and flick switches while it runs — those changes vanish on Stop.
+ *          Machines stay put while running. Levels will switch freePlay off.
  *
  * Options: { freePlay = true, bin = null ({type: count} limits parts), autosave = true }
  */
@@ -15,7 +16,7 @@
   'use strict';
   const { width: W, height: H, floorY: F } = CL.WORLD;
   const MAX_BALLS = 150, MAX_THROW = 1800, MAX_UNDO = 100;
-  const DEG = Math.PI / 180, GRID = 10;
+  const DEG = Math.PI / 180, GRID = 10, GEAR_SNAP = 16;
   const SAVE_KEY = 'contraption-labs.sandbox.v1';
 
   class Sandbox {
@@ -36,6 +37,8 @@
       this.selected = null;
       this.drag = null;
       this.ghost = null;            // preview of the part under the cursor
+      this.linkFrom = null;         // first part picked with the belt/cord tool
+      this.cursor = null;
       this.trailMap = new Map();    // ball id → { color, pts }
       this.ghostTrails = [];        // last run's paths, shown faintly while building
       this.snapshot = null;         // the layout that Start ran from
@@ -75,16 +78,23 @@
 
     addBlock(type, x, y, length, angle) {
       const def = CL.SURFACES[type];
-      const len = clamp(length || def.defaultLength, def.minLength, def.maxLength);
+      const len = def.stretchable ? clamp(length || def.defaultLength, def.minLength, def.maxLength) : undefined;
       return this.world.add(new CL.Block(type, clamp(x, 0, W), clamp(y, 0, F), { length: len, angle: angle || 0 }));
     }
 
     remove(o) {
       if (!o || o.fixed) return;
-      if (o.locked && this.building) { this.emit('toast', '🔩 That part is bolted down. It can\u2019t be removed.'); return; }
-      this.world.remove(o);
-      this.trailMap.delete(o.id);
+      if (o.kind === 'link') {
+        if (!this.building) { this.emit('toast', 'Stop the machine first to change belts and cords.'); return; }
+        this.world.links = this.world.links.filter(l => l !== o);
+      } else {
+        if (o.locked && this.building) { this.emit('toast', '🔩 That part is bolted down. It can\u2019t be removed.'); return; }
+        if (!this.building && o.kind === 'block' && o.def.machine) { this.emit('toast', 'Machines stay put while it runs. Press ■ Stop first.'); return; }
+        this.world.remove(o);
+        this.trailMap.delete(o.id);
+      }
       if (this.selected === o) this.select(null);
+      if (this.linkFrom === o) this.linkFrom = null;
       if (this.building) this.commit();
       this.emit('change');
     }
@@ -100,8 +110,10 @@
     clearAll() {
       this.world.balls.length = 0;
       this.world.blocks = this.world.blocks.filter(k => k.fixed);
+      this.world.links.length = 0;
       this.trailMap.clear();
       this.selected = null;
+      this.linkFrom = null;
     }
 
     /* ---------- layouts, undo, autosave ---------- */
@@ -109,17 +121,16 @@
 
     restore(layout) {
       this.clearAll();
-      for (const p of layout.parts) {
-        const o = CL.Layout.kindOf(p.type) === 'ball'
-          ? this.addBall(p.type, p.x, p.y)
-          : this.addBlock(p.type, p.x, p.y, p.length, p.angle);
-        if (o) o.locked = !!p.locked;
-      }
+      this.world.time = 0;
+      CL.Layout.build(this.world, layout);
     }
+
+    _refreshMachines() { CL.Machines.update(this.world, 0); }
 
     /* Record the current build as an undo step (build mode only). */
     commit() {
       if (!this.building) return;
+      this._refreshMachines();
       const s = JSON.stringify(this.serialize());
       if (s === this._saved) return;
       if (this._saved != null) {
@@ -147,7 +158,7 @@
     }
 
     _restoreSaved() {
-      this.restore(JSON.parse(this._saved));
+      this.restore(CL.Layout.parse(this._saved));
       this._store(this._saved);
       this.select(null);
       this.emit('change');
@@ -163,8 +174,7 @@
       try {
         const s = localStorage.getItem(SAVE_KEY);
         if (!s) return false;
-        const layout = CL.Layout.parse(s);
-        this.restore(layout);
+        this.restore(CL.Layout.parse(s));
         this._saved = JSON.stringify(this.serialize());
         this.emit('change');
         return true;
@@ -197,7 +207,7 @@
       const layout = CL.Layout.parse(text); // throws a friendly Error if invalid
       this.loadLayout(layout);
       let msg = '📂 Opened! ' + layout.parts.length + ' part' + (layout.parts.length === 1 ? '' : 's') + '.';
-      if (layout.skipped) msg += ' (' + layout.skipped + ' unknown part' + (layout.skipped === 1 ? ' was' : 's were') + ' skipped.)';
+      if (layout.skipped) msg += ' (' + layout.skipped + ' unknown item' + (layout.skipped === 1 ? ' was' : 's were') + ' skipped.)';
       this.emit('toast', msg);
       return layout;
     }
@@ -214,6 +224,7 @@
       this.trailMap.clear();
       this.ghostTrails = [];
       this.ghost = null;
+      this.linkFrom = null;
       this.select(null);
       this.emit('mode');
       this.emit('change');
@@ -239,7 +250,7 @@
     toggleStartStop() { this.building ? this.start() : this.stop(); }
 
     /* ---------- toggles ---------- */
-    setTool(t) { this.tool = t; this.select(null); this.ghost = null; this.emit('change'); }
+    setTool(t) { this.tool = t; this.linkFrom = null; this.select(null); this.ghost = null; this.emit('change'); }
     toggleSlow() { this.slowmo = !this.slowmo; this.emit('change'); }
     toggleSnap() { this.snap = !this.snap; this.emit('change'); }
     toggleTrails() {
@@ -251,16 +262,37 @@
       this.emit('change');
     }
     select(o) { this.selected = o; this.emit('select', o); }
+    cancel() { this.linkFrom = null; this.select(null); }
+
+    /* Part settings (switch ON/OFF, fan direction ...) — build mode only */
+    setOption(o, key, value) {
+      if (!this.building || !o || !o.opts || o.locked) return;
+      o.opts[key] = value;
+      if (o.kind === 'block') { o.on = !!o.opts.on; o.running = !!o.opts.awake; }
+      else if (o.def.creature === 'cat') o.state = o.opts.awake ? 'idle' : 'sleep';
+      this.commit();
+      this.emit('change');
+    }
+
+    canEdit(o) {
+      if (!o || o.locked) return false;
+      if (this.building) return true;
+      if (!this.freePlay) return false;
+      return !(o.kind === 'block' && o.def.machine);
+    }
+
+    hasHandle(o) {
+      return !!(o && o.kind === 'block' && (o.def.rotatable || o.def.stretchable) && this.canEdit(o));
+    }
 
     rotateSelected(deg) {
       const k = this.selected;
-      if (!k || k.kind !== 'block' || k.locked || this.drag) return;
-      if (!this.building && !this.freePlay) return;
+      if (!k || k.kind !== 'block' || !k.def.rotatable || !this.canEdit(k) || this.drag) return;
       const old = k.angle;
       k.angle = normAngle(Math.round((k.angle / DEG + deg) / 5) * 5 * DEG);
       k.update();
       if (this.building) {
-        if (!this._blockClear(k)) { k.angle = old; k.update(); this.emit('toast', 'It would bump into a ball. Move the ball first!'); }
+        if (!this._blockClear(k)) { k.angle = old; k.update(); this.emit('toast', 'It would bump into something. Move it first!'); }
         else this.commit();
       }
       this.emit('change');
@@ -274,6 +306,7 @@
       let used = 0;
       for (const o of this.world.balls) if (o.type === type && !o.locked) used++;
       for (const o of this.world.blocks) if (o.type === type && !o.locked) used++;
+      for (const l of this.world.links) if (l.type === type) used++;
       return (this.bin[type] || 0) - used;
     }
     canPlace(type) { return this.remaining(type) > 0; }
@@ -286,7 +319,7 @@
         if (c && c.pen > 0.5) return false;
       }
       for (const k of this.world.blocks) {
-        const c = CL.collide.circleBox(b, k);
+        const c = CL.collide.ballBlock(b, k);
         if (c && c.pen > 0.5) return false;
       }
       return true;
@@ -294,36 +327,58 @@
 
     _blockClear(k) {
       for (const b of this.world.balls) {
-        const c = CL.collide.circleBox(b, k);
+        const c = CL.collide.ballBlock(b, k);
         if (c && c.pen > 0.5) return false;
+      }
+      if (k.shape === 'circle') {               // wheels can't sit inside each other
+        for (const o of this.world.blocks) {
+          if (o === k || o.shape !== 'circle') continue;
+          if (Math.hypot(o.x - k.x, o.y - k.y) < o.r + k.r - 8) return false;
+        }
       }
       return true;
     }
 
-    /* Nudge a ball out of any plank it overlaps, so it sits on top.
-     * If the ball's centre is INSIDE the plank, it always goes on the top face
-     * (that is what a child dropping a ball onto a plank expects). */
+    /* Nudge a ball out of any part it overlaps, so it sits on top. */
     _settle(b) {
       for (let i = 0; i < 4; i++) {
         let moved = false;
         for (const k of this.world.blocks) {
-          const c = CL.collide.circleBox(b, k);
+          const c = CL.collide.ballBlock(b, k);
           if (!c || c.pen <= 0.01) continue;
           moved = true;
-          const dx = b.x - k.x, dy = b.y - k.y;
-          const lx = dx * k.c + dy * k.s, ly = -dx * k.s + dy * k.c;
-          if (!k.fixed && Math.abs(lx) <= k.hw && Math.abs(ly) <= k.hh) {
-            const side = k.c >= 0 ? -1 : 1;              // local side that faces up
-            const ty = side * (k.hh + b.r + 0.2);
-            b.x = k.x + lx * k.c - ty * k.s;
-            b.y = k.y + lx * k.s + ty * k.c;
-          } else {
-            b.x += c.nx * (c.pen + 0.2); b.y += c.ny * (c.pen + 0.2);
+          if (k.shape === 'box' && !k.fixed) {
+            const dx = b.x - k.x, dy = b.y - k.y;
+            const lx = dx * k.c + dy * k.s, ly = -dx * k.s + dy * k.c;
+            if (Math.abs(lx) <= k.hw && Math.abs(ly) <= k.hh) {
+              const side = k.c >= 0 ? -1 : 1;              // local side that faces up
+              const ty = side * (k.hh + b.r + 0.2);
+              b.x = k.x + lx * k.c - ty * k.s;
+              b.y = k.y + lx * k.s + ty * k.c;
+              continue;
+            }
           }
+          b.x += c.nx * (c.pen + 0.2); b.y += c.ny * (c.pen + 0.2);
         }
         b.x = clamp(b.x, b.r, W - b.r); b.y = clamp(b.y, b.r, F - b.r);
         if (!moved) break;
       }
+    }
+
+    /* Gears click into mesh with the nearest gear */
+    _snapGear(k) {
+      if (!k.def.gear) return;
+      let best = null, bd = GEAR_SNAP;
+      for (const o of this.world.blocks) {
+        if (o === k || !o.def.gear) continue;
+        const d = Math.hypot(k.x - o.x, k.y - o.y), gap = Math.abs(d - (k.r + o.r));
+        if (gap < bd) { bd = gap; best = o; }
+      }
+      if (!best) return;
+      const d = Math.hypot(k.x - best.x, k.y - best.y) || 1, want = k.r + best.r;
+      k.x = best.x + (k.x - best.x) / d * want;
+      k.y = best.y + (k.y - best.y) / d * want;
+      k.update();
     }
 
     _sn(v) { return this.snap && this.building ? Math.round(v / GRID) * GRID : v; }
@@ -335,12 +390,13 @@
         this.emit('toast', '🚫 No room there! Parts can\u2019t overlap.');
       } else if (d.mode === 'handle') {
         o.angle = d.start.angle; o.hw = d.start.hw; o.update();
-        this.emit('toast', 'It would bump into a ball. Move the ball first!');
+        this.emit('toast', 'It would bump into something. Move that first!');
       } else {
         o.x = d.start.x; o.y = d.start.y;
         if (o.update) o.update();
         this.emit('toast', '🚫 That spot is taken. It went back where it was.');
       }
+      this._refreshMachines();
     }
 
     _cancelDrag() {
@@ -365,6 +421,7 @@
         if (n === 12) this._acc = 0; // device too slow: drop time rather than spiral
       }
       this.renderer.draw(this);
+      if (this.world.events.length) { this.emit('events', this.world.events.slice()); this.world.events.length = 0; }
       if (++this._frameNo % 6 === 0) this.emit('tick');
       requestAnimationFrame(tt => this._frame(tt));
     }
@@ -389,6 +446,7 @@
           }
         }
       }
+      if (this.selected && this.selected.kind === 'ball' && w.balls.indexOf(this.selected) < 0) this.select(null);
     }
 
     /* ---------- input ---------- */
@@ -398,9 +456,9 @@
       c.addEventListener('pointermove', e => this._move(e));
       c.addEventListener('pointerup', e => this._up(e));
       c.addEventListener('pointercancel', e => this._up(e));
-      c.addEventListener('pointerleave', () => { if (!this.drag) this.ghost = null; });
+      c.addEventListener('pointerleave', () => { if (!this.drag) { this.ghost = null; this.cursor = null; } });
       c.addEventListener('wheel', e => {
-        if (this.selected && this.selected.kind === 'block') {
+        if (this.selected && this.selected.kind === 'block' && this.selected.def.rotatable) {
           e.preventDefault();
           this.rotateSelected(e.deltaY > 0 ? 5 : -5);
         }
@@ -426,6 +484,7 @@
       const bl = this.world.blocks;
       for (let i = bl.length - 1; i >= 0; i--) {
         const k = bl[i]; if (k.fixed) continue;
+        if (k.shape === 'circle') { if (Math.hypot(p.x - k.x, p.y - k.y) <= k.r + tol) return k; continue; }
         const dx = p.x - k.x, dy = p.y - k.y;
         const lx = dx * k.c + dy * k.s, ly = -dx * k.s + dy * k.c;
         if (Math.abs(lx) <= k.hw + tol && Math.abs(ly) <= k.hh + tol + 4) return k;
@@ -433,44 +492,96 @@
       return null;
     }
 
+    _hitLink(p, tol) {
+      for (let i = this.world.links.length - 1; i >= 0; i--) {
+        const l = this.world.links[i];
+        if (CL.machineArt.linkDistance(l, p.x, p.y) <= 5 + tol) return l;
+      }
+      return null;
+    }
+
     _onHandle(p, tol) {
       const s = this.selected;
-      if (!s || s.kind !== 'block' || s.locked) return false;
+      if (!this.hasHandle(s)) return false;
       const h = this.handlePos(s);
       return Math.hypot(p.x - h.x, p.y - h.y) <= 16 + tol;
     }
 
+    /* belt / cord tool */
+    _linkClick(p, tol) {
+      const type = this.tool;
+      if (!this.building) { this.emit('toast', 'Belts and cords are fitted in build mode. Press ■ Stop first.'); return; }
+      const k = this._hitBlock(p, tol);
+      const L = CL.LINKS[type];
+      if (!this.linkFrom) {
+        if (!k) { this.select(null); return; }
+        if (!L.fits(k)) { this.emit('toast', '🚫 ' + L.wrong); return; }
+        this.linkFrom = k; this.select(k);
+        return;
+      }
+      const a = this.linkFrom;
+      this.linkFrom = null;
+      if (!k || k === a) { this.select(null); this.emit('change'); return; }
+      const existing = this.world.links.find(l => l.type === type && ((l.a === a && l.b === k) || (l.a === k && l.b === a)));
+      if (existing) {
+        this.world.links = this.world.links.filter(l => l !== existing);
+        this.emit('toast', '✂️ ' + L.name + ' removed.');
+        this.select(null); this.commit(); return;
+      }
+      if (!this.canPlace(type)) { this.emit('toast', 'No ' + L.name.toLowerCase() + 's left!'); this.select(null); return; }
+      const err = CL.Machines.canLink(this.world, type, a, k);
+      if (err) { this.emit('toast', '🚫 ' + err); this.select(null); this.emit('change'); return; }
+      const link = { type: type, a: a, b: k, kind: 'link' };
+      this.world.links.push(link);
+      this.select(link);
+      this.commit();
+    }
+
     _down(e) {
-      if (e.button === 2) return;
+      if (e.button === 2) { this.cancel(); return; }
       const p = this._pt(e);
       const tol = e.pointerType === 'touch' ? 14 : 5;
       const build = this.building;
-      const canEdit = build || this.freePlay;
+      const canAdd = build || this.freePlay;
       this.canvas.setPointerCapture(e.pointerId);
       this.ghost = null;
 
-      if (canEdit && this._onHandle(p, tol)) {
+      if (CL.LINKS[this.tool] && build) { this._linkClick(p, tol); return; }
+
+      if (this._onHandle(p, tol)) {
         const k = this.selected;
         this.drag = { mode: 'handle', block: k, start: { angle: k.angle, hw: k.hw }, valid: true };
         return;
       }
       const ball = this._hitBall(p, tol);
       if (ball) {
-        if (!canEdit || ball.locked) { this.select(ball); return; }
+        if (!this.canEdit(ball)) { this.select(ball); return; }
         this._grabBall(ball, p, false);
         return;
       }
       const blk = this._hitBlock(p, tol);
+      const lnk = this._hitLink(p, 0);
+      if (lnk && (!blk || blk.shape === 'box')) {
+        const ends = [lnk.type === 'belt' ? lnk.a.axlePos() : lnk.a.plugPos(), lnk.type === 'belt' ? lnk.b.axlePos() : lnk.b.plugPos()];
+        if (!blk || ends.every(q => Math.hypot(q.x - p.x, q.y - p.y) > 14)) { this.select(lnk); return; }
+      }
       if (blk) {
         this.select(blk);
-        if (canEdit && !blk.locked) {
+        if (!build && blk.type === 'switch' && this.freePlay) {   // flick a switch while it runs
+          blk.on = !blk.on; blk.coolUntil = this.world.time + 0.5;
+          this.emit('change'); return;
+        }
+        if (this.canEdit(blk)) {
           this.drag = { mode: 'block', block: blk, ox: blk.x - p.x, oy: blk.y - p.y,
             start: { x: blk.x, y: blk.y }, valid: true };
         }
         return;
       }
-      const isPart = CL.BALLS[this.tool] || CL.SURFACES[this.tool];
-      if (!canEdit || !isPart) { this.select(null); return; }
+      const isPart = CL.BALLS[this.tool] || CL.SURFACES[this.tool];   // (belt/cord tools act like Move while running)
+      if (!canAdd || !isPart) { this.select(null); return; }
+      if (!build && CL.SURFACES[this.tool] && CL.SURFACES[this.tool].machine) {
+        this.emit('toast', 'Machines are built in build mode. Press ■ Stop first.'); return;
+      }
       if (!this.canPlace(this.tool)) { this.emit('toast', 'None left! Every ' + this._name(this.tool) + ' is already in the lab.'); return; }
       if (!build && !this._tempWarned) {
         this._tempWarned = true;
@@ -486,15 +597,18 @@
         return;
       }
       const k = this.addBlock(this.tool, this._sn(p.x), this._sn(p.y));
+      if (build) this._snapGear(k);
       this.select(k);
       this.drag = { mode: 'block', block: k, ox: k.x - p.x, oy: k.y - p.y,
         start: { x: k.x, y: k.y }, isNew: true, valid: !build || this._blockClear(k) };
+      if (build) this._refreshMachines();
       this.emit('change');
     }
 
     _grabBall(b, p, isNew) {
       this.select(b);
-      b.held = true; b.vx = 0; b.vy = 0; b.av = 0; b._rising = false; b.apex = null;
+      b.held = true; b.vx = 0; b.vy = 0; b._rising = false; b.apex = null;
+      if (!b.noSpin) b.av = 0;
       this.trailMap.delete(b.id);
       this.drag = { mode: 'ball', ball: b, ox: b.x - p.x, oy: b.y - p.y, isNew: isNew,
         start: { x: b.x, y: b.y }, valid: true,
@@ -504,6 +618,7 @@
 
     _move(e) {
       const p = this._pt(e);
+      this.cursor = p;
       const d = this.drag;
       const build = this.building;
       if (!d) { this._hover(p, e.pointerType === 'touch' ? 14 : 5); return; }
@@ -523,30 +638,47 @@
         const k = d.block;
         k.x = clamp(this._sn(p.x + d.ox), 0, W); k.y = clamp(this._sn(p.y + d.oy), 0, F);
         k.update();
-        if (build) d.valid = this._blockClear(k);
+        if (build) { this._snapGear(k); d.valid = this._blockClear(k); this._refreshMachines(); }
       } else if (d.mode === 'handle') {
         const k = d.block, def = k.def;
-        let ang = Math.atan2(p.y - k.y, p.x - k.x);
-        if (!e.shiftKey) ang = Math.round(ang / (5 * DEG)) * 5 * DEG; // snap to 5°
-        let hw = Math.hypot(p.x - k.x, p.y - k.y);
-        if (build && this.snap) hw = Math.round(hw / (GRID / 2)) * (GRID / 2);
-        k.angle = normAngle(ang);
-        k.hw = clamp(hw, def.minLength / 2, def.maxLength / 2);
+        let hw;
+        if (def.rotatable) {
+          let ang = Math.atan2(p.y - k.y, p.x - k.x);
+          if (!e.shiftKey) ang = Math.round(ang / (5 * DEG)) * 5 * DEG; // snap to 5°
+          k.angle = normAngle(ang);
+          hw = Math.hypot(p.x - k.x, p.y - k.y);
+        } else {
+          hw = Math.abs((p.x - k.x) * k.c + (p.y - k.y) * k.s);
+        }
+        if (def.stretchable) {
+          if (build && this.snap) hw = Math.round(hw / (GRID / 2)) * (GRID / 2);
+          k.hw = clamp(hw, def.minLength / 2, def.maxLength / 2);
+        }
         k.update();
-        if (build) d.valid = this._blockClear(k);
+        if (build) { d.valid = this._blockClear(k); this._refreshMachines(); }
       }
     }
 
     _hover(p, tol) {
-      const canEdit = this.building || this.freePlay;
-      let cur = this.building ? 'crosshair' : (this.freePlay ? 'crosshair' : 'default');
-      if (canEdit && this._onHandle(p, tol)) cur = 'alias';
-      else if (this._hitBall(p, tol) || this._hitBlock(p, tol)) cur = canEdit ? 'grab' : 'pointer';
-      else if (this.tool === 'hand') cur = 'default';
+      if (CL.LINKS[this.tool] && this.building) {
+        const k = this._hitBlock(p, tol);
+        this.canvas.style.cursor = k && CL.LINKS[this.tool].fits(k) ? 'pointer' : 'crosshair';
+        this.ghost = null;
+        return;
+      }
+      const canAdd = this.building || this.freePlay;
+      let cur = canAdd ? 'crosshair' : 'default';
+      if (this._onHandle(p, tol)) cur = 'alias';
+      else {
+        const o = this._hitBall(p, tol) || this._hitBlock(p, tol);
+        if (o) cur = this.canEdit(o) ? 'grab' : 'pointer';
+        else if (this._hitLink(p, 0)) cur = 'pointer';
+        else if (this.tool === 'hand') cur = 'default';
+      }
       this.canvas.style.cursor = cur;
 
       this.ghost = null;
-      if (!canEdit || cur !== 'crosshair') return;
+      if (!canAdd || cur !== 'crosshair') return;
       const t = this.tool;
       if (CL.BALLS[t]) {
         const g = this._ghosts[t] || (this._ghosts[t] = new CL.Ball(t, 0, 0));
@@ -554,8 +686,10 @@
         if (this.building) this._settle(g);
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._ballClear(g)) };
       } else if (CL.SURFACES[t]) {
+        if (!this.building && CL.SURFACES[t].machine) return;
         const g = this._ghosts[t] || (this._ghosts[t] = new CL.Block(t, 0, 0));
         g.x = clamp(this._sn(p.x), 0, W); g.y = clamp(this._sn(p.y), 0, F); g.update();
+        if (this.building) this._snapGear(g);
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._blockClear(g)) };
       }
     }
@@ -585,7 +719,7 @@
       this.emit('change');
     }
 
-    _name(t) { return ((CL.BALLS[t] || CL.SURFACES[t]).name).toLowerCase(); }
+    _name(t) { return ((CL.BALLS[t] || CL.SURFACES[t] || CL.LINKS[t]).name).toLowerCase(); }
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
