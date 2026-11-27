@@ -29,6 +29,7 @@
       this.vx = 0; this.vy = 0;
       this.angle = 0; this.av = 0;
       this.held = false;     // being dragged by the player
+      this.locked = false;   // bolted down by a level (can't be moved by the player)
       this.touching = false; // in contact with something this substep
     }
   }
@@ -47,6 +48,7 @@
       this.hh = (opts.thickness != null ? opts.thickness : s.thickness) / 2;
       this.angle = opts.angle || 0;
       this.fixed = !!opts.fixed; // lab boundaries cannot be selected
+      this.locked = false;       // bolted down by a level
       this.bounce = s.bounce;
       this.minBounce = s.minBounce || 0;
       this.friction = s.friction;

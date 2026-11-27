@@ -1,35 +1,55 @@
 /* Contraption Labs — sandbox.js
- * Game loop + interaction for the free-play lab.
- *   • Pick a part on the shelf, click in the lab to place it
- *   • Drag anything to move it; flick a ball to throw it
- *   • Drag a plank's yellow handle to turn / stretch it (Q / E also turn)
+ * Lab controller with two modes:
+ *
+ *   BUILD  Nothing moves. Place, drag, turn, stretch and delete parts.
+ *          Parts can't overlap; balls dropped on a plank settle on top.
+ *          Every change can be undone and is autosaved.
+ *   RUN    Physics on. Press Stop to return to EXACTLY what you built.
+ *          In the sandbox (freePlay) you can still throw balls and add
+ *          things while it runs — those are temporary and vanish on Stop.
+ *          Levels will switch freePlay off (hands off while it runs).
+ *
+ * Options: { freePlay = true, bin = null ({type: count} limits parts), autosave = true }
  */
 (function (CL) {
   'use strict';
   const { width: W, height: H, floorY: F } = CL.WORLD;
-  const MAX_BALLS = 150;
-  const MAX_THROW = 1800;
-  const DEG = Math.PI / 180;
+  const MAX_BALLS = 150, MAX_THROW = 1800, MAX_UNDO = 100;
+  const DEG = Math.PI / 180, GRID = 10;
+  const SAVE_KEY = 'contraption-labs.sandbox.v1';
 
   class Sandbox {
-    constructor(canvas) {
+    constructor(canvas, opts) {
+      opts = opts || {};
       this.canvas = canvas;
       this.renderer = new CL.Renderer(canvas);
       this.world = new CL.World();
-      this.running = true;
+      this.mode = 'build';
+      this.running = true;          // pause state inside run mode
       this.slowmo = false;
       this.trails = false;
+      this.snap = true;
+      this.freePlay = opts.freePlay !== false;
+      this.bin = opts.bin || null;
+      this.autosave = opts.autosave !== false;
       this.tool = 'basketball';
       this.selected = null;
       this.drag = null;
-      this.trailMap = new Map();
-      this.preset = 'empty';
+      this.ghost = null;            // preview of the part under the cursor
+      this.trailMap = new Map();    // ball id → { color, pts }
+      this.ghostTrails = [];        // last run's paths, shown faintly while building
+      this.snapshot = null;         // the layout that Start ran from
+      this.past = []; this.future = []; this._saved = null;
+      this.preset = null;
+      this._ghosts = {};
       this._listeners = [];
-      this._acc = 0; this._last = 0; this._frameNo = 0;
+      this._acc = 0; this._last = 0; this._frameNo = 0; this._tempWarned = false;
       this._buildBounds();
       this._bindInput();
       requestAnimationFrame(t => this._frame(t));
     }
+
+    get building() { return this.mode === 'build'; }
 
     /* ---------- events for the UI ---------- */
     on(fn) { this._listeners.push(fn); }
@@ -61,16 +81,19 @@
 
     remove(o) {
       if (!o || o.fixed) return;
+      if (o.locked && this.building) { this.emit('toast', '🔩 That part is bolted down. It can\u2019t be removed.'); return; }
       this.world.remove(o);
       this.trailMap.delete(o.id);
       if (this.selected === o) this.select(null);
+      if (this.building) this.commit();
       this.emit('change');
     }
 
     clearBalls() {
-      this.world.balls.slice().forEach(b => this.world.remove(b));
+      this.world.balls.filter(b => !(this.building && b.locked)).forEach(b => this.world.remove(b));
       this.trailMap.clear();
-      if (this.selected && this.selected.kind === 'ball') this.select(null);
+      if (this.selected && this.selected.kind === 'ball' && this.world.balls.indexOf(this.selected) < 0) this.select(null);
+      if (this.building) this.commit();
       this.emit('change');
     }
 
@@ -78,51 +101,260 @@
       this.world.balls.length = 0;
       this.world.blocks = this.world.blocks.filter(k => k.fixed);
       this.trailMap.clear();
+      this.selected = null;
+    }
+
+    /* ---------- layouts, undo, autosave ---------- */
+    serialize() { return CL.Layout.fromWorld(this.world); }
+
+    restore(layout) {
+      this.clearAll();
+      for (const p of layout.parts) {
+        const o = CL.Layout.kindOf(p.type) === 'ball'
+          ? this.addBall(p.type, p.x, p.y)
+          : this.addBlock(p.type, p.x, p.y, p.length, p.angle);
+        if (o) o.locked = !!p.locked;
+      }
+    }
+
+    /* Record the current build as an undo step (build mode only). */
+    commit() {
+      if (!this.building) return;
+      const s = JSON.stringify(this.serialize());
+      if (s === this._saved) return;
+      if (this._saved != null) {
+        this.past.push(this._saved);
+        if (this.past.length > MAX_UNDO) this.past.shift();
+      }
+      this.future.length = 0;
+      this._saved = s;
+      this._store(s);
+      this.emit('change');
+    }
+
+    undo() {
+      if (!this.building || this.drag || !this.past.length) return;
+      this.future.push(this._saved);
+      this._saved = this.past.pop();
+      this._restoreSaved();
+    }
+
+    redo() {
+      if (!this.building || this.drag || !this.future.length) return;
+      this.past.push(this._saved);
+      this._saved = this.future.pop();
+      this._restoreSaved();
+    }
+
+    _restoreSaved() {
+      this.restore(JSON.parse(this._saved));
+      this._store(this._saved);
       this.select(null);
+      this.emit('change');
+    }
+
+    _store(s) {
+      if (!this.autosave) return;
+      try { localStorage.setItem(SAVE_KEY, s); } catch (e) { /* private mode etc. */ }
+    }
+
+    loadSaved() {
+      if (!this.autosave) return false;
+      try {
+        const s = localStorage.getItem(SAVE_KEY);
+        if (!s) return false;
+        const layout = CL.Layout.parse(s);
+        this.restore(layout);
+        this._saved = JSON.stringify(this.serialize());
+        this.emit('change');
+        return true;
+      } catch (e) { return false; }
+    }
+
+    loadLayout(layout) {
+      this.stop();
+      this.restore(layout);
+      this.ghostTrails = [];
+      this.select(null);
+      this.commit(); // undoable: Undo brings back what you had before
+      this.emit('change');
     }
 
     loadPreset(id) {
       const p = CL.PRESETS[id]; if (!p) return;
       const d = p.build();
-      this.clearAll();
-      d.blocks.forEach(k => this.addBlock(k.type, k.x, k.y, k.length, k.angle));
-      d.balls.forEach(b => this.addBall(b.type, b.x, b.y));
-      this.preset = id;
       this.trails = !!d.trails;
-      this.running = true;
-      this._acc = 0;
-      this.emit('change');
-      if (id !== 'empty') this.emit('toast', p.icon + ' ' + p.blurb);
+      this.loadLayout(CL.Layout.fromPreset(d));
+      this.preset = id;
+      if (id !== 'empty') this.emit('toast', p.icon + ' ' + p.blurb + ' Press ▶ Start!');
     }
 
-    reset() { this.loadPreset(this.preset); }
+    exportLayout() {
+      return JSON.stringify(this.building ? this.serialize() : this.snapshot, null, 2);
+    }
+
+    importLayout(text) {
+      const layout = CL.Layout.parse(text); // throws a friendly Error if invalid
+      this.loadLayout(layout);
+      let msg = '📂 Opened! ' + layout.parts.length + ' part' + (layout.parts.length === 1 ? '' : 's') + '.';
+      if (layout.skipped) msg += ' (' + layout.skipped + ' unknown part' + (layout.skipped === 1 ? ' was' : 's were') + ' skipped.)';
+      this.emit('toast', msg);
+      return layout;
+    }
+
+    /* ---------- build / run ---------- */
+    start() {
+      if (!this.building) return;
+      this._cancelDrag();
+      this.snapshot = this.serialize();
+      this.restore(this.snapshot);  // run from the saved numbers: same build = same result
+      this.mode = 'run';
+      this.running = true;
+      this._acc = 0;
+      this.trailMap.clear();
+      this.ghostTrails = [];
+      this.ghost = null;
+      this.select(null);
+      this.emit('mode');
+      this.emit('change');
+    }
+
+    stop() {
+      if (this.building) return;
+      this._cancelDrag();
+      this.ghostTrails = this.trails ? Array.from(this.trailMap.values()).filter(t => t.pts.length > 1) : [];
+      this.trailMap.clear();
+      this.restore(this.snapshot);
+      this.mode = 'build';
+      this.select(null);
+      this.emit('mode');
+      this.emit('change');
+    }
+
+    toggleRun() {
+      if (this.building) this.start();
+      else { this.running = !this.running; this.emit('change'); }
+    }
+    togglePause() { if (!this.building) { this.running = !this.running; this.emit('change'); } }
+    toggleStartStop() { this.building ? this.start() : this.stop(); }
 
     /* ---------- toggles ---------- */
-    setTool(t) { this.tool = t; this.select(null); this.emit('change'); }
-    toggleRun() { this.running = !this.running; this.emit('change'); }
+    setTool(t) { this.tool = t; this.select(null); this.ghost = null; this.emit('change'); }
     toggleSlow() { this.slowmo = !this.slowmo; this.emit('change'); }
+    toggleSnap() { this.snap = !this.snap; this.emit('change'); }
     toggleTrails() {
       this.trails = !this.trails;
-      if (!this.trails) { this.trailMap.clear(); this.world.balls.forEach(b => (b.apex = null)); }
+      if (!this.trails) {
+        this.trailMap.clear(); this.ghostTrails = [];
+        this.world.balls.forEach(b => (b.apex = null));
+      }
       this.emit('change');
     }
     select(o) { this.selected = o; this.emit('select', o); }
 
     rotateSelected(deg) {
       const k = this.selected;
-      if (!k || k.kind !== 'block') return;
+      if (!k || k.kind !== 'block' || k.locked || this.drag) return;
+      if (!this.building && !this.freePlay) return;
+      const old = k.angle;
       k.angle = normAngle(Math.round((k.angle / DEG + deg) / 5) * 5 * DEG);
-      k.update(); this.emit('change');
+      k.update();
+      if (this.building) {
+        if (!this._blockClear(k)) { k.angle = old; k.update(); this.emit('toast', 'It would bump into a ball. Move the ball first!'); }
+        else this.commit();
+      }
+      this.emit('change');
     }
 
     handlePos(k) { return { x: k.x + k.c * k.hw, y: k.y + k.s * k.hw }; }
+
+    /* ---------- parts bin (used by levels; sandbox = unlimited) ---------- */
+    remaining(type) {
+      if (!this.bin) return Infinity;
+      let used = 0;
+      for (const o of this.world.balls) if (o.type === type && !o.locked) used++;
+      for (const o of this.world.blocks) if (o.type === type && !o.locked) used++;
+      return (this.bin[type] || 0) - used;
+    }
+    canPlace(type) { return this.remaining(type) > 0; }
+
+    /* ---------- placement rules (build mode) ---------- */
+    _ballClear(b) {
+      for (const o of this.world.balls) {
+        if (o === b) continue;
+        const c = CL.collide.circleCircle(b, o);
+        if (c && c.pen > 0.5) return false;
+      }
+      for (const k of this.world.blocks) {
+        const c = CL.collide.circleBox(b, k);
+        if (c && c.pen > 0.5) return false;
+      }
+      return true;
+    }
+
+    _blockClear(k) {
+      for (const b of this.world.balls) {
+        const c = CL.collide.circleBox(b, k);
+        if (c && c.pen > 0.5) return false;
+      }
+      return true;
+    }
+
+    /* Nudge a ball out of any plank it overlaps, so it sits on top.
+     * If the ball's centre is INSIDE the plank, it always goes on the top face
+     * (that is what a child dropping a ball onto a plank expects). */
+    _settle(b) {
+      for (let i = 0; i < 4; i++) {
+        let moved = false;
+        for (const k of this.world.blocks) {
+          const c = CL.collide.circleBox(b, k);
+          if (!c || c.pen <= 0.01) continue;
+          moved = true;
+          const dx = b.x - k.x, dy = b.y - k.y;
+          const lx = dx * k.c + dy * k.s, ly = -dx * k.s + dy * k.c;
+          if (!k.fixed && Math.abs(lx) <= k.hw && Math.abs(ly) <= k.hh) {
+            const side = k.c >= 0 ? -1 : 1;              // local side that faces up
+            const ty = side * (k.hh + b.r + 0.2);
+            b.x = k.x + lx * k.c - ty * k.s;
+            b.y = k.y + lx * k.s + ty * k.c;
+          } else {
+            b.x += c.nx * (c.pen + 0.2); b.y += c.ny * (c.pen + 0.2);
+          }
+        }
+        b.x = clamp(b.x, b.r, W - b.r); b.y = clamp(b.y, b.r, F - b.r);
+        if (!moved) break;
+      }
+    }
+
+    _sn(v) { return this.snap && this.building ? Math.round(v / GRID) * GRID : v; }
+
+    _reject(o, d) {
+      if (d.isNew) {
+        this.world.remove(o);
+        this.select(null);
+        this.emit('toast', '🚫 No room there! Parts can\u2019t overlap.');
+      } else if (d.mode === 'handle') {
+        o.angle = d.start.angle; o.hw = d.start.hw; o.update();
+        this.emit('toast', 'It would bump into a ball. Move the ball first!');
+      } else {
+        o.x = d.start.x; o.y = d.start.y;
+        if (o.update) o.update();
+        this.emit('toast', '🚫 That spot is taken. It went back where it was.');
+      }
+    }
+
+    _cancelDrag() {
+      const d = this.drag;
+      if (d && d.ball) { d.ball.held = false; if (this.building) { d.ball.vx = 0; d.ball.vy = 0; } }
+      this.drag = null;
+    }
 
     /* ---------- main loop ---------- */
     _frame(t) {
       const now = t / 1000;
       const dt = this._last ? Math.min(now - this._last, 0.1) : 0;
       this._last = now;
-      if (this.running) {
+      if (!this.building && this.running) {
         this._acc += dt * (this.slowmo ? 0.25 : 1);
         let n = 0;
         while (this._acc >= this.world.stepDt && n < 12) {
@@ -142,20 +374,18 @@
       const sample = this.trails && w.stepCount % 2 === 0;
       for (let i = w.balls.length - 1; i >= 0; i--) {
         const b = w.balls[i];
-        // escaped the lab? remove it
         if (b.x < -300 || b.x > W + 300 || b.y < -300 || b.y > H + 300) { this.remove(b); continue; }
-        // highest point of each bounce
         if (b.gravityScale > 0 && !b.held) {
           if (b.vy < -60) b._rising = true;
           else if (b._rising && b.vy >= 0) { b._rising = false; b.apex = { x: b.x, y: b.y }; }
         }
         if (sample && !b.held) {
           let tr = this.trailMap.get(b.id);
-          if (!tr) this.trailMap.set(b.id, (tr = []));
-          const last = tr[tr.length - 1];
+          if (!tr) this.trailMap.set(b.id, (tr = { color: b.def.trailColor, pts: [] }));
+          const last = tr.pts[tr.pts.length - 1];
           if (!last || Math.abs(last[0] - b.x) + Math.abs(last[1] - b.y) > 1.5) {
-            tr.push([b.x, b.y]);
-            if (tr.length > 260) tr.shift();
+            tr.pts.push([b.x, b.y]);
+            if (tr.pts.length > 260) tr.pts.shift();
           }
         }
       }
@@ -168,6 +398,7 @@
       c.addEventListener('pointermove', e => this._move(e));
       c.addEventListener('pointerup', e => this._up(e));
       c.addEventListener('pointercancel', e => this._up(e));
+      c.addEventListener('pointerleave', () => { if (!this.drag) this.ghost = null; });
       c.addEventListener('wheel', e => {
         if (this.selected && this.selected.kind === 'block') {
           e.preventDefault();
@@ -202,45 +433,71 @@
       return null;
     }
 
+    _onHandle(p, tol) {
+      const s = this.selected;
+      if (!s || s.kind !== 'block' || s.locked) return false;
+      const h = this.handlePos(s);
+      return Math.hypot(p.x - h.x, p.y - h.y) <= 16 + tol;
+    }
+
     _down(e) {
       if (e.button === 2) return;
       const p = this._pt(e);
       const tol = e.pointerType === 'touch' ? 14 : 5;
+      const build = this.building;
+      const canEdit = build || this.freePlay;
       this.canvas.setPointerCapture(e.pointerId);
-      const sel = this.selected;
+      this.ghost = null;
 
-      if (sel && sel.kind === 'block') {
-        const h = this.handlePos(sel);
-        if (Math.hypot(p.x - h.x, p.y - h.y) <= 16 + tol) { this.drag = { mode: 'handle', block: sel }; return; }
+      if (canEdit && this._onHandle(p, tol)) {
+        const k = this.selected;
+        this.drag = { mode: 'handle', block: k, start: { angle: k.angle, hw: k.hw }, valid: true };
+        return;
       }
       const ball = this._hitBall(p, tol);
-      if (ball) { this._grabBall(ball, p); return; }
+      if (ball) {
+        if (!canEdit || ball.locked) { this.select(ball); return; }
+        this._grabBall(ball, p, false);
+        return;
+      }
       const blk = this._hitBlock(p, tol);
       if (blk) {
         this.select(blk);
-        this.drag = { mode: 'block', block: blk, ox: blk.x - p.x, oy: blk.y - p.y };
+        if (canEdit && !blk.locked) {
+          this.drag = { mode: 'block', block: blk, ox: blk.x - p.x, oy: blk.y - p.y,
+            start: { x: blk.x, y: blk.y }, valid: true };
+        }
         return;
       }
+      const isPart = CL.BALLS[this.tool] || CL.SURFACES[this.tool];
+      if (!canEdit || !isPart) { this.select(null); return; }
+      if (!this.canPlace(this.tool)) { this.emit('toast', 'None left! Every ' + this._name(this.tool) + ' is already in the lab.'); return; }
+      if (!build && !this._tempWarned) {
+        this._tempWarned = true;
+        this.emit('toast', '⏳ Things you add while it runs are just for fun. They vanish when you press Stop.');
+      }
+
       if (CL.BALLS[this.tool]) {
-        const b = this.addBall(this.tool, p.x, p.y);
-        if (b) { this._grabBall(b, { x: b.x, y: b.y }); this.emit('change'); }
-        return;
-      }
-      if (CL.SURFACES[this.tool]) {
-        const k = this.addBlock(this.tool, p.x, p.y);
-        this.select(k);
-        this.drag = { mode: 'block', block: k, ox: k.x - p.x, oy: k.y - p.y };
+        const b = this.addBall(this.tool, this._sn(p.x), this._sn(p.y));
+        if (!b) return;
+        this._grabBall(b, { x: b.x, y: b.y }, true);
+        if (build) { this._settle(b); this.drag.valid = this._ballClear(b); }
         this.emit('change');
         return;
       }
-      this.select(null);
+      const k = this.addBlock(this.tool, this._sn(p.x), this._sn(p.y));
+      this.select(k);
+      this.drag = { mode: 'block', block: k, ox: k.x - p.x, oy: k.y - p.y,
+        start: { x: k.x, y: k.y }, isNew: true, valid: !build || this._blockClear(k) };
+      this.emit('change');
     }
 
-    _grabBall(b, p) {
+    _grabBall(b, p, isNew) {
       this.select(b);
       b.held = true; b.vx = 0; b.vy = 0; b.av = 0; b._rising = false; b.apex = null;
       this.trailMap.delete(b.id);
-      this.drag = { mode: 'ball', ball: b, ox: b.x - p.x, oy: b.y - p.y,
+      this.drag = { mode: 'ball', ball: b, ox: b.x - p.x, oy: b.y - p.y, isNew: isNew,
+        start: { x: b.x, y: b.y }, valid: true,
         samples: [{ t: performance.now(), x: b.x, y: b.y }] };
       this.canvas.style.cursor = 'grabbing';
     }
@@ -248,12 +505,14 @@
     _move(e) {
       const p = this._pt(e);
       const d = this.drag;
+      const build = this.building;
       if (!d) { this._hover(p, e.pointerType === 'touch' ? 14 : 5); return; }
 
       if (d.mode === 'ball') {
         const b = d.ball;
-        b.x = clamp(p.x + d.ox, b.r, W - b.r);
-        b.y = clamp(p.y + d.oy, b.r, F - b.r);
+        b.x = clamp(this._sn(p.x + d.ox), b.r, W - b.r);
+        b.y = clamp(this._sn(p.y + d.oy), b.r, F - b.r);
+        if (build) { this._settle(b); d.valid = this._ballClear(b); return; }
         const now = performance.now();
         d.samples.push({ t: now, x: b.x, y: b.y });
         while (d.samples.length > 2 && now - d.samples[0].t > 90) d.samples.shift();
@@ -262,46 +521,71 @@
         b.vx = this.running ? v.x : 0; b.vy = this.running ? v.y : 0;
       } else if (d.mode === 'block') {
         const k = d.block;
-        k.x = clamp(p.x + d.ox, 0, W); k.y = clamp(p.y + d.oy, 0, F);
+        k.x = clamp(this._sn(p.x + d.ox), 0, W); k.y = clamp(this._sn(p.y + d.oy), 0, F);
         k.update();
+        if (build) d.valid = this._blockClear(k);
       } else if (d.mode === 'handle') {
         const k = d.block, def = k.def;
         let ang = Math.atan2(p.y - k.y, p.x - k.x);
         if (!e.shiftKey) ang = Math.round(ang / (5 * DEG)) * 5 * DEG; // snap to 5°
+        let hw = Math.hypot(p.x - k.x, p.y - k.y);
+        if (build && this.snap) hw = Math.round(hw / (GRID / 2)) * (GRID / 2);
         k.angle = normAngle(ang);
-        k.hw = clamp(Math.hypot(p.x - k.x, p.y - k.y), def.minLength / 2, def.maxLength / 2);
+        k.hw = clamp(hw, def.minLength / 2, def.maxLength / 2);
         k.update();
+        if (build) d.valid = this._blockClear(k);
       }
     }
 
     _hover(p, tol) {
-      let cur = 'crosshair';
-      const sel = this.selected;
-      if (sel && sel.kind === 'block') {
-        const h = this.handlePos(sel);
-        if (Math.hypot(p.x - h.x, p.y - h.y) <= 16 + tol) cur = 'alias';
-      }
-      if (cur === 'crosshair' && (this._hitBall(p, tol) || this._hitBlock(p, tol))) cur = 'grab';
-      if (cur === 'crosshair' && this.tool === 'hand') cur = 'default';
+      const canEdit = this.building || this.freePlay;
+      let cur = this.building ? 'crosshair' : (this.freePlay ? 'crosshair' : 'default');
+      if (canEdit && this._onHandle(p, tol)) cur = 'alias';
+      else if (this._hitBall(p, tol) || this._hitBlock(p, tol)) cur = canEdit ? 'grab' : 'pointer';
+      else if (this.tool === 'hand') cur = 'default';
       this.canvas.style.cursor = cur;
+
+      this.ghost = null;
+      if (!canEdit || cur !== 'crosshair') return;
+      const t = this.tool;
+      if (CL.BALLS[t]) {
+        const g = this._ghosts[t] || (this._ghosts[t] = new CL.Ball(t, 0, 0));
+        g.x = clamp(this._sn(p.x), g.r, W - g.r); g.y = clamp(this._sn(p.y), g.r, F - g.r);
+        if (this.building) this._settle(g);
+        this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._ballClear(g)) };
+      } else if (CL.SURFACES[t]) {
+        const g = this._ghosts[t] || (this._ghosts[t] = new CL.Block(t, 0, 0));
+        g.x = clamp(this._sn(p.x), 0, W); g.y = clamp(this._sn(p.y), 0, F); g.update();
+        this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._blockClear(g)) };
+      }
     }
 
     _up(e) {
       const d = this.drag; if (!d) return;
+      this.drag = null;
+      const build = this.building;
       if (d.mode === 'ball') {
         const b = d.ball;
-        const last = d.samples[d.samples.length - 1];
-        const fresh = performance.now() - last.t < 60;
-        const v = fresh ? throwVel(d.samples) : { x: 0, y: 0 };
-        const sp = Math.hypot(v.x, v.y);
-        const k = sp > MAX_THROW ? MAX_THROW / sp : 1;
-        b.vx = v.x * k; b.vy = v.y * k;
         b.held = false;
+        if (build) {
+          b.vx = 0; b.vy = 0;
+          if (!d.valid) this._reject(b, d); else this.commit();
+        } else {
+          const last = d.samples[d.samples.length - 1];
+          const fresh = performance.now() - last.t < 60;
+          const v = fresh ? throwVel(d.samples) : { x: 0, y: 0 };
+          const sp = Math.hypot(v.x, v.y);
+          const k = sp > MAX_THROW ? MAX_THROW / sp : 1;
+          b.vx = v.x * k; b.vy = v.y * k;
+        }
+      } else if (build) {
+        if (!d.valid) this._reject(d.block, d); else this.commit();
       }
-      this.drag = null;
       this.canvas.style.cursor = 'crosshair';
       this.emit('change');
     }
+
+    _name(t) { return ((CL.BALLS[t] || CL.SURFACES[t]).name).toLowerCase(); }
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }

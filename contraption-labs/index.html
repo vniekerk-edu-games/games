@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Contraption Labs — Sandbox</title>
   <meta name="description" content="Contraption Labs: a physics playground for curious kids.">
+  <meta name="theme-color" content="#0B2D6B">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="mode-build">
   <div id="app">
     <header class="topbar">
       <div class="brand">
@@ -19,12 +20,26 @@
         <span class="tag">Sandbox</span>
       </div>
       <nav class="controls" aria-label="Lab controls">
-        <button id="btnPlay" class="btn">⏸ <span>Pause</span></button>
-        <button id="btnReset" class="btn" title="Reset experiment (R)">↺ <span>Reset</span></button>
-        <button id="btnSlow" class="btn toggle" aria-pressed="false" title="Slow motion (S)">🐢 <span>Slow-mo</span></button>
-        <button id="btnTrails" class="btn toggle" aria-pressed="false" title="Show paths and bounce heights (T)">〰️ <span>Trails</span></button>
-        <button id="btnClearBalls" class="btn" title="Remove all balls">🧺 <span>Clear balls</span></button>
-        <button id="btnFull" class="btn accent" title="Full screen (F)">⛶ <span>Full screen</span></button>
+        <div class="group">
+          <button id="btnStart" class="btn big go">▶ <span>Start</span></button>
+          <button id="btnPause" class="btn" title="Pause / play (Space)" disabled>⏸ <span>Pause</span></button>
+        </div>
+        <div class="group">
+          <button id="btnUndo" class="btn" title="Undo (Ctrl+Z)" disabled>↶ <span>Undo</span></button>
+          <button id="btnRedo" class="btn" title="Redo (Ctrl+Y)" disabled>↷ <span>Redo</span></button>
+          <button id="btnSnap" class="btn toggle" aria-pressed="true" title="Snap parts to the grid (G)">🧲 <span>Snap</span></button>
+        </div>
+        <div class="group">
+          <button id="btnSlow" class="btn toggle" aria-pressed="false" title="Slow motion (S)">🐢 <span>Slow-mo</span></button>
+          <button id="btnTrails" class="btn toggle" aria-pressed="false" title="Show paths and bounce heights (T)">〰️ <span>Trails</span></button>
+          <button id="btnClearBalls" class="btn" title="Remove all balls">🧺 <span>Clear balls</span></button>
+        </div>
+        <div class="group">
+          <button id="btnSave" class="btn" title="Save your build as a file (Ctrl+S)">💾 <span>Save</span></button>
+          <button id="btnOpen" class="btn" title="Open a saved build">📂 <span>Open</span></button>
+          <button id="btnFull" class="btn accent" title="Full screen (F)">⛶ <span>Full screen</span></button>
+        </div>
+        <input type="file" id="fileOpen" accept=".json,application/json" hidden>
       </nav>
     </header>
 
@@ -47,11 +62,13 @@
     </main>
   </div>
 
-  <!-- engine -->
+  <script src="js/theme.js"></script>
+  <!-- engine (no drawing, testable in Node) -->
   <script src="js/engine/catalog.js"></script>
   <script src="js/engine/bodies.js"></script>
   <script src="js/engine/collide.js"></script>
   <script src="js/engine/world.js"></script>
+  <script src="js/engine/layout.js"></script>
   <!-- drawing -->
   <script src="js/render/art.js"></script>
   <script src="js/render/renderer.js"></script>

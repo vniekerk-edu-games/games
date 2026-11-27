@@ -33,6 +33,7 @@
       this.stepCount = 0;
       this.impacts = [];   // filled each step: {a, b, speed, x, y} (for sound/effects later)
       this._contacts = [];
+      this._pool = [];
     }
 
     add(o) { (o.kind === 'ball' ? this.balls : this.blocks).push(o); return o; }
@@ -160,7 +161,7 @@
     }
 
     _makeContact(a, b, hit, e, mu, block) {
-      const pool = this._pool || (this._pool = []);
+      const pool = this._pool;
       const c = pool[this._contacts.length] || (pool[this._contacts.length] = {});
       c.a = a; c.b = b; c.block = block || null; c.nx = hit.nx; c.ny = hit.ny; c.pen = hit.pen;
       c.e = e; c.mu = mu; c.ra = a.r; c.rb = b ? b.r : 0;

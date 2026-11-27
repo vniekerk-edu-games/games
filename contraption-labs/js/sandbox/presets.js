@@ -1,7 +1,7 @@
 /* Contraption Labs — presets.js
  * Ready-made experiments. Each returns plain data:
  *   { blocks: [{type, x, y, length, angle}], balls: [{type, x, y}], trails }
- * This is the same shape future levels will use (plus a goal and a parts bin).
+ * Converted to a layout (see engine/layout.js) when loaded.
  */
 (function (CL) {
   'use strict';

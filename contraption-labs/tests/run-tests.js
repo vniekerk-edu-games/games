@@ -6,7 +6,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const FILES = ['js/engine/catalog.js', 'js/engine/bodies.js', 'js/engine/collide.js',
-  'js/engine/world.js', 'js/sandbox/presets.js'];
+  'js/engine/world.js', 'js/engine/layout.js', 'js/sandbox/presets.js'];
 global.window = global; // the game files attach themselves to window.CL
 for (const f of FILES) require(path.join(ROOT, f));
 const CL = global.CL;
@@ -35,7 +35,7 @@ const rebound = {};
 for (const t of ['bowling', 'basketball', 'tennis', 'bouncy', 'beach']) {
   const w = lab(); const r = CL.BALLS[t].radius;
   const b = w.add(new Ball(t, 800, F - r - 400));
-  let landed = false, peak = Infinity, prevVy = 0, falls = 0;
+  let landed = false, peak = Infinity, prevVy = 0;
   for (let i = 0; i < 120 * 6; i++) {
     w.step();
     if (prevVy > 0 && b.vy <= 0) landed = true;
@@ -89,7 +89,7 @@ console.log('\n4. Ramp: wood rolls, ice slides');
 for (const surf of ['wood', 'ice']) {
   const th = 14 * Math.PI / 180;
   const w = lab();
-  const k = w.add(new Block(surf, 800, 500, { length: 1400, angle: th }));
+  w.add(new Block(surf, 800, 500, { length: 1400, angle: th }));
   const r = 11, hh = 8;
   const b = w.add(new Ball('tennis', 800 - Math.cos(th) * 600 + Math.sin(th) * (hh + r),
     500 - Math.sin(th) * 600 - Math.cos(th) * (hh + r)));
@@ -160,12 +160,14 @@ function pile() {
   check('performance: 12 s of 80 balls', ms < 1500, ms + ' ms (' + (ms / 1440).toFixed(2) + ' ms per step)');
 }
 
-// 9. Presets load and run
+// 9. Presets load (through the layout format) and run
 console.log('\n9. Presets');
 for (const id of CL.PRESET_ORDER) {
-  const w = lab(); const d = CL.PRESETS[id].build();
-  d.blocks.forEach(k => w.add(new Block(k.type, k.x, k.y, { length: k.length, angle: k.angle })));
-  d.balls.forEach(x => w.add(new Ball(x.type, x.x, x.y)));
+  const w = lab(); const layout = CL.Layout.fromPreset(CL.PRESETS[id].build());
+  for (const p of layout.parts) {
+    if (CL.Layout.kindOf(p.type) === 'ball') w.add(new Ball(p.type, p.x, p.y));
+    else w.add(new Block(p.type, p.x, p.y, { length: p.length, angle: p.angle }));
+  }
   run(w, 8);
   check('preset "' + id + '" runs cleanly', w.balls.every(x => !bad(x) && x.y < F + 1));
   if (id === 'crash') {

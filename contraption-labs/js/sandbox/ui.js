@@ -1,5 +1,5 @@
 /* Contraption Labs — ui.js
- * Shelf, toolbar, info card, keyboard shortcuts and full-screen mode.
+ * Shelf, toolbar, info card, keyboard shortcuts, save/open files, full screen.
  */
 (function (CL) {
   'use strict';
@@ -11,11 +11,10 @@
     bindToolbar(sb);
     bindKeys(sb);
     initFullscreen();
-    const stage = $('stage');
-    new ResizeObserver(() => sb.renderer.resize()).observe(stage);
+    new ResizeObserver(() => sb.renderer.resize()).observe($('stage'));
 
     sb.on((type, data) => {
-      if (type === 'change' || type === 'select') { refreshShelf(sb); refreshToolbar(sb); renderInfo(sb); }
+      if (type === 'change' || type === 'select' || type === 'mode') { refreshShelf(sb); refreshToolbar(sb); renderInfo(sb); }
       if (type === 'tick') liveInfo(sb);
       if (type === 'toast') toast(data);
     });
@@ -26,7 +25,7 @@
   function shelfButton(label, html, onClick, data) {
     const b = document.createElement('button');
     b.className = 'shelf-item';
-    b.innerHTML = html + '<span>' + label + '</span>';
+    b.innerHTML = html + '<span>' + label + '</span><b class="count" hidden></b>';
     b.addEventListener('click', onClick);
     Object.keys(data || {}).forEach(k => (b.dataset[k] = data[k]));
     return b;
@@ -48,35 +47,92 @@
   }
 
   function refreshShelf(sb) {
-    document.querySelectorAll('.shelf-item[data-tool]').forEach(b =>
-      b.classList.toggle('active', b.dataset.tool === sb.tool));
+    document.querySelectorAll('.shelf-item[data-tool]').forEach(b => {
+      const t = b.dataset.tool;
+      b.classList.toggle('active', t === sb.tool);
+      const badge = b.querySelector('.count');
+      if (!badge) return;
+      if (sb.bin && t !== 'hand') {
+        const n = Math.max(0, sb.remaining(t));
+        badge.hidden = false; badge.textContent = '×' + n;
+        b.classList.toggle('empty', n === 0);
+      } else { badge.hidden = true; b.classList.remove('empty'); }
+    });
   }
 
   /* ---------- toolbar ---------- */
   function bindToolbar(sb) {
-    $('btnPlay').onclick = () => sb.toggleRun();
-    $('btnReset').onclick = () => sb.reset();
+    $('btnStart').onclick = () => sb.toggleStartStop();
+    $('btnPause').onclick = () => sb.togglePause();
+    $('btnUndo').onclick = () => sb.undo();
+    $('btnRedo').onclick = () => sb.redo();
+    $('btnSnap').onclick = () => sb.toggleSnap();
     $('btnSlow').onclick = () => sb.toggleSlow();
     $('btnTrails').onclick = () => sb.toggleTrails();
     $('btnClearBalls').onclick = () => sb.clearBalls();
+    $('btnSave').onclick = () => saveFile(sb);
+    $('btnOpen').onclick = () => $('fileOpen').click();
+    $('fileOpen').onchange = e => openFile(sb, e.target);
   }
 
   function refreshToolbar(sb) {
-    $('btnPlay').innerHTML = sb.running ? '⏸ <span>Pause</span>' : '▶ <span>Play</span>';
-    $('btnPlay').classList.toggle('on', !sb.running);
+    const build = sb.building;
+    const start = $('btnStart');
+    start.innerHTML = build ? '▶ <span>Start</span>' : '■ <span>Stop</span>';
+    start.className = 'btn big ' + (build ? 'go' : 'stop');
+    start.title = build ? 'Start the machine (Enter)' : 'Stop and go back to your build (Enter / R)';
+    const pause = $('btnPause');
+    pause.disabled = build;
+    pause.innerHTML = (!build && !sb.running) ? '▶ <span>Play</span>' : '⏸ <span>Pause</span>';
+    pause.classList.toggle('on', !build && !sb.running);
+    $('btnUndo').disabled = !build || !sb.past.length;
+    $('btnRedo').disabled = !build || !sb.future.length;
+    $('btnSnap').disabled = !build;
+    $('btnSnap').setAttribute('aria-pressed', sb.snap);
     $('btnSlow').setAttribute('aria-pressed', sb.slowmo);
     $('btnTrails').setAttribute('aria-pressed', sb.trails);
+    document.body.classList.toggle('mode-run', !build);
+    document.body.classList.toggle('mode-build', build);
   }
 
+  /* ---------- save / open ---------- */
+  function saveFile(sb) {
+    const blob = new Blob([sb.exportLayout()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'my-contraption.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('💾 Saved! Look for my-contraption.json in your Downloads folder.');
+  }
+
+  function openFile(sb, input) {
+    const f = input.files && input.files[0];
+    input.value = '';
+    if (!f) return;
+    f.text().then(text => {
+      try { sb.importLayout(text); } catch (err) { toast('😕 ' + err.message); }
+    });
+  }
+
+  /* ---------- keyboard ---------- */
   function bindKeys(sb) {
     document.addEventListener('keydown', e => {
-      if (e.target.closest('input, textarea, select')) return;
+      if (e.target.closest && e.target.closest('input, textarea, select')) return;
       const k = e.key.toLowerCase();
-      if (k === ' ') { e.preventDefault(); sb.toggleRun(); }
+      if (e.ctrlKey || e.metaKey) {
+        if (k === 'z' && !e.shiftKey) { e.preventDefault(); sb.undo(); }
+        else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); sb.redo(); }
+        else if (k === 's') { e.preventDefault(); saveFile(sb); }
+        return;
+      }
+      if (k === 'enter') { e.preventDefault(); sb.toggleStartStop(); }
+      else if (k === ' ') { e.preventDefault(); sb.toggleRun(); }
       else if (k === 'delete' || k === 'backspace') { e.preventDefault(); sb.remove(sb.selected); }
       else if (k === 'q') sb.rotateSelected(-5);
       else if (k === 'e') sb.rotateSelected(5);
-      else if (k === 'r') sb.reset();
+      else if (k === 'r') sb.stop();
+      else if (k === 'g') sb.toggleSnap();
       else if (k === 's') sb.toggleSlow();
       else if (k === 't') sb.toggleTrails();
       else if (k === 'f') toggleFullscreen();
@@ -91,6 +147,15 @@
     return s + '</div></div>';
   }
 
+  function modeCard(sb) {
+    if (sb.building) {
+      return '<div class="mode-card build"><b>🛠 Build mode</b>Arrange your parts. Nothing moves yet. ' +
+        'Press <b>▶ Start</b> to test your idea.</div>';
+    }
+    return '<div class="mode-card run"><b>▶ Running!</b>Watch what happens. Press <b>■ Stop</b> to go back ' +
+      'to your build and try a change.</div>';
+  }
+
   function renderInfo(sb) {
     const el = $('info');
     const o = sb.selected;
@@ -99,13 +164,14 @@
     else if (CL.BALLS[sb.tool]) { kind = 'ball'; type = sb.tool; }
     else if (CL.SURFACES[sb.tool]) { kind = 'block'; type = sb.tool; }
 
+    let h = modeCard(sb);
     if (!kind) {
-      el.innerHTML = '<h3>✋ Move tool</h3><p>Drag things around the lab.</p>' +
-        '<p><b>Flick</b> a ball to throw it. A quick flick throws it harder!</p>' + helpHTML();
+      el.innerHTML = h + '<h3>✋ Move tool</h3><p>Drag things around the lab.</p>' +
+        '<p>While it is running, <b>flick</b> a ball to throw it!</p>' + helpHTML();
       return;
     }
     const d = kind === 'ball' ? CL.BALLS[type] : CL.SURFACES[type];
-    let h = '<div class="info-head"><canvas id="infoIcon" data-kind="' + kind + '" data-type="' + type + '"></canvas><h3>' + d.name + '</h3></div>';
+    h += '<div class="info-head"><canvas id="infoIcon" data-kind="' + kind + '" data-type="' + type + '"></canvas><h3>' + d.name + '</h3></div>';
     if (kind === 'ball') {
       h += bars('Weight', d.stats.weight, 'w') + bars('Bounce', d.stats.bounce, 'b') + bars('Air push', d.stats.air, 'a');
       if (d.gravityScale < 0) h += '<p class="badge">⬆ Floats up!</p>';
@@ -117,12 +183,13 @@
       h += '<div class="live"><div><small>Speed</small><b id="liveSpeed">0</b> m/s</div>' +
         '<div><small>Height</small><b id="liveHeight">0</b> m</div></div>';
     }
-    if (o && kind === 'block') h += '<p class="tip">Drag the <b>yellow handle</b> to turn or stretch it. Keys <kbd>Q</kbd> <kbd>E</kbd> also turn it.</p>';
-    if (o) h += '<button class="danger" id="btnDelete">🗑 Remove</button>';
-    else h += '<p class="tip">Click in the lab to place one.</p>';
+    if (o && o.locked) h += '<p class="tip">🔩 This part is bolted down.</p>';
+    else if (o && kind === 'block') h += '<p class="tip">Drag the <b>yellow handle</b> to turn or stretch it. Keys <kbd>Q</kbd> <kbd>E</kbd> also turn it.</p>';
+    if (o && !o.locked) h += '<button class="danger" id="btnDelete">🗑 Remove</button>';
+    else if (!o) h += '<p class="tip">Click in the lab to place one.</p>';
     el.innerHTML = h;
     CL.art.drawIcon($('infoIcon'), kind, type);
-    if (o) $('btnDelete').onclick = () => sb.remove(o);
+    if (o && !o.locked) $('btnDelete').onclick = () => sb.remove(o);
     liveInfo(sb);
   }
 
@@ -131,14 +198,17 @@
     if (!o || o.kind !== 'ball') return;
     const s = $('liveSpeed'), hgt = $('liveHeight');
     if (!s) return;
-    const sp = o.held ? 0 : Math.hypot(o.vx, o.vy) / M;
+    const sp = (o.held || sb.building) ? 0 : Math.hypot(o.vx, o.vy) / M;
     s.textContent = sp < 0.05 ? '0' : sp.toFixed(1);
     hgt.textContent = Math.max(0, (F - o.y - o.r) / M).toFixed(1);
   }
 
   function helpHTML() {
-    return '<div class="keys"><b>Shortcuts</b><br><kbd>Space</kbd> pause/play · <kbd>R</kbd> reset<br>' +
-      '<kbd>S</kbd> slow-mo · <kbd>T</kbd> trails · <kbd>F</kbd> full screen<br><kbd>Del</kbd> remove selected</div>';
+    return '<div class="keys"><b>Shortcuts</b><br>' +
+      '<kbd>Enter</kbd> start / stop · <kbd>Space</kbd> pause<br>' +
+      '<kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo<br>' +
+      '<kbd>G</kbd> snap · <kbd>S</kbd> slow-mo · <kbd>T</kbd> trails<br>' +
+      '<kbd>F</kbd> full screen · <kbd>Del</kbd> remove</div>';
   }
 
   /* ---------- toast ---------- */
@@ -151,19 +221,18 @@
   }
 
   /* ---------- full screen ---------- */
-  const app = () => $('app');
   const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
   function toggleFullscreen() {
     if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     else {
-      const a = app();
+      const a = $('app');
       const req = a.requestFullscreen || a.webkitRequestFullscreen;
       if (req) req.call(a);
     }
   }
   function initFullscreen() {
     const btn = $('btnFull');
-    const a = app();
+    const a = $('app');
     if (!(a.requestFullscreen || a.webkitRequestFullscreen)) { btn.hidden = true; return; }
     btn.onclick = toggleFullscreen;
     const upd = () => {

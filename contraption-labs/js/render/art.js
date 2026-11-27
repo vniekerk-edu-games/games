@@ -32,6 +32,13 @@
     ctx.strokeStyle = 'rgba(0,0,0,0.45)'; circle(ctx, r); ctx.stroke();
   }
 
+  /* bolted-down marker (locked parts in levels) */
+  function bolt(ctx, x, y) {
+    ctx.fillStyle = '#c9d3e6'; ctx.strokeStyle = '#4a5878'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 4.5, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 2.5, y); ctx.lineTo(x + 2.5, y); ctx.stroke();
+  }
+
   const BALL_ART = {
     bowling(ctx, r, a) {
       ctx.fillStyle = '#2b3290'; circle(ctx, r); ctx.fill();
@@ -104,6 +111,7 @@
   function drawBall(ctx, b) {
     ctx.save(); ctx.translate(b.x, b.y);
     drawBallShape(ctx, b.type, b.r, b.angle, b);
+    if (b.locked) bolt(ctx, 0, 0);
     ctx.restore();
   }
 
@@ -129,23 +137,24 @@
       ctx.strokeStyle = '#4fa8d4'; ctx.lineWidth = 2; rrect(ctx, -w / 2, -h / 2, w, h, 4); ctx.stroke();
     },
     trampoline(ctx, w, h) {
-      ctx.fillStyle = '#2f7de1'; rrect(ctx, -w / 2, -h / 2, w, h, h / 2); ctx.fill();
-      ctx.fillStyle = '#1b1b25'; rrect(ctx, -w / 2 + 6, -h / 2, w - 12, h * 0.42, 3); ctx.fill();
-      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 1.6; ctx.beginPath();
+      ctx.fillStyle = '#00AEEF'; rrect(ctx, -w / 2, -h / 2, w, h, h / 2); ctx.fill();
+      ctx.fillStyle = '#0B2D6B'; rrect(ctx, -w / 2 + 6, -h / 2, w - 12, h * 0.42, 3); ctx.fill();
+      ctx.strokeStyle = '#FFD200'; ctx.lineWidth = 1.6; ctx.beginPath();
       for (let x = -w / 2 + 8; x <= w / 2 - 8; x += 8) ctx.lineTo(x, (Math.round(x / 8) % 2 ? 0.5 : 4.5) - 1);
       ctx.stroke();
-      ctx.strokeStyle = '#174f99'; ctx.lineWidth = 2; rrect(ctx, -w / 2, -h / 2, w, h, h / 2); ctx.stroke();
+      ctx.strokeStyle = '#0B2D6B'; ctx.lineWidth = 2; rrect(ctx, -w / 2, -h / 2, w, h, h / 2); ctx.stroke();
     },
     floor(ctx, w, h) {
-      ctx.fillStyle = '#1b2c52'; ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.fillStyle = '#5d7bb8'; ctx.fillRect(-w / 2, -h / 2, w, 4);
+      ctx.fillStyle = '#071D47'; ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.fillStyle = '#00AEEF'; ctx.fillRect(-w / 2, -h / 2, w, 4);
     },
-    wall(ctx, w, h) { ctx.fillStyle = '#1b2c52'; ctx.fillRect(-w / 2, -h / 2, w, h); }
+    wall(ctx, w, h) { ctx.fillStyle = '#071D47'; ctx.fillRect(-w / 2, -h / 2, w, h); }
   };
 
   function drawBlock(ctx, k) {
     ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(k.angle);
     BLOCK_ART[k.type](ctx, k.hw * 2, k.hh * 2);
+    if (k.locked) { bolt(ctx, -k.hw + 9, 0); bolt(ctx, k.hw - 9, 0); }
     ctx.restore();
   }
 
