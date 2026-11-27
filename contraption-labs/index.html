@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Contraption Labs — Sandbox</title>
+  <meta name="description" content="Contraption Labs: a physics playground for curious kids.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">⚙️</span>
+        <span class="title">Contraption <b>Labs</b></span>
+        <span class="tag">Sandbox</span>
+      </div>
+      <nav class="controls" aria-label="Lab controls">
+        <button id="btnPlay" class="btn">⏸ <span>Pause</span></button>
+        <button id="btnReset" class="btn" title="Reset experiment (R)">↺ <span>Reset</span></button>
+        <button id="btnSlow" class="btn toggle" aria-pressed="false" title="Slow motion (S)">🐢 <span>Slow-mo</span></button>
+        <button id="btnTrails" class="btn toggle" aria-pressed="false" title="Show paths and bounce heights (T)">〰️ <span>Trails</span></button>
+        <button id="btnClearBalls" class="btn" title="Remove all balls">🧺 <span>Clear balls</span></button>
+        <button id="btnFull" class="btn accent" title="Full screen (F)">⛶ <span>Full screen</span></button>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <aside class="shelf" aria-label="Parts shelf">
+        <h2>Balls</h2>
+        <div class="shelf-group" id="shelfBalls"></div>
+        <h2>Build</h2>
+        <div class="shelf-group" id="shelfBuild"></div>
+        <h2>Experiments</h2>
+        <div class="shelf-group" id="shelfExperiments"></div>
+      </aside>
+
+      <section class="stage" id="stage">
+        <canvas id="lab" aria-label="Physics lab"></canvas>
+        <div class="toast" id="toast" role="status"></div>
+      </section>
+
+      <aside class="info" id="info" aria-live="polite"></aside>
+    </main>
+  </div>
+
+  <!-- engine -->
+  <script src="js/engine/catalog.js"></script>
+  <script src="js/engine/bodies.js"></script>
+  <script src="js/engine/collide.js"></script>
+  <script src="js/engine/world.js"></script>
+  <!-- drawing -->
+  <script src="js/render/art.js"></script>
+  <script src="js/render/renderer.js"></script>
+  <!-- sandbox -->
+  <script src="js/sandbox/presets.js"></script>
+  <script src="js/sandbox/sandbox.js"></script>
+  <script src="js/sandbox/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
