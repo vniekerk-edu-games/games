@@ -50,6 +50,7 @@
       this.say = null; this.sayT = -9;
       if (d.creature === 'cat') this.state = this.opts.awake ? 'idle' : 'sleep';
     }
+    ropePos() { return { x: this.x, y: this.y }; }
   }
 
   class Block {
@@ -90,6 +91,8 @@
       this.powered = false;
       this.on = !!this.opts.on;          // switches
       this.running = !!this.opts.awake;  // hamster
+      this.lit = this.opts.lit !== false; // candle
+      this.snipT = -9;                   // scissors: when they last snipped
       this.coolUntil = 0;
       this.update();
     }
@@ -109,15 +112,68 @@
       }
       return { x: this.x, y: this.y };
     }
+    ropePos() { return { x: this.x, y: this.y }; }
     /* Where cords attach */
     plugPos() {
       if (this.type === 'switch') return { x: this.x + this.hw - 8, y: this.y + this.hh - 6 };
       if (this.type === 'motor') return { x: this.x - this.hw + 8, y: this.y + this.hh - 6 };
+      if (this.type === 'scissors') return { x: this.x - this.c * (this.hw - 8), y: this.y - this.s * (this.hw - 8) };
       return { x: this.x - this.c * this.hw * 0.6 + this.s * this.hh * 0.6, y: this.y - this.s * this.hw * 0.6 + this.c * this.hh * 0.6 };
     }
   }
 
+  /* Rigid: a solid that moves, spins and tips over. Made of one or more boxes
+   * fixed together (a bucket is three). */
+  class Rigid {
+    constructor(type, x, y, opts) {
+      const d = CL.RIGIDS[type];
+      if (!d) throw new Error('Unknown rigid type: ' + type);
+      opts = opts || {};
+      this.id = nextId++;
+      this.kind = 'rigid';
+      this.type = type;
+      this.def = d;
+      this.x = x; this.y = y;
+      this.angle = opts.angle || 0;
+      this.vx = 0; this.vy = 0; this.av = 0;
+      this.mass = d.mass; this.invMass = 1 / d.mass;
+      // inertia: mass shared out by area
+      let area = 0; d.shapes.forEach(b => (area += b.hw * b.hh));
+      let I = 0;
+      d.shapes.forEach(b => {
+        const m = d.mass * (b.hw * b.hh) / area;
+        I += m * ((4 * b.hw * b.hw + 4 * b.hh * b.hh) / 12 + b.x * b.x + b.y * b.y);
+      });
+      this.inertia = I; this.invI = 1 / I;
+      this.bounce = d.bounce; this.friction = d.friction; this.drag = d.drag;
+      this.gravityScale = 1;
+      this.held = false; this.locked = false;
+      this.opts = readOptions(d, opts.opts);
+      this.boxes = d.shapes.map(b => ({ lx: b.x, ly: b.y, hw: b.hw, hh: b.hh, x: 0, y: 0, c: 1, s: 0, br: Math.hypot(b.hw, b.hh) }));
+      this.br = 0;
+      d.shapes.forEach(b => (this.br = Math.max(this.br, Math.hypot(Math.abs(b.x) + b.hw, Math.abs(b.y) + b.hh))));
+      this.outline = {                 // box round all the parts, in the body's own frame
+        x0: Math.min(...d.shapes.map(b => b.x - b.hw)), x1: Math.max(...d.shapes.map(b => b.x + b.hw)),
+        y0: Math.min(...d.shapes.map(b => b.y - b.hh)), y1: Math.max(...d.shapes.map(b => b.y + b.hh))
+      };
+      this.update();
+    }
+    /* Call after changing x, y or angle */
+    update() {
+      const c = Math.cos(this.angle), s = Math.sin(this.angle);
+      this.c = c; this.s = s;
+      for (const b of this.boxes) {
+        b.x = this.x + b.lx * c - b.ly * s;
+        b.y = this.y + b.lx * s + b.ly * c;
+        b.c = c; b.s = s;
+      }
+    }
+    toWorld(lx, ly) { return { x: this.x + lx * this.c - ly * this.s, y: this.y + lx * this.s + ly * this.c }; }
+    ropePos() { const p = this.def.ropePoint; return this.toWorld(p.x, p.y); }
+  }
+
   CL.Ball = Ball;
+  CL.Rigid = Rigid;
   CL.Block = Block;
   CL.readOptions = readOptions;
 })(window.CL = window.CL || {});

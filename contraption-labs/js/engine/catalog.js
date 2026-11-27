@@ -81,7 +81,7 @@
       notice: 'Drop it next to a bowling ball. Which lands first? Why?'
     },
     balloon: {
-      name: 'Balloon', radius: 26, mass: 0.01, bounce: 0.45, friction: 0.4,
+      name: 'Balloon', radius: 26, pops: true, mass: 0.01, bounce: 0.45, friction: 0.4,
       drag: 0.004, gravityScale: -0.3, inertiaK: 0.67, rollingResistance: 3.0,
       trailColor: '#ff7b8a',
       stats: [['Weight', 1, 'w'], ['Bounce', 2, 'b'], ['Air push', 5, 'a']],
@@ -116,6 +116,35 @@
       stats: [['Weight', 1, 'w'], ['Bounce', 1, 'b'], ['Smell', 5, 'a']],
       fact: 'A mouse can smell cheese from far away, as long as it is on the same level.',
       notice: 'Cheese doesn\u2019t roll: it slides. Send it along a conveyor belt!'
+    }
+  };
+
+  /* CL.RIGIDS — solid things that move AND tip over (dominoes, crates, buckets).
+   *   shapes: boxes in the body's own frame { x, y, hw, hh } (origin = balance point)
+   *   ropePoint: where a rope ties on (body frame)
+   */
+  CL.RIGIDS = {
+    domino: {
+      name: 'Domino', mass: 0.25, bounce: 0.1, friction: 0.5, drag: 0.0001,
+      shapes: [{ x: 0, y: 0, hw: 6, hh: 30 }], ropePoint: { x: 0, y: -30 },
+      stats: [['Weight', 2, 'w'], ['Tippy', 5, 'b']],
+      fact: 'A domino is tall and thin. A small push near the top tips it past its balance point, and gravity does the rest!',
+      notice: 'Line up dominoes a bit less than their height apart. Knock the first one over and watch the chain reaction.'
+    },
+    crate: {
+      name: 'Crate', mass: 3, bounce: 0.1, friction: 0.6, drag: 0.00002,
+      shapes: [{ x: 0, y: 0, hw: 26, hh: 26 }], ropePoint: { x: 0, y: -26 },
+      stats: [['Weight', 4, 'w'], ['Tippy', 1, 'b']],
+      fact: 'A crate is wide and heavy, so it is very hard to tip over. It slides instead.',
+      notice: 'Tie a rope to it and hang it from a pulley. Now it can lift things!'
+    },
+    bucket: {
+      name: 'Bucket', mass: 1.2, bounce: 0.1, friction: 0.6, drag: 0.0001,
+      shapes: [{ x: 0, y: 24, hw: 30, hh: 4 }, { x: -27, y: 0, hw: 3, hh: 26 }, { x: 27, y: 0, hw: 3, hh: 26 }],
+      ropePoint: { x: 0, y: -40 },
+      stats: [['Weight', 2, 'w'], ['Holds', 4, 'b']],
+      fact: 'A bucket holds things. The more you put in, the heavier it gets.',
+      notice: 'Hang a bucket on a pulley and drop balls into it. When it is heavier than the other side, down it goes!'
     }
   };
 
@@ -204,6 +233,41 @@
       options: [{ key: 'on', label: 'Switch starts', values: [[false, '⭘ OFF'], [true, '⏽ ON']] }]
     },
 
+    hook: {
+      name: 'Hook', shape: 'circle', radius: 9, bounce: 0.3, friction: 0.6, ropeAnchor: true,
+      stats: [['Strength', 5, 'w']],
+      fact: 'A hook holds one end of a rope still, so whatever is on the other end can SWING.',
+      notice: 'A ball on a rope is a PENDULUM. Does a longer rope swing faster or slower?'
+    },
+    pulley: {
+      name: 'Pulley', shape: 'circle', radius: 30, bounce: 0.3, friction: 0.6, pulley: true,
+      stats: [['Lift', 4, 'w']],
+      fact: 'A rope goes over a pulley wheel. When one side goes DOWN, the other side goes UP.',
+      notice: 'Rope tool: click a thing, then the pulley, then another thing. The heavier side wins!'
+    },
+    scissors: {
+      name: 'Scissors', shape: 'box', length: 84, thickness: 30, bounce: 0.3, friction: 0.6,
+      rotatable: true, powered: true, cutter: true, machine: true,
+      stats: [['Sharp', 5, 'w']],
+      fact: 'Scissors SNIP when something bumps them, or when a switch sends them power.',
+      notice: 'Put a rope between the blades (the pointy end). Snip, and whatever was hanging falls!'
+    },
+    pin: {
+      name: 'Pin', shape: 'box', length: 40, thickness: 8, bounce: 0.3, friction: 0.6,
+      rotatable: true, popper: true,
+      stats: [['Sharp', 5, 'w']],
+      fact: 'A pin has a very sharp point. The stretched rubber of a balloon bursts when it touches the point. POP!',
+      notice: 'Turn the pin so the point faces where the balloon will float.'
+    },
+    candle: {
+      name: 'Candle', shape: 'box', length: 18, thickness: 50, bounce: 0.3, friction: 0.6,
+      flame: true,
+      stats: [['Heat', 4, 'w']],
+      fact: 'A flame is very hot. It burns through a rope and pops a balloon.',
+      notice: 'Burning a rope takes a moment. Count how long it takes!',
+      options: [{ key: 'lit', label: 'Candle starts', values: [[true, '🔥 Lit'], [false, '🕯️ Out']] }]
+    },
+
     /* Lab boundaries (not on the shelf) */
     floor: { name: 'Lab floor', shape: 'box', thickness: 120, bounce: 1.0, friction: 0.6, hidden: true },
     wall:  { name: 'Wall', shape: 'box', thickness: 120, bounce: 0.85, friction: 0.6, hidden: true }
@@ -218,19 +282,28 @@
       fits: o => !!(o.def && o.def.axle)
     },
     cord: {
-      name: 'Power cord', fact: 'A cord carries electricity from a switch to a motor or a fan.',
-      notice: 'Click a switch, then click a motor or fan (or the other way round).',
-      wrong: 'Cords join a switch to a motor or a fan.',
+      name: 'Power cord', fact: 'A cord carries electricity from a switch to a motor, a fan or a pair of scissors.',
+      notice: 'Click a switch, then click a motor, fan or scissors (or the other way round).',
+      wrong: 'Cords join a switch to a motor, a fan or scissors.',
       fits: o => !!(o.def && (o.def.powerSource || o.def.powered))
     }
+  };
+
+  CL.LINKS.rope = {
+    name: 'Rope', fact: 'A rope can only PULL, never push. When it is tight it holds things up; when it goes floppy it does nothing.',
+    notice: 'Click a ball, bucket, crate or domino, then a hook (or another thing). For a pulley: thing → pulley → thing.',
+    wrong: 'Ropes tie onto balls, critters, dominoes, crates, buckets and hooks. Pulleys go in the middle.',
+    fits: o => !!(o && (o.kind === 'ball' || o.kind === 'rigid' || (o.def && (o.def.ropeAnchor || o.def.pulley))))
   };
 
   CL.SHELF = {
     sections: [
       { title: 'Balls', items: ['bowling', 'basketball', 'tennis', 'bouncy', 'beach', 'balloon'] },
-      { title: 'Build', items: ['hand', 'wood', 'ice', 'trampoline', 'seesaw'] },
+      { title: 'Build', items: ['hand', 'wood', 'ice', 'trampoline', 'seesaw', 'domino', 'crate', 'bucket'] },
+      { title: 'Ropes', items: ['rope', 'hook', 'pulley'] },
       { title: 'Machines', items: ['gearSmall', 'gearLarge', 'belt', 'conveyor', 'hamster', 'motor'] },
-      { title: 'Power', items: ['switch', 'cord', 'fan'] },
+      { title: 'Power', items: ['switch', 'cord', 'fan', 'scissors'] },
+      { title: 'Pop & burn', items: ['pin', 'candle'] },
       { title: 'Critters', items: ['mouse', 'cat', 'cheese'] }
     ]
   };

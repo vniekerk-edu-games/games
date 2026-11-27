@@ -7,6 +7,8 @@ chain-reaction puzzle games.
 * **Stage 2 – Build & Run:** build while everything is frozen, press **▶ Start**, press **■ Stop** to get your build back.
 * **Stage 3 – Machines & critters:** gears, belts, conveyor belts, a hamster wheel, motors,
   switches, cords, fans, a see-saw, and a mouse, a cat and some cheese.
+* **Stage 4 – Things that tip, hang, snip and pop:** dominoes, crates, buckets, ropes, hooks,
+  pulleys, scissors, pins and candles.
 
 ## Play it locally
 Open `index.html` in Edge or Chrome. No install or build step needed.
@@ -31,6 +33,14 @@ Open `index.html` in Edge or Chrome. No install or build step needed.
 | Mouse | Smells cheese on its own level and runs to it. Runs away from awake cats. Can't walk on ice. |
 | Cat | Sleeps until a mouse comes close or something bumps it, then chases mice. |
 | Cheese | Mice love it. It slides rather than rolls. |
+
+| Domino / crate / bucket | Solid things that slide, **tip over** and stack. Tall + thin tips easily (domino); wide + heavy hardly tips (crate). Buckets hold things. **Q / E** tilts them in build mode. |
+| Rope (tool) | Click a thing, then a hook or another thing. For a pulley: thing → pulley → thing. Ropes only pull; they are exactly as long as you draw them. Click a rope and press Delete to remove it. |
+| Hook | Holds one end of a rope still (pendulums!). |
+| Pulley | One side goes down, the other goes up. The heavier side wins. |
+| Scissors | Snip ropes at their pointy end when bumped or when a switch powers them (cord). |
+| Pin | Pops balloons that touch its point. Turn it to aim. |
+| Candle | Burns through ropes (about 0.6 s) and pops balloons. Can start lit or out. |
 
 Machines stay put while the machine runs (balls, planks and critters can still be thrown and moved in the sandbox).
 
@@ -59,13 +69,15 @@ js/engine/              PHYSICS + DATA (no drawing — testable in Node)
   bodies.js             Ball (moves freely) and Block (fixed; may turn or swing)
   collide.js            collision detection
   world.js              fixed-step impulse solver (deterministic)
-  machines.js           drive network (gears, belts), power, switches, fans
+  ropes.js              ropes and pulleys (pull-only constraints)
+  machines.js           drive network (gears, belts), power, switches, fans, snip/pop/burn
   creatures.js          mouse & cat brains
   layout.js             the saved-build format (also the future level format)
 js/render/
   art.js                balls, planks, icons
   art-machines.js       machines, belts, cords, wind
   art-critters.js       mouse, cat, cheese
+  art-ropes.js          dominoes, crates, buckets, ropes, pulleys, scissors, pins, candles
   renderer.js           lab, trails, bubbles, selection
 js/sandbox/
   presets.js            ready-made experiments
@@ -75,8 +87,15 @@ js/main.js              start-up
 tests/
   run-tests.js          ball physics            node tests/run-tests.js
   machine-tests.js      machines and critters   node tests/machine-tests.js
+  stage4-tests.js       boxes, ropes, pulleys    node tests/stage4-tests.js
   smoke-ui.js           whole game, mock browser node tests/smoke-ui.js
+tools/bundle.js         one-file source bundle (pack / unpack)
 ```
+
+## One-file source bundle
+`contraption-labs-source.txt` holds every project file in one plain-text file (useful where
+zip files can't be uploaded). Rebuild the folder with `node tools/bundle.js unpack contraption-labs-source.txt my-folder`,
+or make a fresh bundle with `node tools/bundle.js pack`.
 
 ## Build file format (`.json`, version 2)
 ```json

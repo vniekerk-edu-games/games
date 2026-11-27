@@ -25,11 +25,11 @@
   function kindOf(t) {
     if (t === 'hand') return 'hand';
     if (CL.LINKS[t]) return 'link';
-    return CL.BALLS[t] ? 'ball' : 'block';
+    return CL.BALLS[t] ? 'ball' : CL.RIGIDS[t] ? 'rigid' : 'block';
   }
   function nameOf(t) {
     if (t === 'hand') return 'Move';
-    return (CL.BALLS[t] || CL.SURFACES[t] || CL.LINKS[t]).name;
+    return (CL.BALLS[t] || CL.RIGIDS[t] || CL.SURFACES[t] || CL.LINKS[t]).name;
   }
 
   function shelfButton(label, html, onClick, data) {
@@ -178,6 +178,10 @@
 
   /* live numbers for the selected thing: [label, valueFn, unit] */
   function liveRows(o) {
+    if (o.kind === 'rigid') {
+      return [['Speed', () => { const sp = o.held ? 0 : Math.hypot(o.vx, o.vy) / M; return sp < 0.05 ? '0' : sp.toFixed(1); }, 'm/s'],
+        ['Tilt', () => { let d = Math.round(o.angle * 180 / Math.PI) % 360; if (d > 180) d -= 360; if (d < -180) d += 360; return d + '°'; }, '']];
+    }
     if (o.kind === 'ball') {
       const rows = [['Speed', () => { const sp = o.held ? 0 : Math.hypot(o.vx, o.vy) / M; return sp < 0.05 ? '0' : sp.toFixed(1); }, 'm/s'],
         ['Height', () => Math.max(0, (F - o.y - o.r) / M).toFixed(1), 'm']];
@@ -192,6 +196,8 @@
     if (o.type === 'switch') rows.push(['Switch', () => (o.on ? 'ON' : 'OFF'), '']);
     if (o.type === 'hamster') rows.push(['Hamster', () => (o.running ? (o.jammed ? 'stuck!' : 'running') : 'asleep'), '']);
     if (o.def.pivoted) rows.push(['Tilt', () => Math.round(-o.angle * 180 / Math.PI) + '°', '']);
+    if (o.def.flame) rows.push(['Flame', () => (o.lit ? '🔥 lit' : 'out'), '']);
+    if (o.def.cutter) rows.push(['Power', () => (o.powered ? '⚡ ON' : 'OFF'), '']);
     return rows;
   }
   function mood(o) {
@@ -219,7 +225,10 @@
     const L = CL.LINKS[l.type];
     let h = modeCard(sb) + '<div class="info-head"><canvas id="infoIcon" data-kind="link" data-type="' + l.type + '"></canvas><h3>' + L.name + '</h3></div>';
     h += '<p>' + L.fact + '</p>';
-    h += '<p class="tip">Joins the <b>' + l.a.def.name.toLowerCase() + '</b> and the <b>' + l.b.def.name.toLowerCase() + '</b>.</p>';
+    h += '<p class="tip">Joins the <b>' + l.a.def.name.toLowerCase() + '</b> and the <b>' + l.b.def.name.toLowerCase() + '</b>' +
+      (l.via ? ', over the <b>pulley</b>' : '') + '.</p>';
+    if (l.type === 'rope') h += '<div class="live"><div><small>Length</small><b>' + (l.L / M).toFixed(1) + '</b> m</div>' +
+      '<div><small>Rope</small><b>' + ((l.slack || 0) > 2 ? 'floppy' : 'tight') + '</b></div></div>';
     if (sb.building) h += '<button class="danger" id="btnDelete">✂️ Remove ' + L.name.toLowerCase() + '</button>';
     return h;
   }
@@ -243,6 +252,7 @@
     let kind, type;
     if (o) { kind = o.kind; type = o.type; }
     else if (CL.BALLS[sb.tool]) { kind = 'ball'; type = sb.tool; }
+    else if (CL.RIGIDS[sb.tool]) { kind = 'rigid'; type = sb.tool; }
     else if (CL.SURFACES[sb.tool]) { kind = 'block'; type = sb.tool; }
 
     let h = modeCard(sb);
@@ -251,7 +261,7 @@
         '<p>While it is running, <b>flick</b> a ball to throw it, or click a switch to flip it!</p>' + helpHTML();
       return;
     }
-    const d = kind === 'ball' ? CL.BALLS[type] : CL.SURFACES[type];
+    const d = kind === 'ball' ? CL.BALLS[type] : kind === 'rigid' ? CL.RIGIDS[type] : CL.SURFACES[type];
     h += '<div class="info-head"><canvas id="infoIcon" data-kind="' + kind + '" data-type="' + type + '"></canvas><h3>' + d.name + '</h3></div>';
     (d.stats || []).forEach(s => (h += bars(s[0], s[1], s[2])));
     if (kind === 'ball' && d.gravityScale < 0) h += '<p class="badge">⬆ Floats up!</p>';
@@ -267,6 +277,7 @@
     if (o && o.locked) h += '<p class="tip">🔩 This part is bolted down.</p>';
     else if (o && sb.hasHandle(o)) h += '<p class="tip">Drag the <b>yellow handle</b> to ' + (d.rotatable ? (d.stretchable ? 'turn or stretch' : 'turn') : 'stretch') + ' it.' + (d.rotatable ? ' Keys <kbd>Q</kbd> <kbd>E</kbd> also turn it.' : '') + '</p>';
     if (o && (d.axle || d.powered || d.powerSource) && sb.building) h += '<p class="tip">🔗 Use the <b>' + (d.axle ? 'Belt' : 'Power cord') + '</b> tool to join it to other machines.</p>';
+    if (o && (d.ropeAnchor || d.pulley || kind === 'rigid') && sb.building) h += '<p class="tip">🪢 Use the <b>Rope</b> tool to tie things on.' + (kind === 'rigid' ? ' Keys <kbd>Q</kbd> <kbd>E</kbd> tilt it.' : '') + '</p>';
     if (o && !o.locked && (sb.building || sb.canEdit(o))) h += '<button class="danger" id="btnDelete">🗑 Remove</button>';
     else if (!o) h += '<p class="tip">Click in the lab to place one.</p>';
     el.innerHTML = h;

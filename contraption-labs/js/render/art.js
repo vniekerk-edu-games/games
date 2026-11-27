@@ -191,6 +191,15 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.translate(size / 2, size / 2);
     if (kind === 'link') { ctx.scale(size / 48, size / 48); LINK_ICON[type](ctx); return; }
+    if (kind === 'rigid') {
+      const r = new CL.Rigid(type, 0, 0);
+      const s = (size * 0.44) / (r.br + 6);
+      ctx.scale(s, s);
+      if (type === 'bucket') ctx.translate(0, 6);
+      if (type === 'domino') ctx.rotate(0.2);
+      CL.art.drawRigid(ctx, r);
+      return;
+    }
     if (kind === 'ball') {
       if (FLAT[type]) {
         const b = new CL.Ball(type, 0, 0);
@@ -211,12 +220,16 @@
     let ext = k.shape === 'circle' ? k.r + 7 : Math.max(Math.abs(k.c * k.hw) + Math.abs(k.s * k.hh), Math.abs(k.s * k.hw) + Math.abs(k.c * k.hh));
     if (k.type === 'hamster') ext = k.r + 22;
     if (k.type === 'switch') ext = k.hh + 30;
+    if (k.type === 'candle') ext = k.hh + 30;
+    if (k.type === 'pulley') ext = k.r + 22;
     if (k.def.pivoted) ext = Math.max(ext, k.def.standHeight);
     const s = (size * 0.46) / ext;
     ctx.scale(s, s);
     if (k.def.pivoted) ctx.translate(0, -k.def.standHeight * 0.35);
     if (k.type === 'hamster') ctx.translate(0, -10);
     if (k.type === 'switch') ctx.translate(0, 12);
+    if (k.type === 'candle') ctx.translate(0, 16);
+    if (k.type === 'pulley') ctx.translate(0, 10);
     drawBlockBack(ctx, k);
     drawBlock(ctx, k);
   }

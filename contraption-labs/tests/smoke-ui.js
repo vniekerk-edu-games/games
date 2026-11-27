@@ -191,7 +191,7 @@ let artErr = '';
 try {
   CL.SHELF.sections.forEach(s => s.items.forEach(t => {
     if (t === 'hand') return;
-    CL.art.drawIcon(el('icon'), CL.LINKS[t] ? 'link' : CL.BALLS[t] ? 'ball' : 'block', t);
+    CL.art.drawIcon(el('icon'), CL.LINKS[t] ? 'link' : CL.BALLS[t] ? 'ball' : CL.RIGIDS[t] ? 'rigid' : 'block', t);
   }));
 } catch (e) { artErr = e.stack; }
 check('every shelf icon draws', !artErr, artErr.split('\n').slice(0, 2).join(' '));
@@ -215,7 +215,53 @@ try {
 } catch (e) { artErr = e.stack; }
 check('info cards, selections and the belt preview draw', !artErr, artErr.split('\n').slice(0, 3).join(' '));
 
-/* ---------- 11. toolbar ---------- */
+/* ---------- 11. Stage 4: boxes and ropes ---------- */
+console.log('\n11. Dominoes, ropes and pulleys (mouse clicks)');
+sb.setTool('hand'); sb.loadPreset('empty');
+sb.setTool('domino'); click(600, 845);
+const dom = sb.world.rigids[0];
+check('a domino dropped near the floor stands on it', dom && Math.abs(dom.y - (CL.WORLD.floorY - 30)) < 1);
+sb.select(dom); key('e');
+check('Q/E tilts a domino in build mode', Math.abs(dom.angle - 5 * Math.PI / 180) < 1e-9);
+key('q');
+sb.setTool('domino'); click(612, 845);
+check('a second domino can\u2019t go inside the first', sb.world.rigids.length === 1);
+sb.setTool('pulley'); click(800, 200);
+sb.setTool('hook'); click(300, 150);
+sb.setTool('bucket'); click(760, 500);
+sb.setTool('crate'); click(840, 500);
+sb.setTool('bowling'); click(300, 400);
+sb.setTool('rope');
+click(760, 480); click(800, 200); click(840, 500);
+const r1 = sb.world.links.find(l => l.type === 'rope');
+check('rope tool: bucket → pulley → crate makes a pulley rope', r1 && r1.via && r1.via.type === 'pulley' && r1.a.type === 'bucket' && r1.b.type === 'crate');
+click(300, 400); click(300, 150);
+check('rope tool: ball → hook', sb.world.links.filter(l => l.type === 'rope').length === 2);
+sb.setTool('rope'); click(800, 200);
+check('starting a rope on a pulley is refused (pulleys go in the middle)', !sb.linkFrom);
+const savedL = r1.L;
+sb.setTool('hand'); drag(840, 500, 840, 600);
+check('moving the crate in build mode makes the rope longer', sb.world.links.find(l => l.via).L > savedL + 90);
+key('z', { ctrlKey: true });
+sb.start(); runFrames(60);
+check('running: the rope holds the ball up under its hook', Math.abs(sb.world.balls[0].y - 400) < 2);
+sb.stop();
+check('Stop puts the ropes back', sb.world.links.filter(l => l.type === 'rope').length === 2);
+sb.select(sb.world.links.find(l => l.type === 'rope' && !l.via)); key('Delete');
+check('a selected rope can be deleted', sb.world.links.filter(l => l.type === 'rope').length === 1);
+sb.setTool('candle'); click(1200, 820);
+const cnd = sb.world.blocks.find(k => k.type === 'candle');
+sb.select(cnd); sb.setOption(cnd, 'lit', false);
+check('candle can be set to start unlit (saved)', sb.serialize().parts.find(p => p.type === 'candle').lit === false);
+sb.setTool('crate'); sb.start();
+fire('pointerdown', 840, 500); for (let i = 1; i <= 5; i++) { clock += 10; fire('pointermove', 840 + i * 15, 500); } fire('pointerup', 915, 500);
+check('a crate can be grabbed and flung while running', sb.world.rigids.find(r => r.type === 'crate').vx > 300);
+sb.stop();
+let e4 = '';
+try { for (const id of ['dominoes', 'pulley', 'swing', 'balloon', 'snip']) { sb.loadPreset(id); sb.start(); runFrames(300); sb.stop(); } } catch (e) { e4 = e.stack; }
+check('all Stage 4 experiments run in the full game loop', !e4, e4.split('\n').slice(0, 3).join(' '));
+
+/* ---------- 12. toolbar ---------- */
 console.log('\n11. Toolbar');
 sb.setTool('hand'); sb.loadPreset('gears');
 check('Start button shows ▶ Start in build mode', els.btnStart.innerHTML.indexOf('Start') >= 0);

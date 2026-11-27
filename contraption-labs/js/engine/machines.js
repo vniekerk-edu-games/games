@@ -27,7 +27,7 @@
     if (dt > 0) triggers(world);
     power(world);
     drive(world, dt);
-    if (dt > 0) wind(world, dt);
+    if (dt > 0) { wind(world, dt); hazards(world, dt); }
   }
 
   function say(o, text, world) { o.say = text; o.sayT = world.time; }
@@ -38,7 +38,8 @@
       if (im.speed < BUMP) continue;
       for (const o of [im.a, im.b]) {
         if (!o || o.kind !== 'block') continue;
-        if (o.type === 'switch' && world.time >= o.coolUntil) {
+        if (o.type === 'scissors' && world.time - o.snipT > 0.5) snip(world, o);
+        else if (o.type === 'switch' && world.time >= o.coolUntil) {
           o.on = !o.on; o.coolUntil = world.time + 0.5;
           world.events.push({ type: 'switch', obj: o, on: o.on });
         } else if (o.type === 'hamster' && !o.running) {
@@ -57,6 +58,50 @@
       const src = l.a.def.powerSource ? l.a : l.b.def.powerSource ? l.b : null;
       const dev = src === l.a ? l.b : l.a;
       if (src && src.on && dev.def.powered) dev.powered = true;
+    }
+    for (const k of world.blocks) {
+      if (k.type !== 'scissors') continue;
+      if (k.powered && !k._wasPowered && world.time > 0) snip(world, k);
+      k._wasPowered = k.powered;
+    }
+  }
+
+  /* ---------- snip, pop, burn ---------- */
+  function effect(world, type, x, y) { world.effects.push({ type, x, y, t: world.time }); }
+
+  function pop(world, b) {
+    world.remove(b);
+    effect(world, 'pop', b.x, b.y);
+    world.events.push({ type: 'pop', obj: b });
+  }
+
+  function bladePoint(k) { return { x: k.x + k.c * (k.hw - 12), y: k.y + k.s * (k.hw - 12) }; }
+  function pinTip(k) { return { x: k.x + k.c * k.hw, y: k.y + k.s * k.hw }; }
+  function flamePoint(k) { return { x: k.x, y: k.y - k.hh - 13 }; }
+
+  function snip(world, k) {
+    k.snipT = world.time;
+    const p = bladePoint(k);
+    for (const l of world.links.slice()) {
+      if (l.type === 'rope' && CL.Ropes.distTo(l, p.x, p.y) < 18) { CL.Ropes.cut(world, l, 'snip'); effect(world, 'snip', p.x, p.y); }
+    }
+    for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - p.x, b.y - p.y) < b.r + 14) pop(world, b);
+  }
+
+  function hazards(world, dt) {
+    for (const k of world.blocks) {
+      if (k.def.popper) {
+        const t = pinTip(k);
+        for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - t.x, b.y - t.y) < b.r + 3) pop(world, b);
+      } else if (k.def.flame && k.lit) {
+        const f = flamePoint(k);
+        for (const b of world.balls.slice()) if (b.def.pops && Math.hypot(b.x - f.x, b.y - f.y) < b.r + 10) pop(world, b);
+        for (const l of world.links.slice()) {
+          if (l.type !== 'rope' || CL.Ropes.distTo(l, f.x, f.y) > 12) continue;
+          l.burn = (l.burn || 0) + dt;
+          if (l.burn > 0.6) { CL.Ropes.cut(world, l, 'burn'); effect(world, 'burn', f.x, f.y - 6); }
+        }
+      }
     }
   }
 
@@ -172,24 +217,25 @@
 
   /* ---------- connecting parts ---------- */
   /* Returns null if OK, or a friendly reason why not. */
-  function canLink(world, type, a, b) {
+  function canLink(world, type, a, b, via) {
     const L = CL.LINKS[type];
     if (!L) return 'Unknown connector.';
+    if (type === 'rope') return CL.Ropes.canRope(world, a, b, via);
     if (!a || !b || a === b) return 'Pick two different parts.';
     if (a.kind !== 'block' || b.kind !== 'block') return type === 'belt'
       ? 'Belts join machines with a wheel: gears, motors, hamster wheels and conveyor belts.'
-      : 'Cords join a switch to a motor or a fan.';
+      : 'Cords join a switch to a motor, a fan or scissors.';
     if (type === 'belt') {
       if (!a.def.axle || !b.def.axle) return 'Belts join machines with a wheel: gears, motors, hamster wheels and conveyor belts.';
     } else {
       const src = a.def.powerSource ? a : b.def.powerSource ? b : null;
       const dev = src === a ? b : a;
-      if (!src || !dev.def.powered) return 'A cord goes from a switch to a motor or a fan.';
+      if (!src || !dev.def.powered) return 'A cord goes from a switch to a motor, a fan or scissors.';
       if (world.links.some(l => l.type === 'cord' && (l.a === dev || l.b === dev))) return 'That machine already has a cord.';
     }
     if (world.links.some(l => l.type === type && ((l.a === a && l.b === b) || (l.a === b && l.b === a)))) return 'Those are already joined.';
     return null;
   }
 
-  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed };
+  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed, bladePoint, pinTip, flamePoint, snip };
 })(window.CL = window.CL || {});

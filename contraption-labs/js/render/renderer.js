@@ -46,12 +46,15 @@
       if (build && sb.ghostTrails.length) this._paths(ctx, sb.ghostTrails, 0.28, 2);
       for (const k of world.blocks) CL.art.drawBlockBack(ctx, k);
       for (const k of world.blocks) CL.art.drawBlock(ctx, k);
-      for (const l of world.links) CL.machineArt.drawLink(ctx, l, sb.selected === l ? T.yellow : null);
+      for (const l of world.links) if (l.type !== 'rope') CL.machineArt.drawLink(ctx, l, sb.selected === l ? T.yellow : null);
       if (!build) CL.machineArt.drawWind(ctx, world);
+      for (const r of world.rigids) CL.art.drawRigid(ctx, r);
+      for (const l of world.links) if (l.type === 'rope') CL.machineArt.drawLink(ctx, l, sb.selected === l ? T.yellow : null);
       this._ruler(ctx);
       if (!build && sb.trails) this._paths(ctx, sb.trailMap.values(), 0.75, 2.6);
       for (const b of world.balls) CL.art.drawBall(ctx, b);
       if (!build && sb.trails) this._apexes(ctx, sb);
+      CL.ropeArt.drawEffects(ctx, world);
       this._jams(ctx, world);
       if (!build) this._bubbles(ctx, world);
       this._linkTool(ctx, sb);
@@ -133,7 +136,7 @@
 
     _bubbles(ctx, world) {
       ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const all = world.balls.concat(world.blocks);
+      const all = world.balls.concat(world.rigids, world.blocks);
       for (const o of all) {
         if (!o.say || world.time - o.sayT > 1.6) continue;
         const w = ctx.measureText(o.say).width + 18, h = 26;
@@ -150,19 +153,26 @@
     _linkTool(ctx, sb) {
       const L = CL.LINKS[sb.tool];
       if (!L || !sb.building) return;
+      const rope = sb.tool === 'rope';
+      const endPos = k => sb.tool === 'belt' ? k.axlePos() : rope ? (k.def.pulley ? { x: k.x, y: k.y } : k.ropePos()) : k.plugPos();
+      const cands = rope ? sb.world.blocks.concat(sb.world.rigids, sb.world.balls) : sb.world.blocks;
       ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
-      for (const k of sb.world.blocks) {
+      for (const k of cands) {
         if (k.fixed || !L.fits(k)) continue;
-        ctx.strokeStyle = k === sb.linkFrom ? T.yellow : 'rgba(0,174,239,0.8)';
-        const p = sb.tool === 'belt' ? k.axlePos() : k.plugPos();
-        ctx.beginPath(); ctx.arc(p.x, p.y, k === sb.linkFrom ? 18 : 15, 0, TAU); ctx.stroke();
+        const on = k === sb.linkFrom || k === sb.linkVia;
+        ctx.strokeStyle = on ? T.yellow : 'rgba(0,174,239,0.8)';
+        const p = endPos(k);
+        const r = k.def.pulley ? k.r + 6 : (k.kind === 'ball' ? Math.min(k.r + 5, 18) : 15);
+        ctx.beginPath(); ctx.arc(p.x, p.y, on ? r + 3 : r, 0, TAU); ctx.stroke();
       }
       ctx.setLineDash([]);
       const a = sb.linkFrom, c = sb.cursor;
       if (a && c) {
-        const p = sb.tool === 'belt' ? a.axlePos() : a.plugPos();
+        const pts = [endPos(a)];
+        if (sb.linkVia) pts.push({ x: sb.linkVia.x, y: sb.linkVia.y - sb.linkVia.r });
+        pts.push(c);
         ctx.strokeStyle = T.yellow; ctx.lineWidth = 4; ctx.setLineDash([10, 6]);
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); pts.slice(1).forEach(q => ctx.lineTo(q.x, q.y)); ctx.stroke();
         ctx.setLineDash([]);
       }
     }
@@ -171,6 +181,7 @@
       const g = sb.ghost; if (!g || sb.drag) return;
       ctx.globalAlpha = 0.45;
       if (g.obj.kind === 'ball') CL.art.drawBall(ctx, g.obj);
+      else if (g.obj.kind === 'rigid') CL.art.drawRigid(ctx, g.obj);
       else { CL.art.drawBlockBack(ctx, g.obj); CL.art.drawBlock(ctx, g.obj); }
       ctx.globalAlpha = 1;
       this._outline(ctx, g.obj, g.valid ? 'rgba(255,255,255,0.7)' : T.invalid);
@@ -178,7 +189,12 @@
 
     _outline(ctx, o, color) {
       ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
-      if (o.kind === 'ball' || o.shape === 'circle') {
+      if (o.kind === 'rigid') {
+        ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.angle);
+        const b = o.outline;
+        CL.art.rrect(ctx, b.x0 - 6, b.y0 - 6, b.x1 - b.x0 + 12, b.y1 - b.y0 + 12, 8); ctx.stroke();
+        ctx.restore();
+      } else if (o.kind === 'ball' || o.shape === 'circle') {
         ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, TAU); ctx.stroke();
       } else {
         ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.angle);
@@ -196,7 +212,7 @@
       if (invalid) {
         ctx.font = 'bold 22px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
         ctx.fillStyle = T.invalid;
-        const top = (o.kind === 'ball' || o.shape === 'circle') ? o.y - o.r - 10 : o.y - Math.max(o.hh, Math.abs(o.s * o.hw)) - 12;
+        const top = o.kind === 'rigid' ? o.y - o.br - 10 : (o.kind === 'ball' || o.shape === 'circle') ? o.y - o.r - 10 : o.y - Math.max(o.hh, Math.abs(o.s * o.hw)) - 12;
         ctx.fillText('🚫', o.x, top);
         ctx.textAlign = 'left';
       }
@@ -229,7 +245,7 @@
 
     _banner(ctx, sb) {
       const build = sb.building;
-      const empty = !sb.world.balls.length && sb.world.blocks.every(k => k.fixed);
+      const empty = !sb.world.balls.length && !sb.world.rigids.length && sb.world.blocks.every(k => k.fixed);
       if (empty && build) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = 'bold 30px ' + FONT; ctx.fillStyle = 'rgba(255,255,255,0.8)';
@@ -239,8 +255,8 @@
         ctx.textAlign = 'left';
       }
       if (CL.LINKS[sb.tool] && build) {
-        const msg = sb.linkFrom ? 'Now click the part to join it to' :
-          (sb.tool === 'belt' ? 'Click a part with a wheel to start the belt' : 'Click a switch, motor or fan to start the cord');
+        const msg = sb.linkFrom ? (sb.tool === 'rope' ? (sb.linkVia ? 'Now click the thing on the other side of the pulley' : 'Now click a hook or thing to tie it to (or a pulley first)') : 'Now click the part to join it to') :
+          (sb.tool === 'belt' ? 'Click a part with a wheel to start the belt' : sb.tool === 'rope' ? 'Click a ball, box, bucket or hook to tie the rope on' : 'Click a switch, motor, fan or scissors to start the cord');
         this._pill(ctx, '🔗  ' + msg, W / 2, 36, T.yellow, T.jem);
       } else if (build) {
         this._pill(ctx, '🛠  BUILD MODE  ·  arrange your parts, then press ▶ Start', W / 2, 36, T.bright, T.jem);

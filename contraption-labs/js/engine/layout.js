@@ -27,10 +27,11 @@
 
   function kindOf(type) {
     if (CL.BALLS[type]) return 'ball';
+    if (CL.RIGIDS && CL.RIGIDS[type]) return 'rigid';
     if (CL.SURFACES[type] && !CL.SURFACES[type].hidden) return 'block';
     return null;
   }
-  function defOf(type) { return CL.BALLS[type] || CL.SURFACES[type]; }
+  function defOf(type) { return CL.BALLS[type] || (CL.RIGIDS && CL.RIGIDS[type]) || CL.SURFACES[type]; }
 
   function writeOptions(p, o) {
     (o.def.options || []).forEach(op => { p[op.key] = o.opts[op.key]; });
@@ -48,6 +49,13 @@
       if (k.locked) p.locked = true;
       ids.set(k, id++); parts.push(p);
     }
+    for (const r of world.rigids || []) {
+      const p = { id: id, type: r.type, x: r1(r.x), y: r1(r.y) };
+      if (r.angle) p.angle = r4(r.angle);
+      writeOptions(p, r);
+      if (r.locked) p.locked = true;
+      ids.set(r, id++); parts.push(p);
+    }
     for (const b of world.balls) {
       const p = { id: id, type: b.type, x: r1(b.x), y: r1(b.y) };
       writeOptions(p, b);
@@ -56,7 +64,10 @@
     }
     const links = [];
     for (const l of world.links) {
-      if (ids.has(l.a) && ids.has(l.b)) links.push({ type: l.type, a: ids.get(l.a), b: ids.get(l.b) });
+      if (!ids.has(l.a) || !ids.has(l.b)) continue;
+      const q = { type: l.type, a: ids.get(l.a), b: ids.get(l.b) };
+      if (l.via && ids.has(l.via)) q.via = ids.get(l.via);
+      links.push(q);
     }
     return { format: FORMAT, version: VERSION, parts: parts, links: links };
   }
@@ -90,7 +101,7 @@
       if (kind === 'block') {
         if (d.stretchable) q.length = r1(clamp(num(p.length, d.defaultLength), d.minLength, d.maxLength));
         if (d.rotatable) q.angle = r4(num(p.angle, 0));
-      }
+      } else if (kind === 'rigid' && num(p.angle, 0)) q.angle = r4(p.angle);
       (d.options || []).forEach(op => {
         const ok = op.values.some(v => v[0] === p[op.key]);
         q[op.key] = ok ? p[op.key] : op.values[0][0];
@@ -103,7 +114,9 @@
     const links = [];
     for (const l of (Array.isArray(obj.links) ? obj.links : []).slice(0, MAX_LINKS)) {
       if (l && CL.LINKS[l.type] && used.has(l.a) && used.has(l.b) && l.a !== l.b) {
-        links.push({ type: l.type, a: l.a, b: l.b });
+        const q = { type: l.type, a: l.a, b: l.b };
+        if (l.type === 'rope' && used.has(l.via)) q.via = l.via;
+        links.push(q);
       } else skipped++;
     }
     return { format: FORMAT, version: VERSION, parts: parts, links: links, skipped: skipped };
@@ -121,17 +134,23 @@
   function build(world, layout) {
     const map = new Map();
     for (const p of layout.parts) {
-      const o = kindOf(p.type) === 'ball'
-        ? new CL.Ball(p.type, p.x, p.y, optionsOf(p))
+      const kind = kindOf(p.type);
+      const o = kind === 'ball' ? new CL.Ball(p.type, p.x, p.y, optionsOf(p))
+        : kind === 'rigid' ? new CL.Rigid(p.type, p.x, p.y, { angle: p.angle, opts: optionsOf(p) })
         : new CL.Block(p.type, p.x, p.y, { length: p.length, angle: p.angle, opts: optionsOf(p) });
       o.locked = !!p.locked;
       world.add(o);
       map.set(p.id, o);
     }
     for (const l of layout.links || []) {
-      const a = map.get(l.a), b = map.get(l.b);
-      if (a && b && !CL.Machines.canLink(world, l.type, a, b)) world.links.push({ type: l.type, a: a, b: b, kind: 'link' });
+      const a = map.get(l.a), b = map.get(l.b), via = l.via ? map.get(l.via) : null;
+      if (a && b && !CL.Machines.canLink(world, l.type, a, b, via)) {
+        const link = { type: l.type, a: a, b: b, kind: 'link' };
+        if (via) link.via = via;
+        world.links.push(link);
+      }
     }
+    if (CL.Ropes) CL.Ropes.resetLengths(world);
     if (CL.Machines) CL.Machines.update(world, 0); // line up gear teeth, work out power
     return map;
   }

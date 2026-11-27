@@ -216,6 +216,7 @@
   }
 
   function drawLink(ctx, l, highlight) {
+    if (l.type === 'rope') { CL.ropeArt.drawRope(ctx, l, highlight); return; }
     if (l.type === 'belt') {
       const p = l.a.axlePos(), q = l.b.axlePos();
       const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;

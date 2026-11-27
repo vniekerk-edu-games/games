@@ -121,11 +121,71 @@
           part('bowling', 800 + 160, 300)] };
       }
     },
+    dominoes: {
+      name: 'Domino run', icon: '🁢',
+      blurb: 'A ball rolls down, the dominoes tumble, and the last one lands on a switch. What does the switch turn on?',
+      build() {
+        const r = ramp('wood', 80, 600, 330, 846);
+        const parts = [r, onRamp(r, 0.05, 'tennis')];
+        for (let i = 0; i < 16; i++) parts.push(part('domino', 400 + i * 44, F - 30));
+        const sw = floorPart('switch', 400 + 16 * 44 + 10);
+        const fan = part('fan', 1240, F - 35, { angle: 0 });
+        parts.push(sw, fan, onFloor('beach', 1330));
+        return { parts: parts, links: [link('cord', sw, fan)] };
+      }
+    },
+    pulley: {
+      name: 'Pulley lift', icon: '🏗️',
+      blurb: 'A crate hangs on one side of the pulley, an empty bucket on the other. Drop a heavy ball in the bucket. What happens to the crate?',
+      build() {
+        const p = part('pulley', 800, 160);
+        const bucket = part('bucket', 766, 520);
+        const crate = part('crate', 834, F - 26 - 0.5);
+        const bowl = part('bowling', 766, 330);
+        return { trails: true, parts: [p, bucket, crate, bowl], links: [{ type: 'rope', a: bucket.id, b: crate.id, via: p.id }] };
+      }
+    },
+    swing: {
+      name: 'Pendulums', icon: '⏱️',
+      blurb: 'Three balls on three ropes: short, medium and long. Which one swings back and forth fastest?',
+      build() {
+        const parts = [], links = [];
+        [[400, 150], [800, 300], [1200, 500]].forEach(([x, L]) => {
+          const h = part('hook', x, 120), b = part('bowling', x - L * 0.7, 120 + L * 0.714);
+          parts.push(h, b); links.push(link('rope', h, b));
+        });
+        return { trails: true, parts: parts, links: links };
+      }
+    },
+    balloon: {
+      name: 'Pop goes the balloon', icon: '🎈',
+      blurb: 'A candle burns through the balloon\u2019s string. Where will the balloon go, and what is waiting up there?',
+      build() {
+        const hook = part('hook', 800, 700);
+        const bal = part('balloon', 800, 470);
+        const candle = part('candle', 800, 615);
+        return { parts: [hook, bal, candle, part('wood', 800, 648, { length: 80 }), part('pin', 800, 120, { angle: Math.PI / 2 })],
+          links: [link('rope', hook, bal)] };
+      }
+    },
+    snip: {
+      name: 'Snip and launch', icon: '✂️',
+      blurb: 'A ball drops onto a switch. The switch powers the scissors. Snip! Where does the cheese end up?',
+      build() {
+        const hook = part('hook', 960, 120);
+        const bw = part('bowling', 960, 400);
+        const sc = part('scissors', 960 - 30, 260, { angle: 0 });
+        const sw = floorPart('switch', 300);
+        return { trails: true, parts: [hook, bw, sc, sw, part('basketball', 300, 300),
+          part('seesaw', 800, 780, { length: 360 }), part('cheese', 800 - 155, 780 - 7 - 12 - 1)],
+          links: [link('rope', hook, bw), link('cord', sw, sc)] };
+      }
+    },
     empty: {
       name: 'Empty lab', icon: '🧹',
       blurb: 'A clean lab. Build anything you like!',
       build() { return { parts: [] }; }
     }
   };
-  CL.PRESET_ORDER = ['chain', 'gears', 'wind', 'seesaw', 'bounce', 'ramps', 'crash', 'empty'];
+  CL.PRESET_ORDER = ['dominoes', 'pulley', 'swing', 'balloon', 'snip', 'chain', 'gears', 'wind', 'seesaw', 'bounce', 'ramps', 'crash', 'empty'];
 })(window.CL = window.CL || {});
