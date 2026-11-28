@@ -15,9 +15,10 @@
 
     sb.on((type, data) => {
       if (type === 'mode') maybeRebuildShelf(sb);
-      if (type === 'change' || type === 'select' || type === 'mode') { refreshShelf(sb); refreshToolbar(sb); renderInfo(sb); }
+      if (type === 'mode') { hideHint(); }
+      if (type === 'change' || type === 'select' || type === 'mode') { refreshShelf(sb); refreshToolbar(sb); renderInfo(sb); refreshCoach(sb); }
       if (type === 'win') onWin(sb, data);
-      if (type === 'tick') liveInfo(sb);
+      if (type === 'tick') { liveInfo(sb); refreshCoach(sb); }
       if (type === 'toast') toast(data);
     });
     refreshShelf(sb); refreshToolbar(sb); renderInfo(sb);
@@ -122,7 +123,7 @@
       } else { badge.hidden = true; b.classList.remove('empty'); }
     });
     // a dot on a closed category shows that's where the part in your hand came from
-    cats.forEach(c => (c.wrap.className = 'cat' + (c.id === openCat ? ' open' : '') + (c.items.indexOf(sb.tool) >= 0 ? ' holding' : '')));
+    cats.forEach(c => (c.wrap.className = 'cat' + (c.id === openCat ? ' open' : '') + (c.items.indexOf(sb.tool) >= 0 ? ' has-tool' : '')));
     refreshHand(sb);
   }
 
@@ -144,7 +145,7 @@
   function bindToolbar(sb) {
     $('btnHand').onclick = () => sb.toHand();
     $('btnPuzzles').onclick = () => showLevels(sb);
-    $('btnHint').onclick = () => { if (sb.level) toast('💡 ' + sb.level.hint, 9000); };
+    $('btnHint').onclick = () => { if (sb.level) showHint(sb); };
     $('btnRestart').onclick = () => sb.resetLevel();
     $('btnInfo').onclick = () => {
       const on = !document.body.classList.contains('info-open');
@@ -181,7 +182,7 @@
     $('btnSlow').setAttribute('aria-pressed', sb.slowmo);
     $('btnTrails').setAttribute('aria-pressed', sb.trails);
     const lv = sb.level;
-    $('modeTag').textContent = lv ? 'Puzzle ' + (CL.LEVELS.indexOf(lv) + 1) : 'Sandbox';
+    $('modeTag').textContent = lv ? (lv.steps ? '🎓 ' : '') + 'Puzzle ' + (CL.LEVELS.indexOf(lv) + 1) : 'Sandbox';
     $('btnHint').hidden = !lv;
     $('btnRestart').hidden = !lv;
     $('btnRestart').disabled = !build;
@@ -401,16 +402,33 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), ms || 4600);
   }
 
-  /* ---------- puzzles: list, start card, solved card ---------- */
+  /* ---------- puzzles: list, start card, solved card ----------
+   * Progress (in the browser): { done: { id: stars }, hints: { id: biggest hint used } }
+   * Stars: ⭐⭐⭐ solved with no hints · ⭐⭐ used a hint · ⭐ used "Show me". Best score is kept. */
   const PROGRESS_KEY = 'contraption-labs.progress';
   let overlayCanClose = true;
   function progress() {
-    try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || { done: {} }; } catch (e) { return { done: {} }; }
+    let p;
+    try { p = JSON.parse(localStorage.getItem(PROGRESS_KEY)); } catch (e) { p = null; }
+    p = p || {};
+    p.done = p.done || {}; p.hints = p.hints || {};
+    Object.keys(p.done).forEach(k => { if (p.done[k] === true) p.done[k] = 3; });   // Stage 5 saves
+    return p;
   }
-  function markDone(id) {
-    const p = progress(); p.done[id] = true;
-    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
+  function saveProgress(p) { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ } }
+  function starsFor(hintLevel) { return hintLevel >= 3 ? 1 : hintLevel >= 1 ? 2 : 3; }
+  function markDone(id, hintLevel) {
+    const p = progress(), s = starsFor(hintLevel);
+    p.done[id] = Math.max(p.done[id] || 0, s);
+    saveProgress(p);
+    return s;
   }
+  function noteHint(id, level) {
+    const p = progress();
+    if ((p.hints[id] || 0) < level) { p.hints[id] = level; saveProgress(p); }
+  }
+  const starText = n => '⭐'.repeat(n) + '<span class="dim">' + '⭐'.repeat(3 - n) + '</span>';
+  const dots = n => '<span class="diff d' + n + '">' + '●'.repeat(n) + '<span class="dim">' + '●'.repeat(3 - n) + '</span> ' + CL.DIFFICULTY[n] + '</span>';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   function showOverlay(html, canClose) {
@@ -423,16 +441,27 @@
 
   function showLevels(sb) {
     if (!sb.building) sb.stop();
-    const done = progress().done;
-    const n = CL.LEVELS.filter(l => done[l.id]).length;
-    let h = '<div class="card-head"><h2>🧩 Puzzles</h2><span class="pill">' + n + ' of ' + CL.LEVELS.length + ' solved</span></div>' +
-      '<p class="card-sub">Each puzzle gives you a few parts. Build a contraption that makes the goal happen!</p><div class="level-grid">';
-    CL.LEVELS.forEach((l, i) => {
-      h += '<button class="level-tile' + (done[l.id] ? ' done' : '') + '" data-level="' + i + '">' +
-        '<span class="lt-icon">' + l.icon + '</span><span class="lt-num">Puzzle ' + (i + 1) + '</span>' +
-        '<span class="lt-name">' + esc(l.name) + '</span>' + (done[l.id] ? '<span class="lt-done">✓ Solved</span>' : '') + '</button>';
+    hideHint();
+    const pr = progress(), done = pr.done;
+    const total = CL.LEVELS.length * 3, got = CL.LEVELS.reduce((s, l) => s + (done[l.id] || 0), 0);
+    let h = '<div class="card-head"><h2>🧩 Puzzles</h2><span class="pill">⭐ ' + got + ' / ' + total + '</span></div>' +
+      '<p class="card-sub">Start with the 🎓 puzzles: they teach you something new. Solve a puzzle without hints to earn ⭐⭐⭐.</p>';
+    CL.CHAPTERS.forEach(ch => {
+      const ls = CL.LEVELS.filter(l => l.chapter === ch.id);
+      const n = ls.filter(l => done[l.id]).length;
+      h += '<div class="chapter"><div class="ch-head"><span class="ch-icon">' + ch.icon + '</span><div><b>' + esc(ch.name) + '</b>' +
+        '<small>' + esc(ch.blurb) + '</small></div><span class="ch-count">' + n + ' / ' + ls.length + '</span></div><div class="level-grid">';
+      ls.forEach(l => {
+        const i = CL.LEVELS.indexOf(l), s = done[l.id] || 0;
+        h += '<button class="level-tile' + (s ? ' done' : '') + '" data-level="' + i + '">' +
+          (l.steps ? '<span class="learn">🎓 Learn</span>' : '') +
+          '<span class="lt-icon">' + l.icon + '</span><span class="lt-num">Puzzle ' + (i + 1) + '</span>' +
+          '<span class="lt-name">' + esc(l.name) + '</span>' + dots(l.level) +
+          '<span class="lt-stars">' + (s ? starText(s) : '&nbsp;') + '</span></button>';
+      });
+      h += '</div></div>';
     });
-    h += '</div><div class="card-actions"><button class="btn" id="ovSandbox">🧪 Free play sandbox</button>' +
+    h += '<div class="card-actions"><button class="btn" id="ovSandbox">🧪 Free play sandbox</button>' +
       (sb.level || shelfFor ? '<button class="btn" id="ovClose">✕ Close</button>' : '') + '</div>';
     showOverlay(h);
     $('overlayCard').querySelectorAll('[data-level]').forEach(b => (b.onclick = () => showIntro(sb, CL.LEVELS[+b.dataset.level])));
@@ -447,23 +476,31 @@
 
   function showIntro(sb, lv) {
     const i = CL.LEVELS.indexOf(lv);
-    showOverlay('<div class="card-head"><span class="big-icon">' + lv.icon + '</span><div><small class="kicker">Puzzle ' + (i + 1) + '</small>' +
-      '<h2>' + esc(lv.name) + '</h2></div></div>' +
+    const ch = CL.CHAPTERS.find(c => c.id === lv.chapter);
+    showOverlay('<div class="card-head"><span class="big-icon">' + lv.icon + '</span><div><small class="kicker">' +
+      (lv.steps ? '🎓 Learn · ' : '') + 'Puzzle ' + (i + 1) + ' · ' + esc(ch.name) + '</small>' +
+      '<h2>' + esc(lv.name) + '</h2></div>' + dots(lv.level) + '</div>' +
       '<p>' + esc(lv.intro) + '</p><div class="goal-box">🎯 <b>Goal:</b> ' + esc(lv.goalText) + '</div>' +
       '<p class="card-sub">Your parts:</p><div class="chips">' + partChips(lv.bin) + '</div>' +
-      '<p class="card-sub">The parts already in the lab are bolted down. Build, press <b>▶ Start</b>, watch, then try again!</p>' +
+      '<p class="card-sub">' + (lv.steps ? 'A checklist will show you what to do, step by step.' :
+        'Stuck? Tap <b>💡 Hint</b>. It can give you a clue, or even show you where a part goes.') + '</p>' +
       '<div class="card-actions"><button class="btn" id="ovBack">← All puzzles</button><button class="btn big go" id="ovGo">Let\u2019s go!</button></div>');
     $('ovBack').onclick = () => showLevels(sb);
-    $('ovGo').onclick = () => { hideOverlay(); sb.loadLevel(lv); };
+    $('ovGo').onclick = () => { hideOverlay(); sb.loadLevel(lv); hintTier = 0; sessionHints = 0; coachDone = []; refreshCoach(sb); };
   }
 
   function onWin(sb, lv) {
-    markDone(lv.id);
+    const used = sessionHints;
+    const stars = markDone(lv.id, used);
+    hideHint();
     setTimeout(() => {
       if (sb.level !== lv) return;
       const i = CL.LEVELS.indexOf(lv), next = CL.LEVELS[i + 1];
+      const msg = stars === 3 ? 'Solved all by yourself. Brilliant!' :
+        stars === 2 ? 'Solved with a hint. Can you do the next one without?' : 'Solved with some help. Try it again later without hints for ⭐⭐⭐!';
       showOverlay('<div class="card-head"><span class="big-icon">🎉</span><div><small class="kicker">Puzzle ' + (i + 1) + ' solved!</small>' +
-        '<h2>' + esc(lv.name) + '</h2></div></div>' +
+        '<h2>' + esc(lv.name) + '</h2></div><span class="win-stars">' + starText(stars) + '</span></div>' +
+        '<p>' + msg + '</p>' +
         '<div class="why-box"><b>🔬 Why it worked</b><p>' + esc(lv.why) + '</p></div>' +
         '<div class="card-actions"><button class="btn" id="ovLevels">🧩 All puzzles</button><button class="btn" id="ovStay">👀 Keep watching</button>' +
         (next ? '<button class="btn big go" id="ovNext">Next puzzle ▶</button>' : '<button class="btn big go" id="ovSandbox2">🧪 Free play</button>') + '</div>');
@@ -472,6 +509,67 @@
       if (next) $('ovNext').onclick = () => showIntro(sb, next);
       else $('ovSandbox2').onclick = () => { hideOverlay(); sb.leaveLevel(); };
     }, 1100);
+  }
+
+  /* ---------- 💡 hints: a nudge, then a clue, then "Show me" (ghost parts) ---------- */
+  let hintTier = 0, sessionHints = 0;
+  function hideHint() { const b = $('hintBox'); if (b) b.hidden = true; }
+  function showHint(sb) {
+    const lv = sb.level; if (!lv) return;
+    if (!sb.building) sb.stop();
+    const box = $('hintBox');
+    if (!box.hidden && hintTier === 0) { hideHint(); return; }
+    if (hintTier === 0) hintTier = 1;
+    renderHint(sb);
+  }
+  function renderHint(sb) {
+    const lv = sb.level, box = $('hintBox');
+    sessionHints = Math.max(sessionHints, hintTier);
+    noteHint(lv.id, hintTier);
+    let h = '<button class="hb-close" id="hbClose" aria-label="Close">✕</button>';
+    if (hintTier <= 2) {
+      h += '<small>💡 Hint ' + hintTier + ' of 3</small><p>' + esc(lv.hints[hintTier - 1]) + '</p>';
+      h += '<button class="btn" id="hbMore">' + (hintTier === 1 ? '🤔 I need more help' : '👀 Show me where') + '</button>';
+    } else {
+      const left = sb.missingGroups().length;
+      h += '<small>👀 Show me</small><p>' + (left ? 'Look for the <b>green see-through</b> part in the lab. Put yours there!' :
+        'Everything is in place. Press <b>▶ Start</b>!') + '</p>';
+      if (left > sb.showCount) h += '<button class="btn" id="hbMore">👀 Show me the next part</button>';
+    }
+    box.innerHTML = h; box.hidden = false;
+    $('hbClose').onclick = hideHint;
+    if ($('hbMore')) $('hbMore').onclick = () => {
+      if (hintTier < 3) hintTier++;
+      if (hintTier === 3) sb.showMore();
+      renderHint(sb);
+    };
+  }
+
+  /* ---------- 🎓 tutorial checklist ---------- */
+  let coachDone = [];
+  function stepDone(sb, check) {
+    const [what, t] = check.split(':'), w = sb.world;
+    const mine = w.balls.concat(w.rigids, w.blocks).filter(o => !o.locked && !o.fixed && o.type === t);
+    if (what === 'start') return !sb.building;
+    if (what === 'pick') return sb.tool === t || mine.length > 0 || w.links.some(l => !l.locked && l.type === t);
+    if (what === 'place') return mine.length > 0;
+    if (what === 'turn') return mine.some(o => Math.abs(Math.sin(o.angle)) > 0.08);
+    if (what === 'link') return w.links.some(l => !l.locked && l.type === t);
+    return false;
+  }
+  function refreshCoach(sb) {
+    const box = $('coach'); if (!box) return;
+    const lv = sb.level;
+    if (!lv || !lv.steps || !$('overlay').hidden) { box.hidden = true; return; }
+    if (sb.level !== refreshCoach.lv) { refreshCoach.lv = sb.level; coachDone = []; }
+    lv.steps.forEach((s, i) => { if (!coachDone[i] && (i === 0 || coachDone[i - 1]) && stepDone(sb, s.check)) coachDone[i] = true; });
+    const next = lv.steps.findIndex((s, i) => !coachDone[i]);
+    let h = '<b>🎓 Let\u2019s learn</b><ol>';
+    lv.steps.forEach((s, i) => { h += '<li class="' + (coachDone[i] ? 'ok' : i === next ? 'now' : '') + '">' + s.text + '</li>'; });
+    h += '</ol>';
+    if (next < 0 && !sb.won) h += '<p class="cc-tip">Didn\u2019t work? Press <b>■ Stop</b>, change something, and try again!</p>';
+    if (box.innerHTML !== h) box.innerHTML = h;
+    box.hidden = false;
   }
 
   /* ---------- full screen ---------- */
@@ -499,6 +597,6 @@
     upd();
   }
 
-  const UI = { init, toast, showLevels, showIntro, hideOverlay, progress };
+  const UI = { init, toast, showLevels, showIntro, hideOverlay, progress, showHint };
   CL.UI = UI;
 })(window.CL = window.CL || {});

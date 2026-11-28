@@ -106,7 +106,7 @@ body.mode-run .brand .logo { animation: spin 3s linear infinite; }
 .cat-title { flex: 1; font-weight: 900; font-size: 0.95rem; }
 .cat-count { font-size: 0.72rem; font-weight: 900; color: var(--jem); background: var(--bright); border-radius: 999px; padding: 1px 7px; }
 .cat-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--yellow); display: none; }
-.cat.holding:not(.open) .cat-dot { display: block; }
+.cat.has-tool:not(.open) .cat-dot { display: block; }
 .chev { font-size: 0.9rem; color: var(--muted); transition: transform 0.2s; }
 .cat.open .chev { transform: rotate(180deg); }
 .cat.open .cat-title { color: var(--yellow); }
@@ -216,6 +216,55 @@ kbd { background: var(--jem-dark); border: 1px solid var(--line); border-radius:
 .lt-num { font-size: 0.75rem; font-weight: 900; color: var(--bright); text-transform: uppercase; letter-spacing: 0.06em; }
 .lt-name { font-weight: 900; font-size: 1rem; text-align: center; }
 .lt-done { font-size: 0.8rem; font-weight: 900; color: var(--green); }
+/* chapters in the puzzle list */
+.card { width: min(900px, 100%); }
+.chapter { margin-top: 16px; }
+.ch-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.ch-head > div { flex: 1; }
+.ch-head b { display: block; font-size: 1.15rem; font-weight: 900; }
+.ch-head small { color: var(--muted); font-size: 0.88rem; }
+.ch-icon { font-size: 1.8rem; width: 44px; height: 44px; display: grid; place-items: center; background: var(--jem-2); border-radius: 14px; }
+.ch-count { font-weight: 900; color: var(--jem); background: var(--bright); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; }
+.level-tile { position: relative; }
+.learn { position: absolute; top: 6px; left: 6px; font-size: 0.68rem; font-weight: 900; background: var(--yellow); color: var(--jem); border-radius: 999px; padding: 1px 7px; }
+.diff { font-size: 0.72rem; font-weight: 900; color: var(--yellow); letter-spacing: 0.02em; white-space: nowrap; }
+.diff.d2 { color: var(--orange); }
+.diff.d3 { color: #ff7a7a; }
+.dim { opacity: 0.25; }
+.lt-stars { font-size: 0.9rem; letter-spacing: 1px; min-height: 1.2em; }
+.win-stars { font-size: 1.8rem; letter-spacing: 2px; }
+
+/* 🎓 tutorial checklist (top-left of the lab) */
+.coach {
+  position: absolute; left: 50px; top: 66px; width: min(330px, 46%); z-index: 15;
+  background: rgba(5, 21, 58, 0.93); border: 3px solid var(--yellow); border-radius: 18px; padding: 12px 14px;
+  font-size: 0.95rem; line-height: 1.35; pointer-events: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.coach > b { color: var(--yellow); font-size: 1rem; }
+.coach ol { margin: 8px 0 0; padding-left: 0; list-style: none; counter-reset: s; }
+.coach li { counter-increment: s; display: flex; gap: 8px; padding: 5px 0; color: var(--muted); }
+.coach li::before {
+  content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 900; font-size: 0.85rem; background: var(--jem-2); color: var(--text);
+}
+.coach li.now { color: var(--text); font-weight: 700; }
+.coach li.now::before { background: var(--yellow); color: var(--jem); animation: nudge 1.2s ease-in-out infinite; }
+.coach li.ok { color: var(--green); text-decoration: line-through; text-decoration-color: rgba(140, 198, 63, 0.6); }
+.coach li.ok::before { content: '✓'; background: var(--green); color: var(--jem); }
+.cc-tip { margin: 8px 0 0; color: var(--muted); font-size: 0.88rem; }
+@keyframes nudge { 50% { transform: scale(1.15); } }
+
+/* 💡 hint panel (top-right of the lab) */
+.hint-box {
+  position: absolute; right: 14px; top: 66px; width: min(340px, 60%); z-index: 16;
+  background: var(--jem); border: 3px solid var(--green); border-radius: 18px; padding: 14px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.hint-box small { color: var(--green); font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.78rem; }
+.hint-box p { margin: 6px 0 12px; font-size: 1rem; line-height: 1.45; }
+.hint-box .btn { width: 100%; min-height: 44px; }
+.hb-close { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 1.1rem; background: none; border: 0; color: var(--muted); cursor: pointer; width: 36px; height: 36px; }
+
 #app { position: relative; }
 .layout { position: relative; }
 .info-toggle { display: none; }

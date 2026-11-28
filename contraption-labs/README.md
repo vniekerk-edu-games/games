@@ -11,29 +11,39 @@ chain-reaction puzzle games.
   pulleys, scissors, pins and candles.
 * **Stage 4c – Fire and friction:** pendulums slow down and stop; candles light each other;
   a jumpy mini dragon breathes fire when frightened.
-* **Stage 5 – Puzzles:** six puzzles with goals, a limited parts bin, bolted-down parts,
-  hints, a "Why it worked" card and saved progress. Free play is still one tap away.
+* **Stage 5 – Puzzles:** goals, a limited parts bin, bolted-down parts, a "Why it worked" card and saved progress.
+* **Stage 6 – Puzzle path:** 17 puzzles in 6 chapters, 🎓 mini-tutorials with a self-ticking checklist,
+  three difficulty levels, a 3-step hint system with "Show me" ghosts, and ⭐ stars.
 
 ## Puzzles
-The game opens on the puzzle list. Each puzzle shows its goal and the parts you get.
-Parts that start in the lab are bolted down; only the parts on your shelf can be added.
-Press **▶ Start** to test, **■ Stop** to adjust. **💡 Hint** helps; **🧹 Start over** clears your parts.
-Your attempt on each puzzle and which puzzles you've solved are remembered in the browser.
+The game opens on the puzzle list, grouped into **chapters**. Each chapter starts with a
+**🎓 Learn** puzzle: a checklist in the corner coaches you step by step and ticks itself off.
+The puzzles after it practise the idea with less help and get harder:
+**● Easy · ●● Tricky · ●●● Brain-buster**.
 
-| # | Puzzle | Goal | Parts | Science |
-|---|---|---|---|---|
-| 1 | Roll it home | Bowling ball onto the target | 1 plank | Ramps turn falling into rolling |
-| 2 | Hot stuff | Pop the balloon | 1 candle | Fire burns rope; helium floats |
-| 3 | Domino dash | Beach ball onto the target | 10 dominoes | Energy travels along a domino row |
-| 4 | Feed the mouse | The mouse eats the cheese | cord, belt, tennis ball | Power → motor → belt → conveyor |
-| 5 | Heavy lifting | Lift the crate | rope, bowling ball | Pulleys change the direction of a pull |
-| 6 | Birthday surprise | Light the 3 cake candles | ball, 12 candles (unlit) | Heat spreads from hot to cool |
+**💡 Hint** has three steps: a nudge question → a clearer clue → **"Show me"**, which draws the
+answer's parts as green see-through ghosts (one group at a time, e.g. "Domino ×8"). A ghost
+disappears when you put your part in the right place.
+
+**Stars:** ⭐⭐⭐ solved without hints · ⭐⭐ used a hint · ⭐ used "Show me". Your best score is kept,
+so a puzzle can be replayed later for more stars. Progress and your attempt on each puzzle are
+remembered in the browser.
+
+| Chapter | Puzzles (difficulty) |
+|---|---|
+| 🎓 Lab basics | 🎓 Drop it in (●) · 🎓 Roll it home (●) |
+| 🎳 Roll & bounce | 🎓 Boing! (●) · Strike! (●●) · Slam dunk (●●) |
+| 🪢 Ropes & pulleys | 🎓 Wrecking ball (●) · Heavy lifting (●●) · Special delivery (●●) |
+| ⚡ Power & machines | 🎓 Power up (●) · Feed the mouse (●●) · Wrong way! (●●●) |
+| 🔥 Fire & critters | 🎓 Hot stuff (●) · Scaredy mouse (●●) · Birthday surprise (●●) |
+| 🏆 Big contraptions | Domino dash (●●) · Chain reaction (●●●) |
 
 ### Adding a puzzle
 Open `js/levels/levels.js`, copy one puzzle object, change it, and save. The comments at the top
-explain every field. Goal types are listed in `js/engine/goals.js`. Then add a known solution to
-`tests/levels-tests.js` and run `node tests/levels-tests.js`: it checks that the puzzle does NOT solve
-itself, and that it CAN be solved with only the parts in its bin.
+explain every field (chapter, difficulty, steps, hints, goals, solution). Give it a `solution`
+(the parts and links that solve it): that powers the "Show me" hint **and** lets
+`node tests/levels-tests.js` prove the puzzle does NOT solve itself and CAN be solved with only the
+parts in its bin. Goal types are listed in `js/engine/goals.js`.
 Tip: build the puzzle in free play first, press 💾 Save, and copy the positions from the saved file.
 
 ## Play it locally

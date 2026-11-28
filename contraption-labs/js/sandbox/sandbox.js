@@ -231,7 +231,77 @@
       this.ghostTrails = []; this.won = false; this.goal = null;
       this.tool = 'hand';
       this._ghosts = {};
+      this.showCount = 0;           // "Show me" hint: how many solution items are revealed
+      this._hintObjs = null;
       this.emit('mode');
+    }
+
+    /* ---------- "Show me" hints ----------
+     * Solution items (parts first, then links) that are NOT in the lab yet.
+     * A part counts as done when an added part of the same type sits within
+     * ~45 px of the answer (and, for planks, within ~12° of its tilt). */
+    hintObjects() {
+      if (!this.level || !this.level.solution) return [];
+      if (this._hintObjs) return this._hintObjs;
+      const sol = this.level.solution, out = [];
+      sol.parts.forEach((p, i) => {
+        const q = CL.Layout.parse({ parts: [Object.assign({ id: 1 }, p, (this.forceOpts || {})[p.type])] }).parts[0];
+        const tmp = new CL.World();
+        CL.Layout.build(tmp, { parts: [q], links: [] });
+        const o = tmp.balls[0] || tmp.rigids[0] || tmp.blocks[0];
+        out.push({ kind: 'part', obj: o, sid: p.id, idx: i });
+      });
+      (sol.links || []).forEach(l => out.push({ kind: 'link', link: l }));
+      return (this._hintObjs = out);
+    }
+
+    _matchPart(h) {
+      const g = h.obj, w = this.world;
+      const pool = w.balls.concat(w.rigids, w.blocks).filter(o => !o.locked && !o.fixed && o.type === g.type);
+      return pool.find(o => Math.hypot(o.x - g.x, o.y - g.y) < 45 &&
+        (!(g.def.rotatable || g.def.stretchable) || Math.abs(Math.sin(o.angle - g.angle)) < 0.21)) || null;
+    }
+
+    /* world object (or ghost) that a solution link end refers to */
+    _hintEnd(id) {
+      const lv = this.world.balls.concat(this.world.rigids, this.world.blocks).find(o => o.locked && o.lid === id);
+      if (lv) return lv;
+      const h = this.hintObjects().find(x => x.kind === 'part' && x.sid === id);
+      return h ? (this._matchPart(h) || h.obj) : null;
+    }
+
+    missingHints() {
+      const out = [];
+      for (const h of this.hintObjects()) {
+        if (h.kind === 'part') { if (!this._matchPart(h)) out.push(h); continue; }
+        const a = this._hintEnd(h.link.a), b = this._hintEnd(h.link.b), via = h.link.via ? this._hintEnd(h.link.via) : null;
+        if (!a || !b) continue;
+        const have = this.world.links.some(l => l.type === h.link.type && ((l.a === a && l.b === b) || (l.a === b && l.b === a)) && (!via || l.via === via));
+        if (!have) out.push(Object.assign({}, h, { a, b, via }));
+      }
+      return out;
+    }
+
+    /* Missing items in groups: a run of the same part (e.g. 8 dominoes) is ONE group */
+    missingGroups() {
+      const groups = [];
+      for (const h of this.missingHints()) {
+        const key = h.kind + ':' + (h.kind === 'part' ? h.obj.type : h.link.type);
+        const last = groups[groups.length - 1];
+        if (last && last.key === key && h.kind === 'part') last.items.push(h);
+        else groups.push({ key: key, items: [h] });
+      }
+      return groups;
+    }
+
+    /* the groups the player has asked to see */
+    shownHints() { return this.missingGroups().slice(0, this.showCount); }
+
+    showMore() {
+      if (!this.level) return 0;
+      this.showCount = Math.min(this.showCount + 1, this.hintObjects().length);
+      this.emit('change');
+      return this.missingGroups().length;
     }
 
     /* The level's own parts, all bolted down */

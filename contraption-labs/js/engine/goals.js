@@ -3,9 +3,12 @@
  * A level is solved when EVERY goal in its list is true at the same moment.
  *
  * Goal types (used in js/levels/levels.js):
- *   { type: 'zone', what: 'bowling', x, y, w, h, label }
- *        a part of that type has its centre inside the box for half a second
+ *   { type: 'zone', what: 'bowling', x, y, w, h, label, hold }
+ *        a part of that type has its centre inside the box for `hold` seconds
+ *        (default 0.5; hold: 0 = just passing through counts, e.g. a hoop)
  *        (what may also be a tag, e.g. what: 'tag:prize')
+ *   { type: 'topple', tag: 'pin' }  every domino/crate with this tag has been
+ *        knocked over (tipped past 50°) or knocked off its shelf
  *   { type: 'pop',   count: 1 }      balloons popped
  *   { type: 'eat',   count: 1 }      cheese eaten by a mouse
  *   { type: 'lit',   tag: 'cake' }   every candle with this tag is alight
@@ -40,10 +43,16 @@
           if (g.type === 'zone') {
             const here = bodies(world).some(o => matches(o, g.what) && inside(o, g));
             if (!here) { s.since = null; s.ok = false; }
-            else { if (s.since === null) s.since = world.time; s.ok = world.time - s.since >= HOLD; }
+            else { if (s.since === null) s.since = world.time; s.ok = s.ok || world.time - s.since >= (g.hold != null ? g.hold : HOLD); }
             s.inside = here;
+            if (g.hold === 0 && s.hit) s.ok = true;          // a hoop: once through is enough
+            if (here) s.hit = true;
           } else if (g.type === 'pop' || g.type === 'eat') {
             s.ok = s.n >= (g.count || 1);
+          } else if (g.type === 'topple') {
+            if (!s.start) s.start = new Map((world.rigids || []).filter(r => r.tag === g.tag).map(r => [r, r.y]));
+            const all = Array.from(s.start.keys());
+            s.ok = all.length > 0 && all.every(r => Math.abs(Math.sin(r.angle)) > 0.77 || r.y - s.start.get(r) > 40 || (world.rigids || []).indexOf(r) < 0);
           } else if (g.type === 'lit') {
             const c = world.blocks.filter(k => k.tag === g.tag);
             s.ok = c.length > 0 && c.every(k => k.lit);

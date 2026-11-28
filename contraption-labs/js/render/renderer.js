@@ -59,6 +59,7 @@
       CL.ropeArt.drawEffects(ctx, world);
       this._jams(ctx, world);
       if (!build) this._bubbles(ctx, world);
+      if (build) this._hintGhosts(ctx, sb);
       this._linkTool(ctx, sb);
       this._ghost(ctx, sb);
       this._selection(ctx, sb);
@@ -197,6 +198,46 @@
         ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); pts.slice(1).forEach(q => ctx.lineTo(q.x, q.y)); ctx.stroke();
         ctx.setLineDash([]);
       }
+    }
+
+    /* "Show me" hint: see-through green parts and dashed links where the answer goes */
+    _hintGhosts(ctx, sb) {
+      if (!sb.level || !sb.showCount) return;
+      const items = [];
+      sb.shownHints().forEach(g => g.items.forEach((h, i) => items.push(Object.assign({ label: i === 0, n: g.items.length }, h))));
+      const pulse = 0.35 + 0.2 * Math.sin(performance.now() / 260);
+      const endPos = (type, o) => type === 'belt' ? o.axlePos() : type === 'cord' ? o.plugPos() : (o.def.pulley ? { x: o.x, y: o.y - o.r } : o.ropePos());
+      for (const h of items) {
+        if (h.kind === 'part') {
+          const o = h.obj;
+          ctx.globalAlpha = pulse;
+          if (o.kind === 'ball') CL.art.drawBall(ctx, o);
+          else if (o.kind === 'rigid') CL.art.drawRigid(ctx, o);
+          else { CL.art.drawBlockBack(ctx, o); CL.art.drawBlock(ctx, o); }
+          ctx.globalAlpha = 1;
+          this._outline(ctx, o, T.green);
+          if (h.label) this._tag(ctx, '👀 ' + CL.Layout.defOf(o.type).name + (h.n > 1 ? ' ×' + h.n : ''), o.x, o.y - (o.r || o.br || o.hh || 20) - 16);
+        } else {
+          const pts = [endPos(h.link.type, h.a)];
+          if (h.via) pts.push({ x: h.via.x, y: h.via.y - h.via.r });
+          pts.push(endPos(h.link.type, h.b));
+          ctx.strokeStyle = T.green; ctx.lineWidth = 5; ctx.setLineDash([12, 8]); ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); pts.slice(1).forEach(q => ctx.lineTo(q.x, q.y)); ctx.stroke();
+          ctx.setLineDash([]); ctx.lineCap = 'butt';
+          pts.forEach(q => { ctx.fillStyle = T.green; ctx.beginPath(); ctx.arc(q.x, q.y, 7, 0, TAU); ctx.fill(); });
+          const m = pts[Math.floor(pts.length / 2)], n = pts[Math.floor(pts.length / 2) - (pts.length > 2 ? 0 : 1)];
+          this._tag(ctx, '👀 ' + CL.LINKS[h.link.type].name, (m.x + n.x) / 2, (m.y + n.y) / 2 - 22);
+        }
+      }
+    }
+
+    _tag(ctx, text, x, y) {
+      ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(text).width + 18;
+      x = Math.max(w / 2 + 50, Math.min(W - w / 2 - 4, x)); y = Math.max(16, y);
+      ctx.fillStyle = T.green; CL.art.rrect(ctx, x - w / 2, y - 13, w, 26, 13); ctx.fill();
+      ctx.fillStyle = T.jem; ctx.fillText(text, x, y + 1);
+      ctx.textAlign = 'left';
     }
 
     _ghost(ctx, sb) {

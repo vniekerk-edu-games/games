@@ -278,7 +278,7 @@ check('the open category is remembered', store['contraption-labs.shelf.open'] ==
 check('Move is no longer inside a category', !CL.SHELF.sections.some(sec => sec.items.indexOf('hand') >= 0));
 sb.setTool('tennis'); runFrames(1);
 check('holding a part shows it above the shelf', els.holding.hidden === false && els.holdingName.textContent === 'Tennis ball');
-check('...and marks the category it came from', cats[0].className.indexOf('holding') >= 0);
+check('...and marks the category it came from', cats[0].className.indexOf('has-tool') >= 0);
 els.btnHand.onclick();
 check('the ✋ button puts it down (back to Move)', sb.tool === 'hand' && els.holding.hidden === true);
 sb.setTool('rope'); sb.loadPreset('pulley'); sb.setTool('rope');
@@ -306,13 +306,13 @@ sb.stop();
 console.log('\n14. Playing a puzzle');
 sb.loadPreset('gears');
 const sandboxSave = store['contraption-labs.sandbox.v1'];
-const L1 = CL.LEVELS[0];
+const L1 = CL.LEVELS.find(l => l.id === 'ramp');
 CL.UI.showLevels(sb);
 check('puzzle list shows every puzzle', CL.LEVELS.every(l => els.overlayCard.innerHTML.indexOf(l.name) >= 0));
 CL.UI.showIntro(sb, L1);
 check('start card shows the goal and the parts you get', els.overlayCard.innerHTML.indexOf(L1.goalText) >= 0 && els.overlayCard.innerHTML.indexOf('Wood plank') >= 0);
 els.ovGo.onclick(); runFrames(2);
-check('puzzle loaded: bowling ball bolted down, banner says Puzzle 1', sb.level === L1 && sb.world.balls[0].locked && els.modeTag.textContent === 'Puzzle 1');
+check('puzzle loaded: bowling ball bolted down, banner says Puzzle 2', sb.level === L1 && sb.world.balls[0].locked && els.modeTag.textContent.indexOf('Puzzle 2') >= 0);
 const lastCat = els.shelf.children[els.shelf.children.length - 1];   // (the mock DOM keeps old children)
 check('the shelf only offers the puzzle\u2019s parts', lastCat.children[0].innerHTML.indexOf('Your parts') >= 0 && lastCat.children[1].children.length === 1);
 drag(300, 200, 700, 500);
@@ -329,7 +329,7 @@ check('the save/open buttons are off during puzzles', els.btnSave.disabled && el
 let wonEvt = false; sb.on(t => { if (t === 'win') wonEvt = true; });
 sb.start(); runFrames(60 * 7);
 check('the ball rolls home and the puzzle is solved', wonEvt && sb.won);
-check('progress is remembered', JSON.parse(store['contraption-labs.progress']).done.ramp === true);
+check('progress is remembered (3 stars: no hints used)', JSON.parse(store['contraption-labs.progress']).done.ramp === 3);
 const attempt = store['contraption-labs.level.ramp'];
 sb.stop();
 check('Stop puts the ball back (and keeps your plank)', sb.world.balls[0].y === 200 && sb.world.blocks.some(k => k.type === 'wood'));
@@ -356,7 +356,68 @@ sb.loadLevel(L1); sb.start(); runFrames(60 * 7);
 setTimeout(() => {
   check('a "Solved!" card explains the science', els.overlay.hidden === false && els.overlayCard.innerHTML.indexOf(L1.why) >= 0 && !!els.ovNext);
   els.ovNext.onclick();
-  check('"Next puzzle" opens the start card for puzzle 2', els.overlayCard.innerHTML.indexOf(CL.LEVELS[1].name) >= 0);
-  console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
-  process.exit(fail ? 1 : 0);
+  const nxt = CL.LEVELS[CL.LEVELS.indexOf(L1) + 1];
+  check('"Next puzzle" opens the start card for the next one', els.overlayCard.innerHTML.indexOf(nxt.name) >= 0);
+  part15();
+
 }, 1300);
+
+/* ---------- 15. chapters, hints, tutorial checklist, stars ---------- */
+function part15() {
+  console.log('\n15. Chapters, hints and tutorials');
+  CL.UI.showLevels(sb);
+  const list = els.overlayCard.innerHTML;
+  check('puzzle list is grouped into chapters', CL.CHAPTERS.every(c => list.indexOf(c.name.replace(/&/g, '&amp;')) >= 0));
+  check('tutorial puzzles are marked 🎓 Learn, and difficulty is shown', list.indexOf('🎓 Learn') >= 0 && list.indexOf('Brain-buster') >= 0);
+  check('old Stage 5 progress (true) still counts as solved', (store['contraption-labs.progress'] = JSON.stringify({ done: { hot: true } }), CL.UI.progress().done.hot === 3));
+
+  // a tutorial: the checklist ticks itself off
+  const drop = CL.LEVELS.find(l => l.id === 'drop');
+  CL.UI.showIntro(sb, drop); els.ovGo.onclick(); runFrames(2);
+  check('tutorial checklist appears with step 1 highlighted', els.coach.hidden === false && /class="now">Tap the <b>Bowling/.test(els.coach.innerHTML));
+  sb.setTool('bowling'); runFrames(7);
+  check('...picking the bowling ball ticks step 1', /class="ok">Tap the <b>Bowling/.test(els.coach.innerHTML));
+  click(1100, 300); runFrames(7);
+  check('...placing it ticks step 2', (els.coach.innerHTML.match(/class="ok"/g) || []).length === 2);
+  sb.start(); runFrames(7);
+  check('...pressing Start ticks step 3', (els.coach.innerHTML.match(/class="ok"/g) || []).length === 3);
+  runFrames(60 * 3);
+  check('...and the puzzle is solved', sb.won);
+  sb.stop();
+
+  // hints on a normal puzzle
+  const lift = CL.LEVELS.find(l => l.id === 'lift');
+  CL.UI.showIntro(sb, lift); els.ovGo.onclick(); runFrames(2);
+  check('no checklist on a normal puzzle', els.coach.hidden === true);
+  els.btnHint.onclick();
+  check('💡 hint 1 of 3: a nudge', els.hintBox.hidden === false && els.hintBox.innerHTML.indexOf(lift.hints[0]) >= 0);
+  els.hbMore.onclick();
+  check('hint 2 of 3: a clue', els.hintBox.innerHTML.indexOf(lift.hints[1]) >= 0);
+  els.hbMore.onclick();
+  check('hint 3: "Show me" reveals one ghost part', sb.showCount === 1 && sb.shownHints().length === 1 && sb.shownHints()[0].items[0].obj.type === 'bowling');
+  let e = ''; try { runFrames(2); } catch (x) { e = x.stack; }
+  check('ghost parts draw without errors', !e, e.split('\n')[0]);
+  els.hbMore.onclick();
+  check('"Show me the next part" reveals the rope', sb.showCount === 2 && sb.shownHints()[1].key === 'link:rope');
+const chainLv = CL.LEVELS.find(l => l.id === 'chain');
+sb.loadLevel(chainLv, true); sb.showMore();
+check('8 dominoes are revealed together as ONE step', sb.shownHints()[0].items.length === 8);
+sb.loadLevel(lift); sb.showCount = 2;
+  sb.setTool('bowling'); click(770, 330);
+  check('a ghost disappears once your part is in the right place', sb.missingHints().length === 1 && sb.missingHints()[0].kind === 'link');
+  sb.setTool('rope'); click(766, 500); click(800, 160); click(834, F_ - 26);
+  check('...and the rope ghost too, once the rope is fitted', sb.missingHints().length === 0);
+  sb.setTool('hand'); sb.start(); runFrames(60 * 4);
+  check('solved with "Show me": 1 star', sb.won && JSON.parse(store['contraption-labs.progress']).done.lift === 1);
+  setTimeout(() => {
+    check('the solved card shows the stars', els.overlayCard.innerHTML.indexOf('win-stars') >= 0);
+    sb.stop();
+    // all puzzles' ghost hints draw
+    let e2 = '';
+    try { CL.LEVELS.forEach(l => { sb.loadLevel(l, true); sb.showCount = 99; runFrames(1); }); } catch (x) { e2 = x.stack; }
+    check('every puzzle\u2019s "Show me" ghosts draw', !e2, e2.split('\n').slice(0, 2).join(' '));
+    console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
+    process.exit(fail ? 1 : 0);
+  }, 1300);
+}
+const F_ = CL.WORLD.floorY;

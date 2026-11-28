@@ -145,6 +145,7 @@
         : kind === 'rigid' ? new CL.Rigid(p.type, p.x, p.y, { angle: p.angle, opts: optionsOf(p) })
         : new CL.Block(p.type, p.x, p.y, { length: p.length, angle: p.angle, opts: optionsOf(p) });
       o.locked = !!p.locked;
+      o.lid = p.id;                  // layout id (lets puzzle hints point at level parts)
       if (p.tag) o.tag = p.tag;
       world.add(o);
       map.set(p.id, o);
