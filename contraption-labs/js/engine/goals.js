@@ -54,7 +54,7 @@
             const all = Array.from(s.start.keys());
             s.ok = all.length > 0 && all.every(r => Math.abs(Math.sin(r.angle)) > 0.77 || r.y - s.start.get(r) > 40 || (world.rigids || []).indexOf(r) < 0);
           } else if (g.type === 'lit') {
-            const c = world.blocks.filter(k => k.tag === g.tag);
+            const c = world.rigids.concat(world.blocks).filter(k => k.tag === g.tag);
             s.ok = c.length > 0 && c.every(k => k.lit);
           } else if (g.type === 'switch') {
             const c = world.blocks.find(k => k.tag === g.tag);

@@ -267,7 +267,7 @@
       links: [{ type: 'rope', a: 1, b: 2 }],
       bin: { candle: 1 },
       goals: [{ type: 'pop', count: 1 }],
-      solution: { parts: [{ type: 'candle', x: 813, y: 700 }] }
+      solution: { parts: [{ type: 'candle', x: 815, y: F - 25 }] }
     },
     {
       id: 'scaredy', chapter: 'fire', level: 2, name: 'Scaredy mouse', icon: '🐭',
@@ -286,19 +286,36 @@
     {
       id: 'dragon', chapter: 'fire', level: 2, name: 'Birthday surprise', icon: '🎂',
       goalText: 'Light all three birthday candles.',
-      intro: 'The dragon\u2019s fire can\u2019t reach the birthday candles. Build it a path of fire!',
-      hints: ['A flame can light a candle standing right next to it.', 'Wake the dragon with the ball. Then make a row of candles, about two small squares apart, from its flame to the cake.'],
+      intro: 'The dragon\u2019s fire can\u2019t reach the birthday candles. Build it a path of fire! You only have 6 candles, so space them out.',
+      hints: ['A flame can light a wick that is close to it. How far apart can two candles be and still pass the fire on?', 'Wake the dragon with the ball. Then stand candles about 4 small grid squares apart, from the end of its flame to the cake.'],
       why: 'Heat moves from hot things to cooler things. Each flame heats the next wick until it catches fire, so the fire travels along the row like dominoes.',
       parts: [
         { id: 1, type: 'dragon', x: 180, y: F - 30.5 },
-        { id: 3, type: 'candle', x: 640, y: F - 25, lit: false, tag: 'cake' },
-        { id: 4, type: 'candle', x: 664, y: F - 25, lit: false, tag: 'cake' },
-        { id: 5, type: 'candle', x: 688, y: F - 25, lit: false, tag: 'cake' }
+        { id: 3, type: 'candle', x: 620, y: F - 25, lit: false, tag: 'cake' },
+        { id: 4, type: 'candle', x: 644, y: F - 25, lit: false, tag: 'cake' },
+        { id: 5, type: 'candle', x: 668, y: F - 25, lit: false, tag: 'cake' }
       ],
-      bin: { tennis: 1, candle: 12 },
+      bin: { tennis: 1, candle: 6 },
       forceOpts: { candle: { lit: false } },
       goals: [{ type: 'lit', tag: 'cake' }],
-      solution: { parts: [{ type: 'tennis', x: 180, y: 600 }].concat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => ({ type: 'candle', x: 400 + i * 24, y: F - 25 }))) }
+      solution: { parts: [{ type: 'tennis', x: 180, y: 600 }].concat([0, 1, 2, 3, 4].map(i => ({ type: 'candle', x: 395 + i * 45, y: F - 25 }))) }
+    },
+    {
+      id: 'topple', chapter: 'fire', level: 2, name: 'Knock-on flame', icon: '🕯️',
+      goalText: 'Pop the balloon.',
+      intro: 'A candle is already burning, but it is too far from the balloon\u2019s string. Candles are tall and thin\u2026 they tip over!',
+      hints: ['What happens to a candle\u2019s flame if the candle falls over towards the string?', 'Make a ramp so a ball rolls into the candle. A light tennis ball just bounces off: try the heavier basketball!'],
+      why: 'The heavy basketball had enough MOMENTUM to push the tall, thin candle past its balance point. It fell over, its flame landed on the string, and the helium balloon floated up into the pin!',
+      parts: [
+        { id: 1, type: 'candle', x: 500, y: F - 25, lit: true },
+        { id: 2, type: 'hook', x: 575, y: F - 9 },
+        { id: 3, type: 'balloon', x: 575, y: 560 },
+        { id: 4, type: 'pin', x: 575, y: 120, angle: 90 * D }
+      ],
+      links: [{ type: 'rope', a: 2, b: 3 }],
+      bin: { wood: 1, tennis: 1, basketball: 1 },
+      goals: [{ type: 'pop', count: 1 }],
+      solution: { parts: [{ type: 'basketball', x: 250, y: 600 }, { type: 'wood', x: 320, y: 760, length: 280, angle: 0.62 }] }
     },
 
     /* ---------------- Big contraptions ---------------- */

@@ -161,6 +161,17 @@
     }
   };
 
+  /* A candle is a solid that can TIP OVER. Its flame stays on the wick, so a
+   * lit candle knocked over carries its fire with it. */
+  CL.RIGIDS.candle = {
+    name: 'Candle', mass: 0.3, bounce: 0.1, friction: 0.6, drag: 0.0001, flame: true,
+    shapes: [{ x: 0, y: 0, hw: 9, hh: 25 }], ropePoint: { x: 0, y: -25 },
+    stats: [['Heat', 4, 'w'], ['Tippy', 4, 'b']],
+    fact: 'A flame is very hot. It burns through rope, pops balloons, and lights any wick it gets close to. A candle is tall and thin, so it TIPS OVER easily and its flame goes with it!',
+    notice: 'Candles up to about 4 small grid squares apart light each other. Or knock a lit candle over so its flame lands where you need it!',
+    options: [{ key: 'lit', label: 'Candle starts', values: [[true, '🔥 Lit'], [false, '🕯️ Out']] }]
+  };
+
   CL.SURFACES = {
     wood: {
       name: 'Wood plank', shape: 'box', thickness: 16, bounce: 0.9, friction: 0.6,
@@ -272,15 +283,6 @@
       fact: 'A pin has a very sharp point. The stretched rubber of a balloon bursts when it touches the point. POP!',
       notice: 'Turn the pin so the point faces where the balloon will float.'
     },
-    candle: {
-      name: 'Candle', shape: 'box', length: 18, thickness: 50, bounce: 0.3, friction: 0.6,
-      flame: true,
-      stats: [['Heat', 4, 'w']],
-      fact: 'A flame is very hot. It burns through rope and pops balloons. An unlit candle catches fire when a flame touches its wick.',
-      notice: 'Stand candles side by side (2 small grid squares apart) and light the first one. Watch the fire spread!',
-      options: [{ key: 'lit', label: 'Candle starts', values: [[true, '🔥 Lit'], [false, '🕯️ Out']] }]
-    },
-
     /* Lab boundaries (not on the shelf) */
     floor: { name: 'Lab floor', shape: 'box', thickness: 120, bounce: 1.0, friction: 0.6, hidden: true },
     wall:  { name: 'Wall', shape: 'box', thickness: 120, bounce: 0.85, friction: 0.6, hidden: true }

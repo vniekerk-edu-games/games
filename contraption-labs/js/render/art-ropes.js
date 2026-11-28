@@ -48,6 +48,7 @@
     ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.angle);
     RIGID_ART[r.type](ctx, r);   // (locked boxes still tip and slide, so no bolt is drawn on them)
     ctx.restore();
+    if (r.def.flame && r.toWorld) drawCandleFlame(ctx, r);
   }
 
   /* ---------- fixed parts ---------- */
@@ -103,25 +104,29 @@
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(-k.hw + 4, -2, 2, 0, TAU); ctx.fill();
   };
 
-  A.WORLD_ART.candle = (ctx, k) => {
-    const w = k.hw * 2, h = k.hh * 2;
-    ctx.translate(k.x, k.y);
-    ctx.fillStyle = '#9aa6c2'; rrect(ctx, -w / 2 - 6, h / 2 - 5, w + 12, 5, 2); ctx.fill();      // holder
+  /* candle body (turns with the candle) */
+  RIGID_ART.candle = (ctx, k) => {
+    const b = k.boxes[0], w = b.hw * 2, h = b.hh * 2;
+    ctx.fillStyle = '#9aa6c2'; rrect(ctx, -w / 2 - 5, h / 2 - 5, w + 10, 5, 2); ctx.fill();       // holder
     ctx.fillStyle = '#fbf6e9'; rrect(ctx, -w / 2, -h / 2, w, h - 4, 3); ctx.fill();               // wax
     ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(w / 2 - 5, -h / 2 + 2, 4, h - 8);
     ctx.fillStyle = '#fbf6e9'; ctx.beginPath(); ctx.ellipse(-3, -h / 2 + 6, 3, 6, 0, 0, TAU); ctx.fill(); // drip
     ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -h / 2); ctx.lineTo(0, -h / 2 - 5); ctx.stroke();
+  };
+  /* candle flame: drawn in the lab's frame so it always points UP, even when the candle has tipped over */
+  function drawCandleFlame(ctx, k) {
     if (!k.lit) return;
-    const t = A.time, fl = 1 + Math.sin(t * 23) * 0.08 + Math.sin(t * 37) * 0.05;
-    const fy = -h / 2 - 13;
-    const glow = ctx.createRadialGradient(0, fy, 1, 0, fy, 26);
+    const w = CL.Machines.wickPoint(k), t = A.time + k.id * 0.37;
+    const fl = 1 + Math.sin(t * 23) * 0.08 + Math.sin(t * 37) * 0.05;
+    const fy = w.y - 13;
+    const glow = ctx.createRadialGradient(w.x, fy, 1, w.x, fy, 30);
     glow.addColorStop(0, 'rgba(255,210,0,0.35)'); glow.addColorStop(1, 'rgba(255,140,0,0)');
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, fy, 26, 0, TAU); ctx.fill();
-    ctx.save(); ctx.translate(0, fy + 7); ctx.scale(1, fl);
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(w.x, fy, 30, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(w.x, fy + 7); ctx.scale(1, fl);
     ctx.fillStyle = '#FF8C00'; ctx.beginPath(); ctx.moveTo(0, -20); ctx.quadraticCurveTo(9, -4, 0, 2); ctx.quadraticCurveTo(-9, -4, 0, -20); ctx.fill();
     ctx.fillStyle = '#FFD200'; ctx.beginPath(); ctx.moveTo(0, -12); ctx.quadraticCurveTo(5, -2, 0, 1); ctx.quadraticCurveTo(-5, -2, 0, -12); ctx.fill();
     ctx.restore();
-  };
+  }
 
   /* ---------- ropes ---------- */
   function drawRope(ctx, l, highlight) {

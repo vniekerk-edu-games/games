@@ -231,6 +231,7 @@ kbd { background: var(--jem-dark); border: 1px solid var(--line); border-radius:
 .diff.d2 { color: var(--orange); }
 .diff.d3 { color: #ff7a7a; }
 .dim { opacity: 0.25; }
+.version { margin: -4px 0 0; font-size: 0.78rem !important; color: var(--muted); opacity: 0.7; }
 .lt-stars { font-size: 0.9rem; letter-spacing: 1px; min-height: 1.2em; }
 .win-stars { font-size: 1.8rem; letter-spacing: 2px; }
 

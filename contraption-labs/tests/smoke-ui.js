@@ -37,7 +37,7 @@ global.performance = { now: () => clock };
 
 /* load the game exactly as index.html does */
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-[...html.matchAll(/<script src="([^"]+)"/g)].forEach(m => require(path.join(ROOT, m[1])));
+[...html.matchAll(/<script src="([^"?]+)/g)].forEach(m => require(path.join(ROOT, m[1])));
 const CL = global.CL, sb = CL.sandbox;
 
 /* ---------- helpers ---------- */
@@ -58,6 +58,8 @@ const check = (n, c, info) => { console.log((c ? '  PASS ' : '  FAIL ') + n + (i
 console.log('\n1. Start-up');
 runFrames(100);
 check('opens on the puzzle list', els.overlay.hidden === false && els.overlayCard.innerHTML.indexOf('Puzzles') >= 0);
+check('every file in index.html has a version tag (so browsers fetch new files)', (html.match(/src="[^"]+"/g) || []).every(x => /\?v=/.test(x)) && /style\.css\?v=/.test(html));
+check('the puzzle list shows the version and puzzle count', els.overlayCard.innerHTML.indexOf(CL.VERSION + ' · ' + CL.LEVELS.length + ' puzzles') >= 0);
 CL.UI.hideOverlay();
 check('boots into BUILD mode with the Mouse power experiment', sb.mode === 'build' && !!findBlock('hamster') && sb.world.links.length === 3);
 const y0 = sb.world.balls[0].y;
@@ -252,7 +254,7 @@ check('Stop puts the ropes back', sb.world.links.filter(l => l.type === 'rope').
 sb.select(sb.world.links.find(l => l.type === 'rope' && !l.via)); key('Delete');
 check('a selected rope can be deleted', sb.world.links.filter(l => l.type === 'rope').length === 1);
 sb.setTool('candle'); click(1200, 820);
-const cnd = sb.world.blocks.find(k => k.type === 'candle');
+const cnd = sb.world.rigids.find(k => k.type === 'candle');
 sb.select(cnd); sb.setOption(cnd, 'lit', false);
 check('candle can be set to start unlit (saved)', sb.serialize().parts.find(p => p.type === 'candle').lit === false);
 sb.setTool('crate'); sb.start();
@@ -341,7 +343,7 @@ sb.resetLevel();
 check('Start over takes your parts out again', !sb.world.blocks.some(k => k.type === 'wood'));
 const L6 = CL.LEVELS.find(l => l.id === 'dragon');
 sb.loadLevel(L6); sb.setTool('candle'); click(500, 835);
-const myCandle = sb.world.blocks.find(k => k.type === 'candle' && !k.locked);
+const myCandle = sb.world.rigids.find(k => k.type === 'candle' && !k.locked);
 sb.setOption(myCandle, 'lit', true);
 check('puzzle rules: candles from the bin start unlit and can\u2019t be switched on', myCandle && !myCandle.lit && !myCandle.opts.lit);
 const L2 = CL.LEVELS.find(l => l.id === 'hot');

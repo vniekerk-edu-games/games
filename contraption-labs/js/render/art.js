@@ -191,6 +191,7 @@
       ctx.scale(s, s);
       if (type === 'bucket') ctx.translate(0, 6);
       if (type === 'domino') ctx.rotate(0.2);
+      if (type === 'candle') { r.lit = true; ctx.translate(0, 10); ctx.scale(0.8, 0.8); }
       CL.art.drawRigid(ctx, r);
       return;
     }

@@ -151,6 +151,8 @@
       this.gravityScale = 1;
       this.held = false; this.locked = false;
       this.opts = readOptions(d, opts.opts);
+      this.lit = !!d.flame && this.opts.lit !== false;   // candles
+      this.heat = 0;
       this.boxes = d.shapes.map(b => ({ lx: b.x, ly: b.y, hw: b.hw, hh: b.hh, x: 0, y: 0, c: 1, s: 0, br: Math.hypot(b.hw, b.hh) }));
       this.br = 0;
       d.shapes.forEach(b => (this.br = Math.max(this.br, Math.hypot(Math.abs(b.x) + b.hw, Math.abs(b.y) + b.hh))));

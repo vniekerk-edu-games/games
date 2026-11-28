@@ -80,7 +80,7 @@
       if (CL.RIGIDS[type]) {
         const r = new CL.Rigid(type, x, y);
         r.x = clamp(x, r.br, W - r.br); r.y = clamp(y, r.br, F - r.br); r.update();
-        return this.world.add(r);
+        return this._force(this.world.add(r));
       }
       const r = CL.BALLS[type].radius;
       return this._force(this.world.add(new CL.Ball(type, clamp(x, r, W - r), clamp(y, r, F - r))));
@@ -91,7 +91,7 @@
       const f = this.forceOpts && this.forceOpts[o.type];
       if (!f || !o.opts) return o;
       Object.assign(o.opts, f);
-      if (o.kind === 'block') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = !!o.def.flame && o.opts.lit !== false; }
+      if (o.kind !== 'ball') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = !!o.def.flame && o.opts.lit !== false; }
       return o;
     }
 
@@ -419,7 +419,7 @@
         this.emit('toast', '🔒 In this puzzle you can\u2019t change that setting.'); return;
       }
       o.opts[key] = value;
-      if (o.kind === 'block') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = o.opts.lit !== false; }
+      if (o.kind !== 'ball') { o.on = !!o.opts.on; o.running = !!o.opts.awake; o.lit = !!o.def.flame && o.opts.lit !== false; }
       else if (o.def.creature === 'cat') o.state = o.opts.awake ? 'idle' : 'sleep';
       else if (o.def.creature === 'dragon') { o.state = o.opts.awake ? 'idle' : 'sleep'; o.face = o.opts.faceLeft ? -1 : 1; }
       this.commit();
@@ -921,7 +921,7 @@
         if (this.building) this._settle(g);
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._ballClear(g)) };
       } else if (CL.RIGIDS[t]) {
-        const g = this._ghosts[t] || (this._ghosts[t] = new CL.Rigid(t, 0, 0));
+        const g = this._force(this._ghosts[t] || (this._ghosts[t] = new CL.Rigid(t, 0, 0)));
         g.x = clamp(this._sn(p.x), 0, W); g.y = clamp(this._sn(p.y), 0, F); g.update();
         if (this.building) this._settle(g);
         this.ghost = { obj: g, valid: this.canPlace(t) && (!this.building || this._rigidClear(g)) };

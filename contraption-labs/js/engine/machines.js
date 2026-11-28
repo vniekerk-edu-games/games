@@ -77,7 +77,9 @@
 
   function bladePoint(k) { return { x: k.x + k.c * (k.hw - 12), y: k.y + k.s * (k.hw - 12) }; }
   function pinTip(k) { return { x: k.x + k.c * k.hw, y: k.y + k.s * k.hw }; }
-  function flamePoint(k) { return { x: k.x, y: k.y - k.hh - 13 }; }
+  /* the flame sits just above the wick, at the top of the candle (wherever it has tipped to) */
+  function wickPoint(k) { return k.toWorld ? k.toWorld(0, -k.boxes[0].hh) : { x: k.x, y: k.y - k.hh }; }
+  function flamePoint(k) { const w = wickPoint(k); return { x: w.x, y: w.y - 13 }; }
 
   function snip(world, k) {
     k.snipT = world.time;
@@ -96,7 +98,9 @@
    *   • unlit candles catch light when a flame touches the wick
    *   • hamsters and sleeping cats get a hot surprise
    */
-  const CANDLE_HEAT = 14;      // px radius of a candle's hot spot
+  const CANDLE_HEAT = 20;      // px radius of a candle's hot spot (rope, balloons)
+  const WICK_REACH = 30;       // extra px a wick can be from a flame and still catch light
+                               // → candles up to ~45 px (4 small grid squares) apart light each other
   const ROPE_BURN = 0.6;       // seconds of candle heat to burn through a rope
   const CATCH_LIGHT = 0.25;    // seconds of heat on a wick to light a candle
 
@@ -109,7 +113,7 @@
 
   function fireSources(world) {
     const out = [];
-    for (const k of world.blocks) if (k.def.flame && k.lit) out.push({ kind: 'spot', obj: k, p: flamePoint(k), heat: 1 });
+    for (const k of world.rigids) if (k.def.flame && k.lit) out.push({ kind: 'spot', obj: k, p: flamePoint(k), heat: 1 });
     for (const d of world.balls) {
       if (d.def.creature !== 'dragon' || d.state !== 'breathe') continue;
       out.push({ kind: 'cone', obj: d, p: mouth(d), dir: d.face, reach: flameReach(d, world.time), spread: d.def.flameSpread, heat: 2 });
@@ -172,18 +176,20 @@
         effect(world, 'burn', (g.pa.x + g.pb.x) / 2, (g.pa.y + g.pb.y) / 2);
       }
     }
+    for (const k of world.rigids) {
+      if (!k.def.flame || k.lit) continue;
+      const w = wickPoint(k);
+      if (heatAt(src, w.x, w.y, WICK_REACH, k)) {
+        k.heat += dt;
+        if (k.heat >= CATCH_LIGHT) {
+          k.lit = true; k.heat = 0;
+          effect(world, 'ignite', w.x, w.y);
+          world.events.push({ type: 'ignite', obj: k });
+        }
+      } else k.heat = 0;
+    }
     for (const k of world.blocks) {
-      if (k.def.flame && !k.lit) {
-        const w = flamePoint(k);
-        if (heatAt(src, w.x, w.y, 12, k)) {              // a flame within ~26 px of the wick
-          k.heat += dt;
-          if (k.heat >= CATCH_LIGHT) {
-            k.lit = true; k.heat = 0;
-            effect(world, 'ignite', w.x, w.y);
-            world.events.push({ type: 'ignite', obj: k });
-          }
-        } else k.heat = 0;
-      } else if (k.type === 'hamster' && !k.running && heatAt(src, k.x, k.y, k.r)) {
+      if (k.type === 'hamster' && !k.running && heatAt(src, k.x, k.y, k.r)) {
         k.running = true; say(k, 'Yikes! HOT!', world);
         world.events.push({ type: 'hamster', obj: k });
       }
@@ -322,6 +328,6 @@
     return null;
   }
 
-  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed, bladePoint, pinTip, flamePoint, snip,
+  CL.Machines = { update, canLink, meshes, fanFrame, sourceSpeed, bladePoint, pinTip, flamePoint, wickPoint, snip,
     mouth, flameReach, fireSources, heatAt };
 })(window.CL = window.CL || {});

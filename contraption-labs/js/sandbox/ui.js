@@ -445,7 +445,8 @@
     const pr = progress(), done = pr.done;
     const total = CL.LEVELS.length * 3, got = CL.LEVELS.reduce((s, l) => s + (done[l.id] || 0), 0);
     let h = '<div class="card-head"><h2>🧩 Puzzles</h2><span class="pill">⭐ ' + got + ' / ' + total + '</span></div>' +
-      '<p class="card-sub">Start with the 🎓 puzzles: they teach you something new. Solve a puzzle without hints to earn ⭐⭐⭐.</p>';
+      '<p class="card-sub">Start with the 🎓 puzzles: they teach you something new. Solve a puzzle without hints to earn ⭐⭐⭐.</p>' +
+      '<p class="version">' + esc(CL.VERSION || '') + ' · ' + CL.LEVELS.length + ' puzzles</p>';
     CL.CHAPTERS.forEach(ch => {
       const ls = CL.LEVELS.filter(l => l.chapter === ch.id);
       const n = ls.filter(l => done[l.id]).length;

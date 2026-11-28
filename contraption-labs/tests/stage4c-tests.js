@@ -39,12 +39,24 @@ console.log('\n2. Candles light each other');
     for (let i = 0; i < 5; i++) parts.push({ id: i + 2, type: 'candle', x: 700 + i * gap, y: 600 - 8 - 25, lit: i === 0 });
     return fromLayout({ parts });
   };
-  const near = row(20); const litAt = [];
-  for (let i = 0; i < 120 * 4; i++) { near.step(); near.blocks.filter(k => k.type === 'candle').forEach((c, j) => { if (c.lit && litAt[j] == null) litAt[j] = near.time; }); }
-  check('candles standing side by side light one after another', litAt.length === 5 && litAt.every((t, i) => !i || t > litAt[i - 1]),
+  const near = row(40); const litAt = [];
+  for (let i = 0; i < 120 * 4; i++) { near.step(); near.rigids.filter(k => k.type === 'candle').forEach((c, j) => { if (c.lit && litAt[j] == null) litAt[j] = near.time; }); }
+  check('candles 4 small grid squares apart light one after another', litAt.length === 5 && litAt.every((t, i) => !i || t > litAt[i - 1]),
     litAt.map(t => t.toFixed(2)).join(' → ') + ' s');
   const far = row(60); run(far, 4);
-  check('candles too far apart don\u2019t light', far.blocks.filter(k => k.type === 'candle' && k.lit).length === 1);
+  check('candles 6 squares apart don\u2019t light', far.rigids.filter(k => k.type === 'candle' && k.lit).length === 1);
+  // candles can be knocked over, and a lit candle carries its flame with it
+  const tip = fromLayout({ parts: [{ id: 1, type: 'candle', x: 600, y: F - 25, lit: true }, { id: 2, type: 'candle', x: 700, y: F - 25, lit: false },
+    { id: 3, type: 'tennis', x: 520, y: F - 60 }] });
+  tip.balls[0].vx = 400;
+  let tipped = 0, litT = 0;
+  for (let i = 0; i < 120 * 4; i++) { tip.step(); if (!tipped && Math.abs(tip.rigids[0].angle) > 1.2) tipped = tip.time; if (!litT && tip.rigids[1].lit) litT = tip.time; }
+  check('a ball knocks a candle over', tipped > 0, 'tipped at ' + tipped.toFixed(2) + ' s');
+  check('...and the fallen lit candle lights the next one (too far away to light standing up)', litT > tipped, 'lit at ' + litT.toFixed(2) + ' s');
+  const still = fromLayout({ parts: [{ id: 1, type: 'candle', x: 600, y: F - 25, lit: true }, { id: 2, type: 'candle', x: 700, y: F - 25, lit: false }] });
+  run(still, 4);
+  check('without the push, it doesn\u2019t', !still.rigids[1].lit);
+  check('candles too far apart don\u2019t light', far.rigids.filter(k => k.type === 'candle' && k.lit).length === 1);
 }
 
 console.log('\n3. Mini dragon');
@@ -52,21 +64,21 @@ const dragonLab = (extra, links) => fromLayout({ parts: [{ id: 1, type: 'dragon'
 {
   const calm = dragonLab([{ id: 2, type: 'candle', x: 520, y: F - 25, lit: false }]);
   run(calm, 3);
-  check('a sleeping dragon stays asleep (and breathes no fire)', calm.balls[0].state === 'sleep' && !calm.blocks.find(k => k.type === 'candle').lit);
+  check('a sleeping dragon stays asleep (and breathes no fire)', calm.balls[0].state === 'sleep' && !calm.rigids.find(k => k.type === 'candle').lit);
 
   const w = dragonLab([{ id: 2, type: 'candle', x: 520, y: F - 25, lit: false }, { id: 3, type: 'candle', x: 280, y: F - 25, lit: false },
     { id: 4, type: 'tennis', x: 400, y: 500 }]);
   const d = w.balls[0]; const seen = [];
   for (let i = 0; i < 120 * 8; i++) { w.step(); if (seen[seen.length - 1] !== d.state) seen.push(d.state); }
   check('a ball lands on it: Hic! → breathes fire → catches its breath → awake', seen.join(' > ') === 'sleep > startle > breathe > rest > idle', seen.join(' > '));
-  const [front, behind] = w.blocks.filter(k => k.type === 'candle');
+  const [front, behind] = w.rigids.filter(k => k.type === 'candle');
   check('its fire lights a candle in front of it', front.lit);
   check('...but not one behind it', !behind.lit);
 
   const left = dragonLab([{ id: 2, type: 'candle', x: 280, y: F - 25, lit: false }, { id: 3, type: 'tennis', x: 400, y: 500 }]);
   left.balls[0].face = -1; left.balls[0].opts.faceLeft = true;
   run(left, 3);
-  check('turned to face left, it breathes fire to the left', left.blocks[left.blocks.length - 1].lit);
+  check('turned to face left, it breathes fire to the left', left.rigids[left.rigids.length - 1].lit);
 
   const cat = dragonLab([{ id: 2, type: 'cat', x: 700, y: F - 26, awake: true }, { id: 3, type: 'mouse', x: 330, y: F - 13 }]);
   let why = null; for (let i = 0; i < 120 * 4 && !why; i++) { cat.step(); const e = cat.events.find(v => v.type === 'dragon-startle'); if (e) why = e.why; cat.events.length = 0; }
@@ -111,7 +123,7 @@ console.log('\n4. Saving and same result every time');
   check('dragon direction and start setting are saved', d.faceLeft === true && d.awake === true && s.parts.find(p => p.type === 'candle').lit === false);
   const w2 = fromLayout(s);
   check('...and come back the same', w2.balls[0].face === -1 && w2.balls[0].state === 'idle');
-  const sim = () => { const x = fromLayout(CL.Layout.fromPreset(CL.PRESETS.dragon.build())); run(x, 8); return JSON.stringify(x.balls.map(b => [b.x, b.y])) + x.links.length + x.blocks.filter(k => k.lit).length; };
+  const sim = () => { const x = fromLayout(CL.Layout.fromPreset(CL.PRESETS.dragon.build())); run(x, 8); return JSON.stringify(x.balls.map(b => [b.x, b.y])) + x.links.length + x.rigids.filter(k => k.lit).length; };
   check('the dragon experiment ends the same way every time', sim() === sim());
 }
 done();

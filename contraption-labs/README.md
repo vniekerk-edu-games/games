@@ -35,7 +35,7 @@ remembered in the browser.
 | 🎳 Roll & bounce | 🎓 Boing! (●) · Strike! (●●) · Slam dunk (●●) |
 | 🪢 Ropes & pulleys | 🎓 Wrecking ball (●) · Heavy lifting (●●) · Special delivery (●●) |
 | ⚡ Power & machines | 🎓 Power up (●) · Feed the mouse (●●) · Wrong way! (●●●) |
-| 🔥 Fire & critters | 🎓 Hot stuff (●) · Scaredy mouse (●●) · Birthday surprise (●●) |
+| 🔥 Fire & critters | 🎓 Hot stuff (●) · Scaredy mouse (●●) · Birthday surprise (●●) · Knock-on flame (●●) |
 | 🏆 Big contraptions | Domino dash (●●) · Chain reaction (●●●) |
 
 ### Adding a puzzle
@@ -48,6 +48,11 @@ Tip: build the puzzle in free play first, press 💾 Save, and copy the position
 
 ## Play it locally
 Open `index.html` in Edge or Chrome. No install or build step needed.
+
+**Seeing an old version?** Browsers keep copies of game files. Every file in `index.html` ends in
+`?v=…` (for example `?v=6b`): when you change the game, change that tag everywhere and browsers fetch
+the new files. The puzzle list shows the version and puzzle count, so you can check. If in doubt,
+press **Ctrl+F5** to force a full reload.
 
 ## Put it on GitHub Pages
 1. Create a repository and upload **everything in this folder** (keep the folder structure, including `.nojekyll`).
@@ -76,7 +81,7 @@ Open `index.html` in Edge or Chrome. No install or build step needed.
 | Pulley | One side goes down, the other goes up. The heavier side wins. |
 | Scissors | Snip ropes at their pointy end when bumped or when a switch powers them (cord). |
 | Pin | Pops balloons that touch its point. Turn it to aim. |
-| Candle | Burns through ropes (about 0.6 s) and pops balloons. Can start lit or out. An unlit candle catches light when a flame touches its wick, so a row of candles about 2 small grid squares apart lights one after another. |
+| Candle | Tall and thin, so it **tips over** when something heavy hits it, and its flame goes with it (the flame always points up). Burns through ropes (about 0.6 s) and pops balloons. Can start lit or out. An unlit candle catches light from a flame up to about 4 small grid squares away, so a row of candles lights one after another. |
 | Mini dragon | Asleep or awake. A bump, a balloon popping nearby or an awake cat close by frightens it: "Hic!", then it breathes fire for about 1.6 s in the direction it faces, then rests for 3 s before it can do it again. Its fire lights candles, burns rope (faster than a candle), pops balloons and wakes hamsters and sleeping cats. |
 
 Machines stay put while the machine runs (balls, planks and critters can still be thrown and moved in the sandbox).
